@@ -1,6 +1,6 @@
 import type { Env } from "./env.js";
 
-/** OpenAI-compatible unified endpoint (sin barra final). */
+/** Punto de entrada unificado compatible con OpenAI (sin barra final). */
 export function aiGatewayCompatBaseUrl(accountId: string, gatewayId: string): string {
   const a = accountId.trim();
   const g = gatewayId.trim();
