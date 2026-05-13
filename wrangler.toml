@@ -13,5 +13,5 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
 [vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
-COPILOT_MODEL = "gpt-5.4-mini"
+COPILOT_MODEL = "gpt-4o-mini"
 OPENAI_API_BASE = "https://api.individual.githubcopilot.com"

@@ -3,12 +3,14 @@ import { AIMessage, SystemMessage } from "@langchain/core/messages";
 import type { GraphState } from "../state.js";
 import type { Env } from "../env.js";
 import { getToolsForIndustry } from "../tools/crm.js";
+import { getCopilotToken } from "../copilot-token.js";
 
-function createLLM(env: Env, model?: string): ChatOpenAI {
+async function createLLM(env: Env, model?: string): Promise<ChatOpenAI> {
+  const { apiKey, baseUrl } = await getCopilotToken(env.COPILOT_GITHUB_TOKEN);
   return new ChatOpenAI({
     model: model || env.COPILOT_MODEL || "gpt-5.4-mini",
-    apiKey: env.COPILOT_GITHUB_TOKEN,
-    configuration: { baseURL: env.OPENAI_API_BASE },
+    apiKey,
+    configuration: { baseURL: baseUrl || env.OPENAI_API_BASE },
   });
 }
 
@@ -25,7 +27,7 @@ export function createModelNode(env: Env) {
         `Prefer tools over guessing. Keep answers concise.`
     );
 
-    const llm = createLLM(env);
+    const llm = await createLLM(env);
     const bound = llm.bindTools(tools);
 
     let response: AIMessage;
@@ -41,7 +43,7 @@ export function createModelNode(env: Env) {
       }
       const fallbackModel = "gpt-5.4";
       if (fallbackModel === usedModel) throw e;
-      const fbLlm = createLLM(env, fallbackModel).bindTools(tools);
+      const fbLlm = (await createLLM(env, fallbackModel)).bindTools(tools);
       const result = await fbLlm.invoke([systemMsg, ...state.messages]);
       response = result as AIMessage;
       usedModel = fallbackModel;

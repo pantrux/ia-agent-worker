@@ -3,6 +3,7 @@ import { HumanMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import type { GraphState, Industry } from "../state.js";
 import type { Env } from "../env.js";
+import { getCopilotToken } from "../copilot-token.js";
 
 const RouteSchema = z.object({
   industry: z.enum(["retail", "finance", "health", "unknown"]).describe("Primary industry for this turn."),
@@ -42,11 +43,12 @@ function getLastUserText(messages: GraphState["messages"]): string {
   return "";
 }
 
-function createLLM(env: Env): ChatOpenAI {
+async function createLLM(env: Env): Promise<ChatOpenAI> {
+  const { apiKey, baseUrl } = await getCopilotToken(env.COPILOT_GITHUB_TOKEN);
   return new ChatOpenAI({
     model: env.COPILOT_MODEL || "gpt-5.4-mini",
-    apiKey: env.COPILOT_GITHUB_TOKEN,
-    configuration: { baseURL: env.OPENAI_API_BASE },
+    apiKey,
+    configuration: { baseURL: baseUrl || env.OPENAI_API_BASE },
   });
 }
 
@@ -58,7 +60,7 @@ export function createRouterNode(env: Env) {
     }
 
     try {
-      const llm = createLLM(env);
+      const llm = await createLLM(env);
       const structured = llm.withStructuredOutput(RouteSchema);
       const prompt = [
         new HumanMessage(
