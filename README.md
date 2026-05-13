@@ -220,7 +220,7 @@ Navegador
              │
              └─► ChatOpenAI ───► GitHub Models API (o Copilot)
                                   base: OPENAI_API_BASE (p. ej. models.github.ai)
-                                  opcional: Cloudflare AI Gateway (`/compat` o `…/custom-{slug}`)
+                                  opcional: Cloudflare AI Gateway (`/compat`; con slug → modelo `custom-{slug}/…`)
 ```
 
 ## Variables de entorno
@@ -240,7 +240,7 @@ Navegador
 | `AI_GATEWAY_ACCOUNT_ID` | Var opcional | Cuenta Cloudflare; con `AI_GATEWAY_ID` activa el AI Gateway en la URL base del cliente. Si **no** están definidas, el LLM usa solo `OPENAI_API_BASE` (p. ej. GitHub Models directo). | — |
 | `AI_GATEWAY_ID` | Var opcional | Identificador del gateway en la URL. | — |
 | `AI_GATEWAY_API_TOKEN` | Secreto opcional | Token para cabecera `cf-aig-authorization` si el gateway lo requiere. | `wrangler secret put AI_GATEWAY_API_TOKEN` |
-| `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). El Worker usa **`…/v1/{cuenta}/{gateway}/custom-{slug}`** (provider-specific): el cuerpo lleva **`COPILOT_MODEL`** tal cual (p. ej. `openai/gpt-4o-mini`). Sin esta variable: solo **`…/compat`**. | `github-models` |
+| `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). Con slug, el Worker usa **`…/compat`** y el modelo pasa como **`custom-{slug}/{COPILOT_MODEL}`** (API unificada de AI Gateway). Sin slug: solo **`…/compat`** con el `model` tal cual. | `github-models` |
 
 > Si quieres apuntar al endpoint real de GitHub Copilot (`https://api.individual.githubcopilot.com`), `src/copilot-token.ts` intentará intercambiar el GitHub token por un session token Copilot. Si no, usa el GitHub token tal cual.
 
@@ -249,7 +249,7 @@ Navegador
 #### Opción A — Automático (recomendado)
 
 1. Crea un [API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) con permiso **Account → AI Gateway → Edit** y permiso para **listar la cuenta** (p. ej. **Account → Account Settings → Read**, o un token de plantilla que incluya acceso a la cuenta), para que `GET https://api.cloudflare.com/client/v4/accounts` funcione sin `wrangler`.
-2. Crea en la raíz del repo un fichero **`.env`** (gitignored) o **`.env.ai-gateway.local`**, y define `CLOUDFLARE_API_TOKEN=…` (plantillas: [`.env.example`](.env.example), [`.env.ai-gateway.example`](.env.ai-gateway.example)).
+2. Crea en la raíz del repo un fichero **`.env`** (gitignored) o **`.env.ai-gateway.local`**, y define **`CF_AI_GATEWAY_API_TOKEN=…`** (recomendado; plantillas: [`.env.example`](.env.example), [`.env.ai-gateway.example`](.env.ai-gateway.example)). Evita poner un token solo de AI Gateway en **`CLOUDFLARE_API_TOKEN`** dentro de `.env` si usas `wrangler deploy` con OAuth: Wrangler leería ese token y puede fallar sin permiso Workers.
 3. En la raíz del repo: `npm run provision:ai-gateway`  
    Crea si no existen el gateway `ia-agent-worker-llm` y el custom provider `github-models` → `https://models.github.ai/inference`. Al final imprime los valores para pegar en el Worker.
 4. Añade en **[vars]** de `wrangler.toml` (o en el dashboard del Worker) las tres variables que muestra el script; despliega con `npm run deploy`.
@@ -257,8 +257,8 @@ Navegador
 
 #### Comprobar estado (API Cloudflare)
 
-- Con token en **`.env`** o **`.env.ai-gateway.local`** en la raíz del repo (o `CLOUDFLARE_API_TOKEN` en el entorno): **`npm run check:ai-gateway`** — código de salida **0** si existen el gateway `AI_GATEWAY_ID` y el custom provider con slug `AI_GATEWAY_PROVIDER_SLUG`; **2** si falta el API Token (el OAuth de `wrangler login` no sustituye al token del panel para esta API).
-- En **GitHub Actions**, workflow **«Provision AI Gateway»** (`workflow_dispatch`): crea el secret **`CLOUDFLARE_API_TOKEN`** en el repo (mismos permisos que arriba) y ejecútalo una vez; opcionalmente variables `CLOUDFLARE_ACCOUNT_ID`, `AI_GATEWAY_ID`, `AI_GATEWAY_PROVIDER_SLUG`, `AI_GATEWAY_CUSTOM_BASE_URL` si no usas los valores por defecto.
+- Con **`CF_AI_GATEWAY_API_TOKEN`** (o `CLOUDFLARE_API_TOKEN` / `CF_API_TOKEN`) en **`.env`** o **`.env.ai-gateway.local`** en la raíz del repo: **`npm run check:ai-gateway`** — código de salida **0** si existen el gateway `AI_GATEWAY_ID` y el custom provider con slug `AI_GATEWAY_PROVIDER_SLUG`; **2** si falta el token (el OAuth de `wrangler login` no sustituye al token del panel para esta API).
+- En **GitHub Actions**, workflow **«Provision AI Gateway»** (`workflow_dispatch`): crea el secret **`CLOUDFLARE_API_TOKEN`** en el repo (mismos permisos que arriba; el workflow lo inyecta como **`CF_AI_GATEWAY_API_TOKEN`**) y ejecútalo una vez; opcionalmente variables `CLOUDFLARE_ACCOUNT_ID`, `AI_GATEWAY_ID`, `AI_GATEWAY_PROVIDER_SLUG`, `AI_GATEWAY_CUSTOM_BASE_URL` si no usas los valores por defecto.
 
 #### Si `/api/chat` devuelve 500 y en logs aparece `MODEL_NOT_FOUND` / `404 page not found`
 
@@ -268,5 +268,5 @@ Suele faltar el **custom provider** o el **gateway** en la cuenta de Cloudflare.
 
 1. En el dashboard de Cloudflare, crea un **AI Gateway** y anota **account id** + **gateway id** (segmentos de la URL `…/v1/{account}/{gateway}/…`).
 2. Para **GitHub Models** (`OPENAI_API_BASE=https://models.github.ai/inference`), crea un **custom provider** cuyo `base_url` sea `https://models.github.ai/inference` y un **slug** (p. ej. `github-models`).
-3. En el Worker, define `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID` y `AI_GATEWAY_PROVIDER_SLUG` igual al slug (sin `custom-`). El Worker llamará a **`…/custom-{slug}/chat/completions`** (OpenAI SDK) para que el gateway reenvíe a **`{base_url}/chat/completions`**; el campo `model` del JSON es el de GitHub (`openai/…`). Ver [custom providers](https://developers.cloudflare.com/ai-gateway/configuration/custom-providers/).
+3. En el Worker, define `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID` y `AI_GATEWAY_PROVIDER_SLUG` (sin `custom-`). Con slug, las llamadas van a **`…/compat/chat/completions`** y el JSON lleva **`"model": "custom-{slug}/openai/…"`** (patrón unificado de Cloudflare). Ver [custom providers](https://developers.cloudflare.com/ai-gateway/configuration/custom-providers/).
 4. Si tu gateway exige autenticación de cliente, guarda `AI_GATEWAY_API_TOKEN` como secreto (`wrangler secret put AI_GATEWAY_API_TOKEN`). Referencia compat (sin slug): [Unified API](https://developers.cloudflare.com/ai-gateway/usage/chat-completion/).

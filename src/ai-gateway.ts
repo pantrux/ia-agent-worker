@@ -8,8 +8,8 @@ export function aiGatewayCompatBaseUrl(accountId: string, gatewayId: string): st
 }
 
 /**
- * Endpoint provider-specific: el SDK añade `/chat/completions` →
- * `…/custom-{slug}/chat/completions` y el gateway reenvía a `{base_url}/chat/completions`.
+ * URL `…/custom-{slug}` (provider-specific). Reservada por si hace falta; el flujo OpenAI SDK
+ * recomendado con custom providers es **`/compat`** + modelo `custom-{slug}/…`.
  * @see https://developers.cloudflare.com/ai-gateway/configuration/custom-providers/
  */
 export function aiGatewayCustomProviderBaseUrl(accountId: string, gatewayId: string, slugWithoutCustomPrefix: string): string {
@@ -29,10 +29,9 @@ function stripCustomProviderModelPrefix(model: string, slugClean: string): strin
 /**
  * Si `AI_GATEWAY_ACCOUNT_ID` e `AI_GATEWAY_ID` están definidos, enruta las llamadas por AI Gateway.
  *
- * - Con **`AI_GATEWAY_PROVIDER_SLUG`**: ruta **provider-specific** (`…/custom-{slug}`), cuerpo con el
- *   mismo `model` que el proveedor (p. ej. `openai/gpt-4o-mini`). Evita `/compat`, donde el upstream
- *   para GitHub Models puede resolverse a paths inválidos.
- * - Sin slug: endpoint **compat** (`…/compat`).
+ * - Con **`AI_GATEWAY_PROVIDER_SLUG`**: API unificada **`/compat`** y modelo `custom-{slug}/{modelo}`
+ *   (patrón recomendado por Cloudflare para el SDK OpenAI con custom providers).
+ * - Sin slug: **`/compat`** con el `model` tal cual.
  *
  * `AI_GATEWAY_API_TOKEN` opcional → `cf-aig-authorization`.
  */
@@ -56,8 +55,8 @@ export function resolveAiGatewayLlmConfig(
   const slug = env.AI_GATEWAY_PROVIDER_SLUG?.trim();
   if (slug) {
     const slugClean = slug.replace(/^custom-/, "").trim();
+    const baseUrl = aiGatewayCompatBaseUrl(accountId, gatewayId);
     if (!slugClean) {
-      const baseUrl = aiGatewayCompatBaseUrl(accountId, gatewayId);
       return {
         apiKey: upstream.apiKey,
         baseUrl,
@@ -65,12 +64,14 @@ export function resolveAiGatewayLlmConfig(
         ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
       };
     }
-    const baseUrl = aiGatewayCustomProviderBaseUrl(accountId, gatewayId, slugClean);
-    const resolvedModel = stripCustomProviderModelPrefix(model, slugClean);
+    const customPrefix = `custom-${slugClean}/`;
+    const compatModel = model.startsWith(customPrefix)
+      ? model
+      : `${customPrefix}${stripCustomProviderModelPrefix(model, slugClean)}`;
     return {
       apiKey: upstream.apiKey,
       baseUrl,
-      model: resolvedModel,
+      model: compatModel,
       ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
     };
   }
