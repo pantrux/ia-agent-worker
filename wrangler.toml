@@ -2,6 +2,7 @@ name = "ia-agent-worker"
 main = "src/index.ts"
 compatibility_date = "2025-10-08"
 compatibility_flags = ["nodejs_compat"]
+account_id = "8a31ec012e21b8f414288de35697c564"
 
 [observability]
 enabled = true
