@@ -8,6 +8,8 @@ Este documento baja a **decisiones**, **criterios** y **entregables** la arquite
 Contexto del repo: [PROJECT-OVERVIEW.md](./PROJECT-OVERVIEW.md).  
 Trazas Worker ↔ LangSmith: [langsmith-integration-plan.md](./langsmith-integration-plan.md).
 
+**Seguimiento de implementación (PR y estados):** [ROADMAP-IMPLEMENTATION.md](./ROADMAP-IMPLEMENTATION.md) — tablero de auditoría por fase; actualizarlo en cada PR o cierre de hito. Este archivo (`ROADMAP-CF-LANGSMITH.md`) se mantiene como **visión y criterios**; el detalle de avance vive en el tablero.
+
 ---
 
 ## 1. Registro de decisiones (ADR resumido)
@@ -120,6 +122,8 @@ Seguir [Deploy your app to cloud](https://docs.langchain.com/langsmith/deploymen
 
 ## 3. Backlog inmediato (próximas 2 semanas)
 
+Los entregables siguientes se reflejan también en el tablero [ROADMAP-IMPLEMENTATION.md](./ROADMAP-IMPLEMENTATION.md) (columna **Estado** y **PR**).
+
 Orden sugerido; asignar dueño en tu tablero.
 
 1. ~~**Cerrar ADR-03/04**~~ Hecho por defecto MVP en §5 (reabrir solo si cambian requisitos).
@@ -143,7 +147,7 @@ Orden sugerido; asignar dueño en tu tablero.
 
 ## 5. Decisión registrada (MVP)
 
-```
+```text
 TARGET_RUNTIME: Worker
 STUDIO_PROD: No
 AI_GATEWAY: Yes (PoC Fase B → prod tras validación)
@@ -154,6 +158,8 @@ NOTAS: LangGraph Cloud / CF Containers quedan como opciones documentadas (§2.1,
 Con esta decisión, prioriza **Fase A → B** sin reabrir arquitectura salvo cambio de requisitos.
 
 ## 6. Checklist Fase A (esta semana)
+
+Para **estado y PR** asociados a cada ítem, usa [ROADMAP-IMPLEMENTATION.md](./ROADMAP-IMPLEMENTATION.md) (filas A1–A4 y T0).
 
 - [ ] Reglas WAF en zona: rate limit `POST /api/chat` y `POST /api/chat/resume` (umbrales por IP).
 - [ ] Proyectos LangSmith: `ia-agent-worker-prod` vs `ia-agent-worker-preview` + `LANGSMITH_PROJECT` por entorno en Wrangler (`[env.*]` o vars de preview).

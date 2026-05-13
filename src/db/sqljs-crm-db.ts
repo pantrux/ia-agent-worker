@@ -51,6 +51,7 @@ class SqlJsPreparedStatement implements CrmPreparedStatement {
       this.db.run(this.sql, this.params);
     }
     const changes = this.db.getRowsModified();
+    // sql.js no expone lastInsertRowid; last_row_id queda en 0. Los tools actuales generan IDs fuera de la fila (p. ej. lead-${Date.now()}). En D1, meta.last_row_id puede ser distinto.
     return { success: true, meta: { changes, last_row_id: 0 } };
   }
 }

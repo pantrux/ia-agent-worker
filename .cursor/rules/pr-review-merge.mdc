@@ -1,0 +1,33 @@
+---
+description: PRs — evaluar reviews, aplicar fixes, responder en GitHub y merge solo con criterios cumplidos
+alwaysApply: true
+---
+
+# Pull requests: reviews, trazabilidad y merge
+
+Reglas operativas para PRs de este repositorio (y el mismo criterio si el agente trabaja aquí como raíz del workspace).
+
+## 1. Reviews, comentarios y sugerencias
+
+- **Revisar siempre** comentarios en línea, reviews de bots (CodeRabbit, Greptile, etc.) y sugerencias de humanos.
+- **Si corresponde**, aplicar la corrección en código o documentación, ejecutar comprobaciones locales pertinentes (`tsc`, tests, smoke) y **commitear en la rama del PR** (push a la misma branch).
+- **Si no corresponde** (falso positivo o decisión consciente), no cambiar código solo por cumplir al bot: dejar **respuesta en el hilo** explicando por qué no aplica (trazabilidad).
+
+## 2. Respuestas en GitHub (trazabilidad)
+
+- Tras evaluar o corregir, **responder en GitHub** en el hilo correspondiente o con un comentario en el PR (p. ej. `gh pr comment`, respuesta a review thread vía API, o resolución del comentario en la UI) indicando: qué se hizo, en qué commit, o por qué se desestima.
+- Objetivo: **futura auditoría** sin depender del chat de Cursor.
+
+## 3. Merge (condiciones estrictas)
+
+**No ejecutar merge** (`gh pr merge`, botón en UI, etc.) hasta que **simultáneamente**:
+
+1. **No queden comentarios pendientes** por resolver: sugerencias accionables atendidas o respondidas explícitamente; conversaciones de review resueltas cuando la plataforma lo permita.
+2. El **resumen / score del review automatizado principal** (p. ej. Greptile confidence, o el indicador equivalente de la herramienta activa) sea el **máximo de su escala** — por defecto **5/5** cuando la escala sea 0–5. Si la herramienta solo ofrece máximo **4/5**, exigir además **cero hallazgos abiertos** y criterio explícito en comentario de PR de que se acepta el riesgo residual antes de merge.
+
+Hasta entonces: **no merge**; seguir iterando en la rama del PR.
+
+## 4. Herramientas
+
+- Preferir **GitHub CLI** (`gh pr view`, `gh pr checks`, `gh api` para threads) cuando el entorno esté autenticado.
+- Tras merge, actualizar `docs/ROADMAP-IMPLEMENTATION.md` si aplica.

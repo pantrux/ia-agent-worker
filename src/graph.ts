@@ -24,8 +24,18 @@ function routeAfterValidation(state: GraphState): "model" | typeof END {
   return "model";
 }
 
+/** D1 expone `batch`; la implementación sql.js de `CrmDatabase` solo expone `prepare`. */
+function d1DatabaseForCheckpointOrThrow(db: Env["DB"]): D1Database {
+  if (typeof (db as { batch?: unknown }).batch === "function") {
+    return db as D1Database;
+  }
+  throw new Error(
+    "buildGraph: el checkpointer por defecto (D1Saver) requiere un binding D1 en env.DB, o bien pasa options.checkpointer (p. ej. MemorySaver en Agent Server)."
+  );
+}
+
 export function buildGraph(env: Env, options?: { checkpointer?: BaseCheckpointSaver }) {
-  const checkpointer = options?.checkpointer ?? new D1Saver(env.DB as D1Database);
+  const checkpointer = options?.checkpointer ?? new D1Saver(d1DatabaseForCheckpointOrThrow(env.DB));
 
   const graph = new StateGraph(GraphAnnotation)
     .addNode("router", createRouterNode(env))
