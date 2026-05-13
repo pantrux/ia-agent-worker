@@ -2,6 +2,7 @@ import { HumanMessage } from "@langchain/core/messages";
 import { Command } from "@langchain/langgraph";
 import type { Env } from "./env.js";
 import { buildGraph } from "./graph.js";
+import { logWorkerAccess } from "./access-log.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
@@ -37,16 +38,25 @@ function jsonResponse(data: unknown, status: number, request: Request, env: Env)
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const cors = corsHeaders(request, env);
+    const t0 = Date.now();
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: cors });
+      const res = new Response(null, { status: 204, headers: cors });
+      logWorkerAccess(request, env, {
+        operation: "cors_preflight",
+        status: res.status,
+        durationMs: Date.now() - t0,
+      });
+      return res;
     }
 
     const url = new URL(request.url);
     const path = url.pathname;
 
     if (path === "/ping" && request.method === "GET") {
-      return jsonResponse({ status: "ok", service: "ia-agent-worker" }, 200, request, env);
+      const res = jsonResponse({ status: "ok", service: "ia-agent-worker" }, 200, request, env);
+      logWorkerAccess(request, env, { operation: "ping", status: res.status, durationMs: Date.now() - t0 });
+      return res;
     }
 
     if (path === "/api/chat" && request.method === "POST") {
@@ -57,7 +67,9 @@ export default {
       return handleResume(request, env);
     }
 
-    return jsonResponse({ error: "Not found" }, 404, request, env);
+    const res = jsonResponse({ error: "Not found" }, 404, request, env);
+    logWorkerAccess(request, env, { operation: "not_found", status: res.status, durationMs: Date.now() - t0 });
+    return res;
   },
 } satisfies ExportedHandler<Env>;
 
@@ -99,24 +111,37 @@ function configureLangSmithEnv(env: Env): void {
 }
 
 async function handleChat(request: Request, env: Env): Promise<Response> {
+  const t0 = Date.now();
+  const finish = (res: Response, threadId?: string, err?: string) => {
+    logWorkerAccess(request, env, {
+      operation: "chat",
+      status: res.status,
+      durationMs: Date.now() - t0,
+      thread_id: threadId,
+      error: err,
+    });
+    return res;
+  };
+
   let body: ChatRequest;
   try {
     body = (await request.json()) as ChatRequest;
   } catch {
-    return jsonResponse({ error: "Invalid JSON body" }, 400, request, env);
+    return finish(jsonResponse({ error: "Invalid JSON body" }, 400, request, env));
   }
 
   if (!body.message?.trim()) {
-    return jsonResponse({ error: "message is required" }, 400, request, env);
+    return finish(jsonResponse({ error: "message is required" }, 400, request, env));
   }
 
   const parsedThreadId = parseThreadId(body.thread_id);
   if (body.thread_id && !parsedThreadId) {
-    return jsonResponse({ error: "thread_id must be a valid UUID" }, 400, request, env);
+    return finish(jsonResponse({ error: "thread_id must be a valid UUID" }, 400, request, env));
   }
   const threadId = parsedThreadId ?? crypto.randomUUID();
   configureLangSmithEnv(env);
   const graph = buildGraph(env);
+  const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
   const config = {
     configurable: { thread_id: threadId },
     metadata: {
@@ -125,7 +150,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
       runtime: "cloudflare-worker",
       ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
     },
-    tags: ["api:chat", "langsmith"],
+    tags: ["api:chat", "langsmith", ...deploymentTags],
   };
 
   try {
@@ -138,56 +163,75 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     const lastMsg = messages[messages.length - 1];
     const reply = lastMsg ? (typeof lastMsg.content === "string" ? lastMsg.content : String(lastMsg.content)) : "";
 
-    return jsonResponse(
-      {
-        thread_id: threadId,
-        reply,
-        industry: result.industry,
-        intent: result.intent,
-        tool_state: result.toolState,
-      },
-      200,
-      request,
-      env
+    return finish(
+      jsonResponse(
+        {
+          thread_id: threadId,
+          reply,
+          industry: result.industry,
+          intent: result.intent,
+          tool_state: result.toolState,
+        },
+        200,
+        request,
+        env
+      ),
+      threadId
     );
   } catch (e: unknown) {
     const err = e as { name?: string; value?: unknown };
     if (err.name === "GraphInterrupt" || String(e).includes("GraphInterrupt")) {
       const interruptValue = err.value ?? null;
-      return jsonResponse(
-        {
-          thread_id: threadId,
-          status: "pending_approval",
-          interrupt: interruptValue,
-        },
-        200,
-        request,
-        env
+      return finish(
+        jsonResponse(
+          {
+            thread_id: threadId,
+            status: "pending_approval",
+            interrupt: interruptValue,
+          },
+          200,
+          request,
+          env
+        ),
+        threadId
       );
     }
     console.error("Chat error:", e);
-    return jsonResponse({ error: String(e) }, 500, request, env);
+    return finish(jsonResponse({ error: String(e) }, 500, request, env), threadId, String(e));
   }
 }
 
 async function handleResume(request: Request, env: Env): Promise<Response> {
+  const t0 = Date.now();
+  const finish = (res: Response, threadId?: string, err?: string) => {
+    logWorkerAccess(request, env, {
+      operation: "resume",
+      status: res.status,
+      durationMs: Date.now() - t0,
+      thread_id: threadId,
+      error: err,
+    });
+    return res;
+  };
+
   let body: ResumeRequest;
   try {
     body = (await request.json()) as ResumeRequest;
   } catch {
-    return jsonResponse({ error: "Invalid JSON body" }, 400, request, env);
+    return finish(jsonResponse({ error: "Invalid JSON body" }, 400, request, env));
   }
 
   if (!body.thread_id) {
-    return jsonResponse({ error: "thread_id is required" }, 400, request, env);
+    return finish(jsonResponse({ error: "thread_id is required" }, 400, request, env));
   }
   const threadId = parseThreadId(body.thread_id);
   if (!threadId) {
-    return jsonResponse({ error: "thread_id must be a valid UUID" }, 400, request, env);
+    return finish(jsonResponse({ error: "thread_id must be a valid UUID" }, 400, request, env));
   }
 
   configureLangSmithEnv(env);
   const graph = buildGraph(env);
+  const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
   const config = {
     configurable: { thread_id: threadId },
     metadata: {
@@ -196,7 +240,7 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
       runtime: "cloudflare-worker",
       ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
     },
-    tags: ["api:resume", "langsmith"],
+    tags: ["api:resume", "langsmith", ...deploymentTags],
   };
 
   try {
@@ -209,19 +253,22 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
     const lastMsg = messages[messages.length - 1];
     const reply = lastMsg ? (typeof lastMsg.content === "string" ? lastMsg.content : String(lastMsg.content)) : "";
 
-    return jsonResponse(
-      {
-        thread_id: threadId,
-        reply,
-        industry: result.industry,
-        tool_state: result.toolState,
-      },
-      200,
-      request,
-      env
+    return finish(
+      jsonResponse(
+        {
+          thread_id: threadId,
+          reply,
+          industry: result.industry,
+          tool_state: result.toolState,
+        },
+        200,
+        request,
+        env
+      ),
+      threadId
     );
   } catch (e: unknown) {
     console.error("Resume error:", e);
-    return jsonResponse({ error: String(e) }, 500, request, env);
+    return finish(jsonResponse({ error: String(e) }, 500, request, env), threadId, String(e));
   }
 }
