@@ -1,0 +1,42 @@
+# Smoke HTTP contra el Worker desplegado (URL en variable WORKER_SMOKE_URL).
+# Sin esa variable el job falla de forma explícita (evita CI verde falso).
+
+name: Worker smoke (remote)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: worker-smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Remote smoke (/ping, chat opcional)
+        env:
+          WORKER_SMOKE_URL: ${{ vars.WORKER_SMOKE_URL }}
+          SMOKE_INCLUDE_CHAT: ${{ vars.SMOKE_INCLUDE_CHAT }}
+        run: |
+          if [ -z "${WORKER_SMOKE_URL}" ]; then
+            echo "::error::Falta la variable de repositorio WORKER_SMOKE_URL (Settings → Secrets and variables → Actions → Variables). Ejemplo: https://ia-agent-worker.<account>.workers.dev"
+            exit 1
+          fi
+          npm run smoke:worker

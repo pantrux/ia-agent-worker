@@ -6,6 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "studio": "langgraphjs dev -h 0.0.0.0 -p 2024",
+    "studio:tunnel": "langgraphjs dev -h 0.0.0.0 -p 2024 --tunnel",
+    "studio:check": "node ./scripts/studio-check.mjs",
+    "smoke:worker": "node ./scripts/smoke-worker.mjs",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create ia-agent-db",
     "db:migrate": "wrangler d1 execute ia-agent-db --file=schema.sql",
@@ -22,6 +26,10 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260501",
+    "@langchain/langgraph-cli": "^0.0.40",
+    "sql.js": "^1.11.0",
+    "@types/node": "^22.10.0",
+    "dotenv": "^16.4.7",
     "typescript": "^5.7",
     "wrangler": "^4"
   }
