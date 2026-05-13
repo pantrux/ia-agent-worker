@@ -1,8 +1,9 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import type { Industry } from "../state.js";
+import type { CrmDatabase } from "../db/crm-db.js";
 
-function createCrmTools(db: D1Database) {
+function createCrmTools(db: CrmDatabase) {
   const findCustomerByName = tool(
     async ({ name }) => {
       const result = await db
@@ -105,7 +106,7 @@ function createCrmTools(db: D1Database) {
 
 export const CRITICAL_TOOL_NAMES = new Set(["delete_customer_record"]);
 
-export function getToolsForIndustry(industry: Industry, db: D1Database) {
+export function getToolsForIndustry(industry: Industry, db: CrmDatabase) {
   const t = createCrmTools(db);
   const allTools = [t.findCustomerByName, t.getCustomerData, t.updateOrderStatus, t.createLead, t.deleteCustomerRecord];
   const safeTools = [t.findCustomerByName, t.getCustomerData, t.updateOrderStatus, t.createLead];

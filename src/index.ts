@@ -119,7 +119,12 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
   const graph = buildGraph(env);
   const config = {
     configurable: { thread_id: threadId },
-    metadata: { thread_id: threadId, operation: "chat", runtime: "cloudflare-worker" },
+    metadata: {
+      thread_id: threadId,
+      operation: "chat",
+      runtime: "cloudflare-worker",
+      ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
+    },
     tags: ["api:chat", "langsmith"],
   };
 
@@ -185,7 +190,12 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
   const graph = buildGraph(env);
   const config = {
     configurable: { thread_id: threadId },
-    metadata: { thread_id: threadId, operation: "resume", runtime: "cloudflare-worker" },
+    metadata: {
+      thread_id: threadId,
+      operation: "resume",
+      runtime: "cloudflare-worker",
+      ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
+    },
     tags: ["api:resume", "langsmith"],
   };
 
