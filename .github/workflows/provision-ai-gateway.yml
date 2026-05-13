@@ -1,0 +1,37 @@
+# Crea el AI Gateway y el custom provider hacia GitHub Models si no existen (idempotente).
+# Requiere secret: CLOUDFLARE_API_TOKEN (Account → AI Gateway → Edit; conviene Account → Read).
+
+name: Provision AI Gateway
+
+on:
+  workflow_dispatch:
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Provision gateway + custom provider
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          AI_GATEWAY_ID: ${{ vars.AI_GATEWAY_ID }}
+          AI_GATEWAY_PROVIDER_SLUG: ${{ vars.AI_GATEWAY_PROVIDER_SLUG }}
+          AI_GATEWAY_CUSTOM_BASE_URL: ${{ vars.AI_GATEWAY_CUSTOM_BASE_URL }}
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
+            echo "::error::Falta el secret CLOUDFLARE_API_TOKEN (Settings → Secrets and variables → Actions → Secrets). Crea un API Token en el panel de Cloudflare con permiso «Account — AI Gateway — Edit»."
+            exit 1
+          fi
+          npm run provision:ai-gateway

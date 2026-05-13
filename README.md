@@ -255,6 +255,15 @@ Navegador
 4. Añade en **[vars]** de `wrangler.toml` (o en el dashboard del Worker) las tres variables que muestra el script; despliega con `npm run deploy`.
 5. Prueba desde el frontend con el mismo `POST` a `/api/chat`; en **AI Gateway → tu gateway** deberías ver peticiones.
 
+#### Comprobar estado (API Cloudflare)
+
+- Con token en `.env.ai-gateway.local` (o `CLOUDFLARE_API_TOKEN` en el entorno): **`npm run check:ai-gateway`** — código de salida **0** si existen el gateway `AI_GATEWAY_ID` y el custom provider con slug `AI_GATEWAY_PROVIDER_SLUG`; **2** si falta el API Token (el OAuth de `wrangler login` no sustituye al token del panel para esta API).
+- En **GitHub Actions**, workflow **«Provision AI Gateway»** (`workflow_dispatch`): crea el secret **`CLOUDFLARE_API_TOKEN`** en el repo (mismos permisos que arriba) y ejecútalo una vez; opcionalmente variables `CLOUDFLARE_ACCOUNT_ID`, `AI_GATEWAY_ID`, `AI_GATEWAY_PROVIDER_SLUG`, `AI_GATEWAY_CUSTOM_BASE_URL` si no usas los valores por defecto.
+
+#### Si `/api/chat` devuelve 500 y en logs aparece `MODEL_NOT_FOUND` / `404 page not found`
+
+Suele faltar el **custom provider** o el **gateway** en la cuenta de Cloudflare. Ejecuta `npm run provision:ai-gateway` (local) o el workflow **Provision AI Gateway**, luego **`npm run check:ai-gateway`** hasta obtener salida 0.
+
 #### Opción B — Manual (dashboard)
 
 1. En el dashboard de Cloudflare, crea un **AI Gateway** y anota **account id** + **gateway id** (segmentos de la URL `…/v1/{account}/{gateway}/…`).

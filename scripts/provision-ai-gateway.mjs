@@ -46,6 +46,21 @@ function mergeEnvLocalFile(absPath) {
 
 mergeEnvLocalFile(localEnv);
 
+if (!(process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim() && existsSync(localEnv)) {
+  try {
+    const raw = readFileSync(localEnv, "utf8").replace(/^\uFEFF/, "");
+    const parsed = parse(raw);
+    const rawTok = parsed.CLOUDFLARE_API_TOKEN ?? parsed.CF_API_TOKEN;
+    if (rawTok !== undefined && String(rawTok).trim() === "") {
+      console.error(
+        "CLOUDFLARE_API_TOKEN (o CF_API_TOKEN) aparece vacío en .env.ai-gateway.local. Elimina la línea o pega el token del panel de Cloudflare (no sirve el OAuth de `wrangler login` para esta API)."
+      );
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 const API = "https://api.cloudflare.com/client/v4";
 
 const gatewayId = (process.env.AI_GATEWAY_ID || "ia-agent-worker-llm").trim();

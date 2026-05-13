@@ -11,6 +11,7 @@
     "studio:check": "node ./scripts/studio-check.mjs",
     "smoke:worker": "node ./scripts/smoke-worker.mjs",
     "provision:ai-gateway": "node ./scripts/provision-ai-gateway.mjs",
+    "check:ai-gateway": "node ./scripts/cf-ai-gateway-status.mjs",
     "rotate:bff-secret": "node ./scripts/rotate-bff-secret.mjs",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create ia-agent-db",
