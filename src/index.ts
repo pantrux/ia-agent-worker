@@ -3,6 +3,7 @@ import { Command } from "@langchain/langgraph";
 import type { Env } from "./env.js";
 import { buildGraph } from "./graph.js";
 import { logWorkerAccess } from "./access-log.js";
+import { verifyBffApiAuth, type BffAuthFailureReason } from "./bff-auth.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
@@ -33,6 +34,19 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
 function jsonResponse(data: unknown, status: number, request: Request, env: Env): Response {
   const headers = { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(request, env) };
   return new Response(JSON.stringify(data), { status, headers });
+}
+
+function jsonBffUnauthorized(request: Request, env: Env, t0: number, reason: BffAuthFailureReason): Response {
+  const res = jsonResponse({ error: "No autorizado" }, 401, request, env);
+  res.headers.set("WWW-Authenticate", 'Bearer realm="bff"');
+  logWorkerAccess(request, env, {
+    operation: "bff_auth",
+    status: res.status,
+    durationMs: Date.now() - t0,
+    requestTs: new Date(t0).toISOString(),
+    error: reason,
+  });
+  return res;
 }
 
 export default {
@@ -66,10 +80,14 @@ export default {
     }
 
     if (path === "/api/chat" && request.method === "POST") {
+      const auth = verifyBffApiAuth(request, env);
+      if (!auth.ok) return jsonBffUnauthorized(request, env, t0, auth.reason);
       return handleChat(request, env);
     }
 
     if (path === "/api/chat/resume" && request.method === "POST") {
+      const auth = verifyBffApiAuth(request, env);
+      if (!auth.ok) return jsonBffUnauthorized(request, env, t0, auth.reason);
       return handleResume(request, env);
     }
 

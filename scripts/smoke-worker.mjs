@@ -5,6 +5,7 @@
  *
  * Opcional:
  *   SMOKE_INCLUDE_CHAT=1 — además POST /api/chat (cuesta tokens; el Worker debe tener COPILOT_GITHUB_TOKEN).
+ *   WORKER_SMOKE_BFF_TOKEN — si el Worker tiene secreto BFF_API_TOKEN, mismo valor aquí para enviar Authorization: Bearer.
  *
  * Uso local: WORKER_SMOKE_URL=https://... workers.dev node scripts/smoke-worker.mjs
  */
@@ -63,11 +64,14 @@ async function postChat() {
   const url = `${base}/api/chat`;
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), 120000);
+  const headers = { "Content-Type": "application/json" };
+  const bff = process.env.WORKER_SMOKE_BFF_TOKEN?.trim();
+  if (bff) headers["Authorization"] = `Bearer ${bff}`;
   try {
     const r = await fetch(url, {
       method: "POST",
       signal: ac.signal,
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         message: "Responde solo con la palabra exacta: PONG",
       }),

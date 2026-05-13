@@ -34,6 +34,7 @@ jobs:
         env:
           WORKER_SMOKE_URL: ${{ vars.WORKER_SMOKE_URL }}
           SMOKE_INCLUDE_CHAT: ${{ vars.SMOKE_INCLUDE_CHAT }}
+          WORKER_SMOKE_BFF_TOKEN: ${{ secrets.WORKER_SMOKE_BFF_TOKEN }}
         run: |
           if [ -z "${WORKER_SMOKE_URL}" ]; then
             echo "::error::Falta la variable de repositorio WORKER_SMOKE_URL (Settings → Secrets and variables → Actions → Variables). Ejemplo: https://ia-agent-worker.<account>.workers.dev"

@@ -18,6 +18,9 @@ OPENAI_API_BASE = "https://models.github.ai/inference"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-demo"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
+# Secreto opcional del BFF (A2): si existe, POST /api/chat y /api/chat/resume exigen `Authorization: Bearer …`
+#   npx wrangler secret put BFF_API_TOKEN
+#   npx wrangler secret put BFF_API_TOKEN --env preview
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
 
@@ -37,4 +40,5 @@ OPENAI_API_BASE = "https://models.github.ai/inference"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-preview"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
+# Mismo secreto opcional BFF en preview: `wrangler secret put BFF_API_TOKEN --env preview`
 DEPLOYMENT_ENV = "preview"
