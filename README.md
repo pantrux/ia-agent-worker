@@ -138,6 +138,21 @@ npx wrangler d1 execute ia-agent-db --file=seed.sql
 npx wrangler deploy
 ```
 
+### Entorno `preview` (Fase A — LangSmith / metadata)
+
+En [`wrangler.toml`](wrangler.toml) existe **`[env.preview]`** (`ia-agent-worker-preview`). En Wrangler, **`vars` no se heredan** entre entornos: `[env.preview.vars]` repite las mismas claves que producción y cambia `DEPLOYMENT_ENV` y `LANGSMITH_PROJECT` para LangSmith.
+
+```bash
+# Desplegar el Worker de preview
+npx wrangler deploy --env preview
+
+# Secretos por entorno (mismos nombres que en prod, valores pueden ser distintos)
+npx wrangler secret put COPILOT_GITHUB_TOKEN --env preview
+npx wrangler secret put LANGSMITH_API_KEY --env preview
+```
+
+La URL pública será `https://ia-agent-worker-preview.<subdominio>.workers.dev`. Úsala en `WORKER_SMOKE_URL` del CI si quieres validar preview en lugar de prod.
+
 Sin Docker. Sin plan Workers Paid. Sin Containers.
 
 ## CI: smoke remoto (GitHub Actions)
