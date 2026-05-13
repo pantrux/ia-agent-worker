@@ -4,4 +4,8 @@ export interface Env {
   ALLOWED_ORIGINS: string;
   COPILOT_MODEL: string;
   OPENAI_API_BASE: string;
+  LANGSMITH_API_KEY?: string;
+  LANGSMITH_TRACING?: string;
+  LANGSMITH_PROJECT?: string;
+  LANGCHAIN_CALLBACKS_BACKGROUND?: string;
 }
