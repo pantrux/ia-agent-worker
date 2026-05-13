@@ -82,7 +82,7 @@
   </header>
 
   <div class="diagram-wrap" role="img" aria-label="Diagrama de arquitectura del ecosistema Orquesta (serverless)">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1125" role="presentation">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1210" role="presentation">
       <defs>
         <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L7,3 z" fill="#94a3b8" />
@@ -98,6 +98,9 @@
         </marker>
         <marker id="arrow-emerald" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L7,3 z" fill="#10b981" />
+        </marker>
+        <marker id="arrow-amber" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L7,3 z" fill="#f59e0b" />
         </marker>
       </defs>
 
@@ -289,72 +292,87 @@
         Deploy: push a main → Workers Builds CI ejecuta <tspan font-family="ui-monospace, Consolas, monospace">wrangler deploy</tspan>
       </text>
 
+      <!-- ─────────── AI GATEWAY LAYER (visible) ─────────── -->
+      <rect x="120" y="838" width="1000" height="78" rx="14"
+            fill="#f59e0b" fill-opacity="0.14" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.85" />
+      <text x="620" y="862" text-anchor="middle" font-size="14" font-weight="700" fill="#d97706"
+            font-family="system-ui, sans-serif">
+        Cloudflare AI Gateway — capa opcional (LLM)
+      </text>
+      <text x="620" y="882" text-anchor="middle" font-size="9.5" fill="currentColor">
+        Base OpenAI-compat: <tspan font-family="ui-monospace, Consolas, monospace">…/v1/{account}/{gateway}/compat</tspan>
+        · con <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_PROVIDER_SLUG</tspan> el cuerpo usa modelo <tspan font-family="ui-monospace, Consolas, monospace">custom-{slug}/…</tspan>
+      </text>
+      <text x="620" y="900" text-anchor="middle" font-size="9" fill="#888">
+        Sin <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_ACCOUNT_ID</tspan> / <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_ID</tspan> el Worker llama directo a <tspan font-family="ui-monospace, Consolas, monospace">OPENAI_API_BASE</tspan> (p. ej. GitHub Models).
+      </text>
+
       <!-- ─────────── EXTERNAL SERVICES ─────────── -->
-      <text x="620" y="845" text-anchor="middle" font-size="13" font-weight="700" fill="#94a3b8">
+      <text x="620" y="928" text-anchor="middle" font-size="13" font-weight="700" fill="#94a3b8">
         Servicios externos
       </text>
 
       <!-- D1 -->
-      <rect x="40" y="870" width="380" height="140" rx="12"
+      <rect x="40" y="948" width="380" height="152" rx="12"
             fill="#10b981" fill-opacity="0.07" stroke="#10b981" stroke-opacity="0.45" />
-      <text x="230" y="896" text-anchor="middle" font-size="12" font-weight="700" fill="#34d399">
+      <text x="230" y="974" text-anchor="middle" font-size="12" font-weight="700" fill="#34d399">
         Cloudflare D1 — ia-agent-db
       </text>
-      <text x="230" y="915" text-anchor="middle" font-size="10" fill="#888">SQLite serverless · binding env.DB</text>
+      <text x="230" y="993" text-anchor="middle" font-size="10" fill="#888">SQLite serverless · binding env.DB</text>
 
-      <line x1="60" y1="927" x2="400" y2="927" stroke="#10b981" stroke-opacity="0.25" />
+      <line x1="60" y1="1005" x2="400" y2="1005" stroke="#10b981" stroke-opacity="0.25" />
 
-      <text x="60" y="947" font-size="10" font-weight="600" fill="currentColor">CRM mock</text>
-      <text x="60" y="963" font-size="9" fill="#888">customers · orders · leads</text>
-      <text x="60" y="977" font-size="9" fill="#888">seed.sql (cust-001..003)</text>
+      <text x="60" y="1025" font-size="10" font-weight="600" fill="currentColor">CRM mock</text>
+      <text x="60" y="1041" font-size="9" fill="#888">customers · orders · leads</text>
+      <text x="60" y="1055" font-size="9" fill="#888">seed.sql (cust-001..003)</text>
 
-      <text x="230" y="947" font-size="10" font-weight="600" fill="currentColor">LangGraph checkpointer</text>
-      <text x="230" y="963" font-size="9" fill="#888">checkpoints · checkpoint_writes</text>
-      <text x="230" y="977" font-size="9" fill="#888">payload TEXT (JSON UTF-8)</text>
+      <text x="230" y="1025" font-size="10" font-weight="600" fill="currentColor">LangGraph checkpointer</text>
+      <text x="230" y="1041" font-size="9" fill="#888">checkpoints · checkpoint_writes</text>
+      <text x="230" y="1055" font-size="9" fill="#888">payload TEXT (JSON UTF-8)</text>
 
       <!-- GitHub Models -->
-      <rect x="440" y="870" width="380" height="140" rx="12"
+      <rect x="440" y="948" width="380" height="152" rx="12"
             fill="#a855f7" fill-opacity="0.07" stroke="#a855f7" stroke-opacity="0.45" />
-      <text x="630" y="896" text-anchor="middle" font-size="12" font-weight="700" fill="#c084fc">
+      <text x="630" y="974" text-anchor="middle" font-size="12" font-weight="700" fill="#c084fc">
         GitHub Models API
       </text>
-      <text x="630" y="915" text-anchor="middle" font-size="10" fill="#888">https://models.github.ai/inference</text>
+      <text x="630" y="993" text-anchor="middle" font-size="10" fill="#888">https://models.github.ai/inference</text>
 
-      <line x1="460" y1="927" x2="800" y2="927" stroke="#a855f7" stroke-opacity="0.25" />
+      <line x1="460" y1="1005" x2="800" y2="1005" stroke="#a855f7" stroke-opacity="0.25" />
 
-      <text x="630" y="947" text-anchor="middle" font-size="10" font-weight="600" fill="currentColor">
+      <text x="630" y="1025" text-anchor="middle" font-size="10" font-weight="600" fill="currentColor">
         Compatible OpenAI Chat Completions
       </text>
-      <text x="630" y="963" text-anchor="middle" font-size="8.8" fill="#888">
-        Opcional: Cloudflare AI Gateway <tspan font-family="ui-monospace, Consolas, monospace">…/compat</tspan> + modelo <tspan font-family="ui-monospace, Consolas, monospace">custom-{slug}/…</tspan> (vars <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_*</tspan>)
+      <text x="630" y="1045" text-anchor="middle" font-size="9" fill="#888">
+        Destino upstream del chat (OpenAI-compat); el Worker puede apuntar aquí directo o vía la capa Gateway.
       </text>
-      <text x="630" y="979" text-anchor="middle" font-size="9" fill="#888">
+      <text x="630" y="1063" text-anchor="middle" font-size="9" fill="#888">
         modelo: openai/gpt-4o-mini (configurable)
       </text>
-      <text x="630" y="995" text-anchor="middle" font-size="9" fill="#888">
+      <text x="630" y="1079" text-anchor="middle" font-size="9" fill="#888">
         auth: token <tspan font-family="ui-monospace, Consolas, monospace">gh auth token</tspan> (Bearer)
       </text>
-      <text x="630" y="1010" text-anchor="middle" font-size="9" fill="#888">
+      <text x="630" y="1094" text-anchor="middle" font-size="9" fill="#888">
         copilot-token.ts: passthrough si no es endpoint Copilot
       </text>
 
       <!-- GitHub -->
-      <rect x="840" y="870" width="360" height="140" rx="12"
+      <rect x="840" y="948" width="360" height="152" rx="12"
             fill="#94a3b8" fill-opacity="0.08" stroke="#94a3b8" stroke-opacity="0.45" />
-      <text x="1020" y="896" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">
+      <text x="1020" y="974" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">
         GitHub + LangSmith
       </text>
 
-      <line x1="860" y1="915" x2="1180" y2="915" stroke="#94a3b8" stroke-opacity="0.25" />
+      <line x1="860" y1="993" x2="1180" y2="993" stroke="#94a3b8" stroke-opacity="0.25" />
 
-      <text x="860" y="935" font-size="10" font-weight="600" fill="currentColor">LangSmith (observabilidad)</text>
-      <text x="860" y="950" font-size="9" fill="#888">runs/traces + filtros por thread_id y operation</text>
+      <text x="860" y="1013" font-size="10" font-weight="600" fill="currentColor">LangSmith (observabilidad)</text>
+      <text x="860" y="1028" font-size="9" fill="#888">runs/traces + filtros por thread_id y operation</text>
 
-      <text x="860" y="970" font-size="10" font-weight="600" fill="currentColor">pantrux/aaas-landing</text>
-      <text x="860" y="985" font-size="9" fill="#888">push main → Cloudflare Pages</text>
+      <text x="860" y="1048" font-size="10" font-weight="600" fill="currentColor">pantrux/aaas-landing</text>
+      <text x="860" y="1063" font-size="9" fill="#888">push main → Cloudflare Pages</text>
 
-      <text x="860" y="1005" font-size="10" font-weight="600" fill="currentColor">pantrux/ia-agent-worker</text>
-      <text x="1020" y="1005" font-size="9" fill="#888">push main → Workers Builds (deploy)</text>
+      <text x="860" y="1083" font-size="10" font-weight="600" fill="currentColor">pantrux/ia-agent-worker</text>
+      <text x="1020" y="1083" font-size="9" fill="#888">push main → Workers Builds (deploy)</text>
 
       <!-- ─────────── ARROWS ─────────── -->
       <!-- User → Pages -->
@@ -368,58 +386,66 @@
       <text x="850" y="170" text-anchor="middle" font-size="9.5" fill="#fb923c">POST /api/chat (CORS)</text>
 
       <!-- Worker → D1 -->
-      <path d="M 770 820 C 600 840, 360 852, 235 868" fill="none"
+      <path d="M 770 820 C 600 880, 360 920, 235 948" fill="none"
             stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-emerald)" />
-      <text x="500" y="838" text-anchor="middle" font-size="9.5" fill="#34d399">CRM SQL · checkpoints</text>
+      <text x="500" y="888" text-anchor="middle" font-size="9.5" fill="#34d399">CRM SQL · checkpoints</text>
 
-      <!-- Worker → GitHub Models -->
-      <path d="M 920 820 C 880 838, 760 852, 640 868" fill="none"
-            stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrow-purple)" />
-      <text x="780" y="848" text-anchor="middle" font-size="9.5" fill="#c084fc">LLM inference (Gateway opc.)</text>
+      <!-- Worker → AI Gateway (LLM saliente) -->
+      <path d="M 920 818 L 920 838" fill="none"
+            stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-amber)" />
+      <text x="938" y="832" font-size="9" fill="#d97706">LLM →</text>
+
+      <!-- AI Gateway → GitHub Models -->
+      <path d="M 620 916 C 620 932 630 940 630 948" fill="none"
+            stroke="#a855f7" stroke-width="1.6" marker-end="url(#arrow-purple)" />
+      <text x="620" y="938" text-anchor="middle" font-size="9" fill="#c084fc">OpenAI-compat → upstream</text>
 
       <!-- GitHub → Pages -->
-      <path d="M 990 870 C 800 720, 460 660, 310 622" fill="none"
+      <path d="M 990 948 C 800 720, 460 660, 310 622" fill="none"
             stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow-gray)" />
 
       <!-- GitHub → Worker -->
-      <path d="M 1050 870 C 1100 820, 1140 810, 1130 820" fill="none"
+      <path d="M 1050 948 C 1100 820, 1140 810, 1130 820" fill="none"
             stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow-gray)" />
       <text x="1170" y="838" text-anchor="end" font-size="9" fill="#94a3b8">CI auto-deploy + telemetry</text>
 
       <!-- ─────────── LEGEND ─────────── -->
       <g font-size="10" font-family="system-ui, sans-serif">
-        <rect x="40" y="1030" width="1160" height="32" rx="6"
+        <rect x="40" y="1118" width="1160" height="34" rx="6"
               fill="currentColor" fill-opacity="0.03" />
-        <circle cx="60" cy="1046" r="5" fill="#22c55e" opacity="0.6" />
-        <text x="72" y="1050" fill="currentColor">Usuario</text>
+        <circle cx="60" cy="1135" r="5" fill="#22c55e" opacity="0.6" />
+        <text x="72" y="1139" fill="currentColor">Usuario</text>
 
-        <circle cx="148" cy="1046" r="5" fill="#6366f1" opacity="0.6" />
-        <text x="160" y="1050" fill="currentColor">Cloudflare Pages (landing)</text>
+        <circle cx="148" cy="1135" r="5" fill="#6366f1" opacity="0.6" />
+        <text x="160" y="1139" fill="currentColor">Cloudflare Pages (landing)</text>
 
-        <circle cx="328" cy="1046" r="5" fill="#f97316" opacity="0.6" />
-        <text x="340" y="1050" fill="currentColor">Cloudflare Worker (agente)</text>
+        <circle cx="328" cy="1135" r="5" fill="#f97316" opacity="0.6" />
+        <text x="340" y="1139" fill="currentColor">Cloudflare Worker (agente)</text>
 
-        <circle cx="520" cy="1046" r="5" fill="#10b981" opacity="0.6" />
-        <text x="532" y="1050" fill="currentColor">Cloudflare D1</text>
+        <circle cx="505" cy="1135" r="5" fill="#f59e0b" opacity="0.75" />
+        <text x="517" y="1139" fill="currentColor">AI Gateway (opcional)</text>
 
-        <circle cx="635" cy="1046" r="5" fill="#a855f7" opacity="0.6" />
-        <text x="647" y="1050" fill="currentColor">LLM externo (GitHub Models)</text>
+        <circle cx="668" cy="1135" r="5" fill="#10b981" opacity="0.6" />
+        <text x="680" y="1139" fill="currentColor">Cloudflare D1</text>
 
-        <line x1="830" y1="1046" x2="860" y2="1046" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4" />
-        <text x="868" y="1050" fill="currentColor">CI/CD</text>
+        <circle cx="788" cy="1135" r="5" fill="#a855f7" opacity="0.6" />
+        <text x="800" y="1139" fill="currentColor">LLM upstream (GitHub Models)</text>
 
-        <line x1="920" y1="1046" x2="950" y2="1046" stroke="#6366f1" stroke-width="1.6" />
-        <text x="958" y="1050" fill="currentColor">Flujo de datos (producción)</text>
+        <line x1="958" y1="1135" x2="988" y2="1135" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4" />
+        <text x="996" y="1139" fill="currentColor">CI/CD</text>
+
+        <line x1="1048" y1="1135" x2="1078" y2="1135" stroke="#6366f1" stroke-width="1.6" />
+        <text x="1086" y="1139" fill="currentColor">Flujo datos prod.</text>
       </g>
 
       <!-- ─────────── NOTES ─────────── -->
-      <rect x="40" y="1073" width="1160" height="36" rx="4"
+      <rect x="40" y="1162" width="1160" height="36" rx="4"
             fill="currentColor" fill-opacity="0.02" />
-      <text x="56" y="1088" font-size="9.5" fill="#888">
+      <text x="56" y="1177" font-size="9.5" fill="#888">
         Notas: CORS vía ALLOWED_ORIGINS. HITL: POST /api/chat/resume. LangSmith: LANGSMITH_API_KEY (Secrets).
       </text>
-      <text x="56" y="1103" font-size="9.5" fill="#888">
-        AI Gateway: vars AI_GATEWAY_*; BFF opcional: Authorization Bearer con BFF_API_TOKEN en /api/chat y /api/chat/resume.
+      <text x="56" y="1192" font-size="9.5" fill="#888">
+        La caja naranja «AI Gateway» resume el proxy OpenAI-compat; BFF opcional con BFF_API_TOKEN en /api/chat y /api/chat/resume.
       </text>
     </svg>
   </div>
@@ -427,7 +453,7 @@
   <footer>
     Diagrama mantenido en los repositorios <strong>pantrux/ia-agent-mvp</strong>,
     <strong>pantrux/aaas-landing</strong> y <strong>pantrux/ia-agent-worker</strong> bajo
-    <code>docs/architecture.html</code>. Última actualización: 2026-05-13 (AI Gateway /compat, BFF opcional, diagrama SVG).
+    <code>docs/architecture.html</code>. Última actualización: 2026-05-13 — capa explícita AI Gateway en el SVG + BFF opcional.
   </footer>
 </body>
 </html>
