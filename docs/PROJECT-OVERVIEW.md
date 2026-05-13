@@ -53,6 +53,10 @@ Navegador
                                     └─ ChatOpenAI → GitHub Models API
                                                     https://models.github.ai/inference
                                                     modelo: openai/gpt-4o-mini
+                                    │
+                                    └─ LangSmith Tracing API
+                                                    runs/traces con metadata
+                                                    (thread_id, operation, runtime)
 ```
 
 Notas:
@@ -60,6 +64,7 @@ Notas:
 - El cliente del chat **llama al Worker directamente** (no hay Pages Functions de proxy). El Worker autoriza orígenes con `ALLOWED_ORIGINS`.
 - D1 alberga tanto la **simulación CRM** como los **checkpoints** de LangGraph (mismos esquemas, base `ia-agent-db`).
 - Autenticación al LLM: el secreto `COPILOT_GITHUB_TOKEN` es un token de `gh auth token`; el código (`src/copilot-token.ts`) intenta intercambiar a token Copilot y, si la base URL no es la de Copilot, lo usa **tal cual** contra GitHub Models.
+- Observabilidad: el Worker publica trazas en LangSmith cuando está presente `LANGSMITH_API_KEY`; se adjuntan `metadata` y `tags` por operación (`chat` y `resume`).
 
 ---
 
@@ -97,6 +102,7 @@ Notas:
 - **LangGraph.js** (`@langchain/langgraph`) — StateGraph + Annotation API.
 - **@langchain/openai** — cliente Chat compatible OpenAI.
 - **@langchain/langgraph-checkpoint** — base abstracta para el checkpointer.
+- **langsmith** — tracing/observabilidad de ejecuciones LangChain/LangGraph.
 - **Cloudflare D1** (SQLite serverless) — binding `env.DB`.
 - **zod** — schemas de structured output para el router.
 
@@ -104,7 +110,7 @@ Notas:
 
 | Ruta | Función |
 |------|---------|
-| `src/index.ts` | Entry HTTP del Worker (`fetch`): CORS + ruteo (`/ping`, `/api/chat`, `/api/chat/resume`). |
+| `src/index.ts` | Entry HTTP del Worker (`fetch`): CORS + ruteo (`/ping`, `/api/chat`, `/api/chat/resume`) + inyección de `LANGSMITH_*` a runtime y metadata/tags por request. |
 | `src/graph.ts` | `buildGraph(env)`: compone el StateGraph con los nodos y aristas condicionales. |
 | `src/state.ts` | `GraphAnnotation` con `messages`, `industry`, `intent`, `toolState`, `validationPass`, `policyFeedback`, `retryCount`. |
 | `src/nodes/router.ts` | Clasificador de industria/intent con structured output (zod). |
@@ -160,11 +166,15 @@ database_id   = "..."
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
 COPILOT_MODEL   = "openai/gpt-4o-mini"
 OPENAI_API_BASE = "https://models.github.ai/inference"
+LANGSMITH_TRACING = "true"
+LANGSMITH_PROJECT = "ia-agent-worker-demo"
+LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 ```
 
 Secretos:
 
 - `COPILOT_GITHUB_TOKEN` — token GitHub (PAT o salida de `gh auth token`).
+- `LANGSMITH_API_KEY` — API key de LangSmith (custodiada en Cloudflare Secrets).
 
 ### 5.6 Despliegue
 
@@ -179,6 +189,7 @@ npx wrangler d1 execute ia-agent-db --remote --file=seed.sql
 
 # Subir secreto
 npx wrangler secret put COPILOT_GITHUB_TOKEN
+npx wrangler secret put LANGSMITH_API_KEY
 
 # Deploy
 npx wrangler deploy
@@ -244,6 +255,25 @@ Esto permite usar el mismo secreto contra cualquiera de los dos endpoints OpenAI
 
 ---
 
+## 8.1 Observabilidad con LangSmith
+
+Variables operativas en Worker:
+
+```
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=ia-agent-worker-demo
+LANGCHAIN_CALLBACKS_BACKGROUND=false
+LANGSMITH_API_KEY=<secret>
+```
+
+Comportamiento:
+
+1. Si no existe `LANGSMITH_API_KEY`, el tracing no se activa.
+2. En `POST /api/chat` y `POST /api/chat/resume` se envía metadata: `thread_id`, `operation`, `runtime`.
+3. Para evitar pérdida de callbacks en serverless, `LANGCHAIN_CALLBACKS_BACKGROUND=false`.
+
+---
+
 ## 9. CI/CD resumen
 
 | Repo | CI/CD | Disparador | Acción |
@@ -259,7 +289,8 @@ Esto permite usar el mismo secreto contra cualquiera de los dos endpoints OpenAI
 **Cloudflare Worker (`ia-agent-worker`):**
 
 - `[vars]` en `wrangler.toml`: `ALLOWED_ORIGINS`, `COPILOT_MODEL`, `OPENAI_API_BASE`.
-- Secret: `COPILOT_GITHUB_TOKEN`.
+- `[vars]` en `wrangler.toml`: `LANGSMITH_TRACING`, `LANGSMITH_PROJECT`, `LANGCHAIN_CALLBACKS_BACKGROUND`.
+- Secret: `COPILOT_GITHUB_TOKEN`, `LANGSMITH_API_KEY`.
 - Binding: `[[d1_databases]] binding = "DB"` apuntando a `ia-agent-db`.
 
 **Cloudflare Pages (`aaas-landing`):**
