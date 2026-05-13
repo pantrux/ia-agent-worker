@@ -32,7 +32,7 @@
       padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
     }
     header {
-      max-width: 1240px;
+      max-width: 1580px;
       margin: 0 auto 1.25rem;
     }
     h1 {
@@ -48,7 +48,7 @@
       max-width: 78ch;
     }
     .diagram-wrap {
-      max-width: 1240px;
+      max-width: 1580px;
       margin: 0 auto;
       background: var(--card);
       border-radius: 14px;
@@ -61,7 +61,7 @@
       height: auto;
     }
     footer {
-      max-width: 1240px;
+      max-width: 1580px;
       margin: 1.25rem auto 0;
       font-size: 0.85rem;
       color: var(--muted);
@@ -82,360 +82,161 @@
   </header>
 
   <div class="diagram-wrap" role="img" aria-label="Diagrama de arquitectura del ecosistema Orquesta (serverless)">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1175" role="presentation">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 1360" role="presentation">
       <defs>
-        <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L7,3 z" fill="#94a3b8" />
-        </marker>
-        <marker id="arrow-indigo" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L7,3 z" fill="#6366f1" />
-        </marker>
-        <marker id="arrow-orange" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L7,3 z" fill="#f97316" />
-        </marker>
-        <marker id="arrow-purple" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L7,3 z" fill="#a855f7" />
-        </marker>
-        <marker id="arrow-emerald" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L7,3 z" fill="#10b981" />
-        </marker>
-        <marker id="arrow-amber" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L7,3 z" fill="#f59e0b" />
-        </marker>
-        <marker id="arrow-cyan" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L0,6 L7,3 z" fill="#06b6d4" />
-        </marker>
+        <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#94a3b8" /></marker>
+        <marker id="arrow-indigo" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#6366f1" /></marker>
+        <marker id="arrow-orange" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#f97316" /></marker>
+        <marker id="arrow-purple" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#a855f7" /></marker>
+        <marker id="arrow-emerald" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#10b981" /></marker>
+        <marker id="arrow-amber" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#f59e0b" /></marker>
+        <marker id="arrow-cyan" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#06b6d4" /></marker>
       </defs>
 
-      <!-- ─────────── HEADER ─────────── -->
-      <text x="620" y="34" text-anchor="middle" font-size="20" font-weight="700"
-            fill="currentColor" font-family="system-ui, sans-serif">
-        Orquesta — Arquitectura serverless
-      </text>
-      <text x="620" y="58" text-anchor="middle" font-size="12" fill="#888"
-            font-family="system-ui, sans-serif">
-        aaas-landing (Cloudflare Pages) + ia-agent-worker (Cloudflare Worker + D1) · Mayo 2026
-      </text>
+      <text x="780" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="currentColor" font-family="system-ui, sans-serif">Orquesta — Arquitectura serverless</text>
+      <text x="780" y="64" text-anchor="middle" font-size="13" fill="#888" font-family="system-ui, sans-serif">aaas-landing (Pages) + ia-agent-worker (Worker + D1) · 2026</text>
 
-      <!-- ─────────── USER ─────────── -->
-      <rect x="510" y="90" width="220" height="64" rx="32"
-            fill="#22c55e" fill-opacity="0.12" stroke="#22c55e" stroke-opacity="0.55" stroke-width="1.5" />
-      <text x="620" y="118" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">
-        Navegador del usuario
-      </text>
-      <text x="620" y="136" text-anchor="middle" font-size="10" fill="#888">
-        HTML/JS estático · fetch /api/chat
-      </text>
+      <rect x="600" y="92" width="360" height="72" rx="36" fill="#22c55e" fill-opacity="0.1" stroke="#22c55e" stroke-opacity="0.5" stroke-width="1.5" />
+      <text x="780" y="128" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">Navegador del usuario</text>
+      <text x="780" y="148" text-anchor="middle" font-size="11" fill="#888">HTML estático · fetch /api/chat</text>
 
-      <!-- ─────────── PAGES COLUMN (left) ─────────── -->
-      <rect x="40" y="200" width="540" height="420" rx="14"
-            fill="#6366f1" fill-opacity="0.06" stroke="#6366f1" stroke-width="1.5" stroke-opacity="0.55" />
-      <text x="310" y="227" text-anchor="middle" font-size="14" font-weight="700" fill="#818cf8">
-        Cloudflare Pages
-      </text>
-      <text x="310" y="245" text-anchor="middle" font-size="10" fill="#888">
-        repo: pantrux/aaas-landing · Next.js 15 · export estático
-      </text>
+      <!-- PAGES -->
+      <rect x="72" y="210" width="680" height="628" rx="16" fill="#6366f1" fill-opacity="0.07" stroke="#6366f1" stroke-width="1.5" stroke-opacity="0.55" />
+      <text x="412" y="242" text-anchor="middle" font-size="16" font-weight="700" fill="#818cf8">Cloudflare Pages</text>
+      <text x="412" y="264" text-anchor="middle" font-size="11" fill="#888">pantrux/aaas-landing · Next.js 15 · export estático</text>
 
-      <!-- Pages > Sitio público -->
-      <rect x="60" y="265" width="500" height="68" rx="8"
-            fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.18" />
-      <text x="310" y="288" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">
-        Sitio público (marketing) — /es · /en
-      </text>
-      <text x="310" y="306" text-anchor="middle" font-size="9.5" fill="#888">
-        Hero · Industrias · Plataforma · Pricing · Docs · CTA "Deploy Agent"
-      </text>
-      <text x="310" y="322" text-anchor="middle" font-size="9.5" fill="#888">
-        i18n con next-intl · Tailwind v4 + shadcn/ui
-      </text>
+      <rect x="96" y="280" width="632" height="76" rx="10" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.16" />
+      <text x="412" y="306" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Sitio público — /es · /en</text>
+      <text x="412" y="326" text-anchor="middle" font-size="10" fill="#888">Marketing · i18n · Tailwind · shadcn/ui</text>
+      <text x="412" y="344" text-anchor="middle" font-size="10" fill="#888">Hero · industrias · pricing · docs</text>
 
-      <!-- Pages > Cliente demo -->
-      <rect x="60" y="350" width="500" height="100" rx="8"
-            fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.18" />
-      <text x="310" y="373" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">
-        Cliente del chat — components/demo/agent-chat.tsx
-      </text>
-      <text x="310" y="391" text-anchor="middle" font-size="9.5" fill="#888">
-        Ruta /demo · LocalStorage thread_id · auto-scroll interno
-      </text>
-      <text x="310" y="408" text-anchor="middle" font-size="9.5" fill="#888">
-        POST AGENT_API_BASE + /api/chat  (CORS directo al Worker)
-      </text>
-      <text x="310" y="425" text-anchor="middle" font-size="9.5" fill="#888">
-        POST AGENT_API_BASE + /api/chat/resume  (HITL aprobar/denegar)
-      </text>
-      <text x="310" y="442" text-anchor="middle" font-size="9" fill="#94a3b8" font-style="italic">
-        AGENT_API_BASE hardcoded en lib/site.ts → ia-agent-worker.workers.dev
-      </text>
+      <rect x="96" y="368" width="632" height="112" rx="10" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.16" />
+      <text x="412" y="394" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Cliente demo — agent-chat.tsx</text>
+      <text x="412" y="416" text-anchor="middle" font-size="10" fill="#888">/demo · thread_id en localStorage</text>
+      <text x="412" y="434" text-anchor="middle" font-size="10" fill="#888">POST al Worker: /api/chat y /api/chat/resume (HITL)</text>
+      <text x="412" y="454" text-anchor="middle" font-size="9.5" fill="#94a3b8" font-style="italic">AGENT_API_BASE → ia-agent-worker…workers.dev</text>
 
-      <!-- Pages > CI/CD -->
-      <rect x="60" y="467" width="500" height="68" rx="8"
-            fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.15" />
-      <text x="310" y="490" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">
-        Build &amp; Deploy
-      </text>
-      <text x="310" y="508" text-anchor="middle" font-size="9.5" fill="#888">
-        npm run build → out/ (HTML estático) · push a main → Cloudflare Pages CI
-      </text>
-      <text x="310" y="524" text-anchor="middle" font-size="9.5" fill="#888">
-        public/_redirects: "/" → "/es/"
-      </text>
+      <rect x="96" y="492" width="632" height="72" rx="10" fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.14" />
+      <text x="412" y="518" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">Build &amp; Deploy</text>
+      <text x="412" y="540" text-anchor="middle" font-size="10" fill="#888">npm run build → out/ · push main → Pages CI</text>
 
-      <!-- Pages > nota anterior -->
-      <rect x="60" y="552" width="500" height="55" rx="8"
-            fill="#94a3b8" fill-opacity="0.06" stroke="#94a3b8" stroke-opacity="0.25" stroke-dasharray="4 3" />
-      <text x="310" y="575" text-anchor="middle" font-size="10" font-weight="600" fill="#94a3b8">
-        (Histórico) Pages Functions de proxy
-      </text>
-      <text x="310" y="592" text-anchor="middle" font-size="9" fill="#888">
-        functions/api/chat/* — eliminado en favor de llamada directa al Worker
-      </text>
+      <rect x="96" y="576" width="632" height="60" rx="10" fill="#94a3b8" fill-opacity="0.06" stroke="#94a3b8" stroke-opacity="0.3" stroke-dasharray="5 4" />
+      <text x="412" y="600" text-anchor="middle" font-size="11" font-weight="600" fill="#94a3b8">Histórico: proxy Pages Functions</text>
+      <text x="412" y="620" text-anchor="middle" font-size="9.5" fill="#888">Eliminado — llamada directa al Worker</text>
 
-      <!-- ─────────── WORKER COLUMN (right) ─────────── -->
-      <rect x="640" y="200" width="560" height="722" rx="14"
-            fill="#f97316" fill-opacity="0.06" stroke="#f97316" stroke-width="1.5" stroke-opacity="0.55" />
-      <text x="920" y="227" text-anchor="middle" font-size="14" font-weight="700" fill="#fb923c">
-        Cloudflare Worker (serverless)
-      </text>
-      <text x="920" y="245" text-anchor="middle" font-size="10" fill="#888">
-        repo: pantrux/ia-agent-worker · TypeScript · LangGraph.js
-      </text>
+      <!-- WORKER -->
+      <rect x="808" y="210" width="680" height="628" rx="16" fill="#f97316" fill-opacity="0.07" stroke="#f97316" stroke-width="1.5" stroke-opacity="0.55" />
+      <text x="1148" y="242" text-anchor="middle" font-size="16" font-weight="700" fill="#fb923c">Cloudflare Worker</text>
+      <text x="1148" y="264" text-anchor="middle" font-size="11" fill="#888">pantrux/ia-agent-worker · TypeScript · LangGraph.js</text>
 
-      <!-- HTTP entry -->
-      <rect x="660" y="265" width="520" height="70" rx="8"
-            fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.18" />
-      <text x="920" y="288" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">
-        HTTP entry — src/index.ts
-      </text>
-      <text x="920" y="306" text-anchor="middle" font-size="9.5" fill="#888">
-        CORS (ALLOWED_ORIGINS) · OPTIONS preflight
-      </text>
-      <text x="920" y="322" text-anchor="middle" font-size="9.5" fill="#888">
-        POST /api/chat · POST /api/chat/resume · GET /ping
-      </text>
+      <rect x="832" y="280" width="632" height="74" rx="10" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.16" />
+      <text x="1148" y="306" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">HTTP — src/index.ts</text>
+      <text x="1148" y="326" text-anchor="middle" font-size="10" fill="#888">CORS · OPTIONS · /api/chat · /api/chat/resume · /ping</text>
 
-      <!-- StateGraph block -->
-      <rect x="660" y="350" width="520" height="260" rx="8"
-            fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.15" />
-      <text x="920" y="373" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">
-        StateGraph — LangGraph.js (src/graph.ts)
-      </text>
-      <text x="920" y="390" text-anchor="middle" font-size="9" fill="#888">
-        START → router → model ⇄ tools → validation → END  (con re-try condicional)
-      </text>
+      <rect x="832" y="366" width="632" height="268" rx="10" fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.14" />
+      <text x="1148" y="392" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">StateGraph — src/graph.ts</text>
+      <text x="1148" y="410" text-anchor="middle" font-size="9.5" fill="#888">router → model ⇄ tools → validation → END</text>
 
-      <!-- 4 nodos: router / model / tools / validation -->
-      <rect x="680" y="408" width="240" height="86" rx="6"
-            fill="#6366f1" fill-opacity="0.08" stroke="#6366f1" stroke-opacity="0.35" />
-      <text x="800" y="427" text-anchor="middle" font-size="10" font-weight="700" fill="#818cf8">router_node</text>
-      <text x="800" y="444" text-anchor="middle" font-size="9" fill="#888">classify industry · intent</text>
-      <text x="800" y="460" text-anchor="middle" font-size="9" fill="#888">structured output (zod)</text>
-      <text x="800" y="476" text-anchor="middle" font-size="9" fill="#888">retail · finance · health</text>
+      <rect x="852" y="428" width="296" height="88" rx="8" fill="#6366f1" fill-opacity="0.1" stroke="#6366f1" stroke-opacity="0.4" />
+      <text x="1000" y="452" text-anchor="middle" font-size="11" font-weight="700" fill="#818cf8">router_node</text>
+      <text x="1000" y="472" text-anchor="middle" font-size="9.5" fill="#888">industria · intent · zod</text>
+      <rect x="1164" y="428" width="296" height="88" rx="8" fill="#a855f7" fill-opacity="0.1" stroke="#a855f7" stroke-opacity="0.4" />
+      <text x="1312" y="452" text-anchor="middle" font-size="11" font-weight="700" fill="#c084fc">model_node</text>
+      <text x="1312" y="472" text-anchor="middle" font-size="9.5" fill="#888">ChatOpenAI · tools · → LLM abajo</text>
 
-      <rect x="930" y="408" width="240" height="86" rx="6"
-            fill="#a855f7" fill-opacity="0.08" stroke="#a855f7" stroke-opacity="0.35" />
-      <text x="1050" y="427" text-anchor="middle" font-size="10" font-weight="700" fill="#c084fc">model_node</text>
-      <text x="1050" y="444" text-anchor="middle" font-size="9" fill="#888">ChatOpenAI .bindTools()</text>
-      <text x="1050" y="460" text-anchor="middle" font-size="9" fill="#888">model + fallback</text>
-      <text x="1050" y="476" text-anchor="middle" font-size="9" fill="#888">→ LLM (Gateway opc. · ver abajo)</text>
+      <rect x="852" y="528" width="296" height="92" rx="8" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-opacity="0.4" />
+      <text x="1000" y="552" text-anchor="middle" font-size="11" font-weight="700" fill="#34d399">tools_node</text>
+      <text x="1000" y="572" text-anchor="middle" font-size="9.5" fill="#888">CRM tools · HITL en delete</text>
+      <rect x="1164" y="528" width="296" height="92" rx="8" fill="#f59e0b" fill-opacity="0.1" stroke="#f59e0b" stroke-opacity="0.4" />
+      <text x="1312" y="552" text-anchor="middle" font-size="11" font-weight="700" fill="#fbbf24">validation_node</text>
+      <text x="1312" y="572" text-anchor="middle" font-size="9.5" fill="#888">políticas · retry a model</text>
 
-      <rect x="680" y="508" width="240" height="92" rx="6"
-            fill="#10b981" fill-opacity="0.08" stroke="#10b981" stroke-opacity="0.35" />
-      <text x="800" y="527" text-anchor="middle" font-size="10" font-weight="700" fill="#34d399">tools_node</text>
-      <text x="800" y="544" text-anchor="middle" font-size="9" fill="#888">get_customer_data</text>
-      <text x="800" y="560" text-anchor="middle" font-size="9" fill="#888">list_recent_orders · update_order_status</text>
-      <text x="800" y="576" text-anchor="middle" font-size="9" fill="#888">create_lead · delete_customer_record</text>
-      <text x="800" y="592" text-anchor="middle" font-size="9" fill="#f97316">HITL: interrupt() en delete</text>
+      <rect x="832" y="632" width="632" height="58" rx="8" fill="#10b981" fill-opacity="0.07" stroke="#10b981" stroke-opacity="0.45" />
+      <text x="1148" y="656" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">D1Saver — checkpointer</text>
+      <text x="1148" y="674" text-anchor="middle" font-size="9.5" fill="#888">Persistencia en D1 · thread_id · HITL</text>
 
-      <rect x="930" y="508" width="240" height="92" rx="6"
-            fill="#f59e0b" fill-opacity="0.08" stroke="#f59e0b" stroke-opacity="0.35" />
-      <text x="1050" y="527" text-anchor="middle" font-size="10" font-weight="700" fill="#fbbf24">validation_node</text>
-      <text x="1050" y="544" text-anchor="middle" font-size="9" fill="#888">regex / keywords por industria</text>
-      <text x="1050" y="560" text-anchor="middle" font-size="9" fill="#888">retail · finance · health</text>
-      <text x="1050" y="576" text-anchor="middle" font-size="9" fill="#888">retry → model (max 1)</text>
-      <text x="1050" y="592" text-anchor="middle" font-size="9" fill="#888">policy_feedback en estado</text>
+      <rect x="832" y="700" width="632" height="72" rx="8" fill="currentColor" fill-opacity="0.03" stroke="currentColor" stroke-opacity="0.12" />
+      <text x="1148" y="722" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">Variables y secretos</text>
+      <text x="1148" y="742" text-anchor="middle" font-size="9" fill="#888">ALLOWED_ORIGINS · COPILOT_* · OPENAI_API_BASE · AI_GATEWAY_* · BFF_API_TOKEN · LANGSMITH_*</text>
 
-      <!-- D1Saver -->
-      <rect x="660" y="625" width="520" height="60" rx="8"
-            fill="#10b981" fill-opacity="0.06" stroke="#10b981" stroke-opacity="0.4" />
-      <text x="920" y="647" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">
-        D1Saver — checkpointer (BaseCheckpointSaver)
-      </text>
-      <text x="920" y="664" text-anchor="middle" font-size="9.5" fill="#888">
-        getTuple · list · put · putWrites  →  D1 SQLite (payload TEXT UTF-8)
-      </text>
-      <text x="920" y="679" text-anchor="middle" font-size="9.5" fill="#888">
-        thread_id por usuario; HITL persiste el estado de la interrupción
-      </text>
+      <rect x="832" y="782" width="632" height="48" rx="8" fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.12" />
+      <text x="1148" y="804" text-anchor="middle" font-size="10" fill="#888">Deploy CI: push main → Workers Builds · <tspan font-family="ui-monospace, Consolas, monospace">wrangler deploy</tspan></text>
+      <text x="1148" y="820" text-anchor="middle" font-size="9.5" fill="#67e8f9">Trazas LangSmith (SDK) → franja «LangSmith» debajo</text>
 
-      <!-- Variables -->
-      <rect x="660" y="697" width="520" height="68" rx="8"
-            fill="currentColor" fill-opacity="0.03" stroke="currentColor" stroke-opacity="0.12" />
-      <text x="920" y="717" text-anchor="middle" font-size="10" font-weight="600" fill="currentColor">
-        Variables y secretos (wrangler.toml / Secrets)
-      </text>
-      <text x="920" y="732" text-anchor="middle" font-size="8.5" fill="#888">
-        ALLOWED_ORIGINS · COPILOT_MODEL · OPENAI_API_BASE · COPILOT_GITHUB_TOKEN (secret)
-      </text>
-      <text x="920" y="748" text-anchor="middle" font-size="8.5" fill="#888">
-        AI_GATEWAY_ACCOUNT_ID · AI_GATEWAY_ID · AI_GATEWAY_PROVIDER_SLUG · AI_GATEWAY_API_TOKEN (opc.) · BFF_API_TOKEN (opc.) · DEPLOYMENT_ENV (opc.)
-      </text>
+      <!-- INTEGRACIÓN: fuera del Worker, ancho completo -->
+      <rect x="72" y="862" width="1416" height="148" rx="18" fill="#64748b" fill-opacity="0.06" stroke="#64748b" stroke-opacity="0.35" stroke-width="1.5" />
+      <text x="780" y="894" text-anchor="middle" font-size="15" font-weight="700" fill="currentColor">Integración opcional (no forma parte del isolate del Worker)</text>
+      <text x="780" y="914" text-anchor="middle" font-size="10.5" fill="#888">Mismo ancho que el diagrama · más aire entre bloques · lectura de izquierda a derecha</text>
 
-      <!-- Deploy + trazas (una sola franja; detalle en cajas inferiores) -->
-      <rect x="660" y="765" width="520" height="52" rx="8"
-            fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.14" />
-      <text x="920" y="786" text-anchor="middle" font-size="9.5" fill="#888">
-        Deploy: push a <tspan font-family="ui-monospace, Consolas, monospace">main</tspan> → Workers Builds · <tspan font-family="ui-monospace, Consolas, monospace">wrangler deploy</tspan>
-      </text>
-      <text x="920" y="804" text-anchor="middle" font-size="9" fill="#67e8f9">
-        Trazas LangSmith (SDK) → caja «LangSmith» debajo · <tspan font-family="ui-monospace, Consolas, monospace">LANGSMITH_*</tspan> en Secrets
-      </text>
+      <rect x="370" y="932" width="380" height="68" rx="12" fill="#f59e0b" fill-opacity="0.18" stroke="#f59e0b" stroke-width="2" />
+      <text x="560" y="958" text-anchor="middle" font-size="13" font-weight="700" fill="#d97706">Cloudflare AI Gateway</text>
+      <text x="560" y="978" text-anchor="middle" font-size="10" fill="currentColor">…/compat · modelo <tspan font-family="ui-monospace, Consolas, monospace">custom-{slug}/…</tspan></text>
+      <text x="560" y="992" text-anchor="middle" font-size="9" fill="#888">Proxy OpenAI-compat opcional</text>
 
-      <!-- Salidas del Worker: dos cajas alineadas (sin bandas a todo el ancho) -->
-      <rect x="668" y="822" width="504" height="96" rx="12"
-            fill="#f97316" fill-opacity="0.04" stroke="#f97316" stroke-opacity="0.35" />
-      <text x="920" y="838" text-anchor="middle" font-size="9" font-weight="600" fill="#fb923c">Salidas hacia servicios externos</text>
+      <rect x="810" y="932" width="380" height="68" rx="12" fill="#06b6d4" fill-opacity="0.16" stroke="#06b6d4" stroke-width="2" />
+      <text x="1000" y="958" text-anchor="middle" font-size="13" font-weight="700" fill="#0891b2">LangSmith</text>
+      <text x="1000" y="978" text-anchor="middle" font-size="10" fill="currentColor">runs / spans · <tspan font-family="ui-monospace, Consolas, monospace">LANGSMITH_PROJECT</tspan></text>
+      <text x="1000" y="992" text-anchor="middle" font-size="9" fill="#888">Observabilidad SaaS (async)</text>
 
-      <rect x="682" y="846" width="232" height="64" rx="10"
-            fill="#f59e0b" fill-opacity="0.16" stroke="#f59e0b" stroke-width="1.8" stroke-opacity="0.9" />
-      <text x="798" y="866" text-anchor="middle" font-size="11" font-weight="700" fill="#d97706">AI Gateway</text>
-      <text x="798" y="884" text-anchor="middle" font-size="8.5" fill="currentColor">…/compat · <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_*</tspan></text>
-      <text x="798" y="898" text-anchor="middle" font-size="8" fill="#888">Opcional · proxy OpenAI-compat</text>
+      <text x="780" y="1048" text-anchor="middle" font-size="15" font-weight="700" fill="#94a3b8">Servicios externos</text>
 
-      <rect x="926" y="846" width="232" height="64" rx="10"
-            fill="#06b6d4" fill-opacity="0.14" stroke="#06b6d4" stroke-width="1.8" stroke-opacity="0.85" />
-      <text x="1042" y="866" text-anchor="middle" font-size="11" font-weight="700" fill="#0891b2">LangSmith</text>
-      <text x="1042" y="884" text-anchor="middle" font-size="8.5" fill="currentColor">runs/spans · <tspan font-family="ui-monospace, Consolas, monospace">LANGSMITH_PROJECT</tspan></text>
-      <text x="1042" y="898" text-anchor="middle" font-size="8" fill="#888">SaaS observabilidad LLM</text>
+      <rect x="96" y="1072" width="432" height="148" rx="14" fill="#10b981" fill-opacity="0.08" stroke="#10b981" stroke-opacity="0.5" />
+      <text x="312" y="1104" text-anchor="middle" font-size="13" font-weight="700" fill="#34d399">Cloudflare D1</text>
+      <text x="312" y="1126" text-anchor="middle" font-size="10.5" fill="#888">ia-agent-db · CRM mock · checkpoints</text>
+      <text x="312" y="1148" text-anchor="middle" font-size="10" fill="#888">Binding <tspan font-family="ui-monospace, Consolas, monospace">env.DB</tspan></text>
 
-      <!-- ─────────── EXTERNAL SERVICES ─────────── -->
-      <text x="620" y="934" text-anchor="middle" font-size="13" font-weight="700" fill="#94a3b8">
-        Servicios externos
-      </text>
+      <rect x="576" y="1072" width="432" height="148" rx="14" fill="#a855f7" fill-opacity="0.08" stroke="#a855f7" stroke-opacity="0.5" />
+      <text x="792" y="1104" text-anchor="middle" font-size="13" font-weight="700" fill="#c084fc">GitHub Models API</text>
+      <text x="792" y="1126" text-anchor="middle" font-size="10.5" fill="#888">OpenAI-compat · Chat Completions</text>
+      <text x="792" y="1148" text-anchor="middle" font-size="10" fill="#888">Upstream del LLM</text>
 
-      <!-- D1 -->
-      <rect x="40" y="952" width="380" height="128" rx="12"
-            fill="#10b981" fill-opacity="0.07" stroke="#10b981" stroke-opacity="0.45" />
-      <text x="230" y="976" text-anchor="middle" font-size="12" font-weight="700" fill="#34d399">
-        Cloudflare D1 — ia-agent-db
-      </text>
-      <text x="230" y="994" text-anchor="middle" font-size="9.5" fill="#888">SQLite · binding <tspan font-family="ui-monospace, Consolas, monospace">env.DB</tspan></text>
+      <rect x="1056" y="1072" width="432" height="148" rx="14" fill="#94a3b8" fill-opacity="0.1" stroke="#94a3b8" stroke-opacity="0.45" />
+      <text x="1272" y="1104" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">GitHub — CI/CD</text>
+      <text x="1272" y="1128" text-anchor="middle" font-size="10" fill="#888">Repos · Actions (sin flechas en el dibujo)</text>
+      <text x="1272" y="1150" text-anchor="middle" font-size="9.5" fill="#888">Pages + Worker deploy desde <tspan font-family="ui-monospace, Consolas, monospace">main</tspan></text>
 
-      <line x1="60" y1="1004" x2="400" y2="1004" stroke="#10b981" stroke-opacity="0.25" />
+      <!-- Flechas: detrás de textos de cajas = primero en bloque, pero aquí van al final para legibilidad -->
+      <path d="M 700 172 Q 412 210 412 280" fill="none" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow-indigo)" />
+      <text x="520" y="210" font-size="10" fill="#818cf8">GET / sitio · /demo</text>
+      <path d="M 860 172 Q 1148 210 1148 280" fill="none" stroke="#f97316" stroke-width="2.2" marker-end="url(#arrow-orange)" />
+      <text x="1040" y="210" font-size="10" fill="#fb923c">POST /api/chat</text>
 
-      <text x="60" y="1020" font-size="9.5" font-weight="600" fill="currentColor">CRM mock</text>
-      <text x="60" y="1034" font-size="8.8" fill="#888">customers · orders · leads · seed</text>
+      <path d="M 852 660 C 420 720 200 900 312 1072" fill="none" stroke="#10b981" stroke-width="1.8" marker-end="url(#arrow-emerald)" />
+      <text x="260" y="900" font-size="10" fill="#34d399">D1 / CRM</text>
 
-      <text x="230" y="1020" font-size="9.5" font-weight="600" fill="currentColor">Checkpointer</text>
-      <text x="230" y="1034" font-size="8.8" fill="#888">checkpoints · writes · payload JSON</text>
+      <path d="M 1312 516 L 1312 580 L 560 580 L 560 932" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-amber)" />
+      <text x="900" y="568" font-size="10" fill="#d97706">LLM → Gateway</text>
 
-      <!-- GitHub Models -->
-      <rect x="440" y="952" width="380" height="128" rx="12"
-            fill="#a855f7" fill-opacity="0.07" stroke="#a855f7" stroke-opacity="0.45" />
-      <text x="630" y="976" text-anchor="middle" font-size="12" font-weight="700" fill="#c084fc">
-        GitHub Models API
-      </text>
-      <text x="630" y="994" text-anchor="middle" font-size="9.5" fill="#888"><tspan font-family="ui-monospace, Consolas, monospace">models.github.ai</tspan> · OpenAI-compat</text>
+      <path d="M 1320 804 L 1320 860 L 1000 860 L 1000 932" fill="none" stroke="#06b6d4" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#arrow-cyan)" />
+      <text x="1220" y="840" font-size="10" fill="#0891b2">trazas</text>
 
-      <line x1="460" y1="1004" x2="800" y2="1004" stroke="#a855f7" stroke-opacity="0.25" />
+      <path d="M 560 1000 L 560 1036 L 792 1036 L 792 1072" fill="none" stroke="#a855f7" stroke-width="1.8" marker-end="url(#arrow-purple)" />
+      <text x="660" y="1024" font-size="10" fill="#c084fc">OpenAI-compat</text>
 
-      <text x="630" y="1022" text-anchor="middle" font-size="9.5" font-weight="600" fill="currentColor">Chat Completions</text>
-      <text x="630" y="1038" text-anchor="middle" font-size="8.8" fill="#888">Modelo configurable · Bearer GitHub</text>
-      <text x="630" y="1054" text-anchor="middle" font-size="8.5" fill="#888">Destino LLM (directo o vía AI Gateway arriba)</text>
-
-      <!-- GitHub (solo CI/repos) -->
-      <rect x="840" y="952" width="360" height="128" rx="12"
-            fill="#94a3b8" fill-opacity="0.08" stroke="#94a3b8" stroke-opacity="0.45" />
-      <text x="1020" y="976" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">
-        GitHub — CI/CD
-      </text>
-
-      <line x1="860" y1="994" x2="1180" y2="994" stroke="#94a3b8" stroke-opacity="0.25" />
-
-      <text x="860" y="1016" font-size="9.5" font-weight="600" fill="currentColor">aaas-landing</text>
-      <text x="860" y="1031" font-size="8.8" fill="#888">push <tspan font-family="ui-monospace, Consolas, monospace">main</tspan> → Pages</text>
-
-      <text x="860" y="1052" font-size="9.5" font-weight="600" fill="currentColor">ia-agent-worker</text>
-      <text x="1020" y="1052" font-size="8.8" fill="#888">push <tspan font-family="ui-monospace, Consolas, monospace">main</tspan> → Workers Builds</text>
-
-      <text x="860" y="1070" font-size="8.5" fill="#888" font-style="italic">Flechas CI omitidas (evitan cruces). CI en GitHub Actions.</text>
-
-      <!-- ─────────── ARROWS (rutas ortogonales; sin cruces CI) ─────────── -->
-      <!-- User → Pages -->
-      <path d="M 540 154 C 460 174, 380 188, 320 198" fill="none"
-            stroke="#6366f1" stroke-width="1.6" marker-end="url(#arrow-indigo)" />
-      <text x="402" y="170" text-anchor="middle" font-size="9.5" fill="#818cf8">GET sitio + /demo</text>
-
-      <!-- User → Worker -->
-      <path d="M 700 154 C 800 174, 870 188, 920 198" fill="none"
-            stroke="#f97316" stroke-width="1.8" marker-end="url(#arrow-orange)" />
-      <text x="850" y="170" text-anchor="middle" font-size="9.5" fill="#fb923c">POST /api/chat (CORS)</text>
-
-      <!-- Worker → D1 (sale por la izquierda del grafo) -->
-      <path d="M 680 652 C 320 700 120 820 230 952" fill="none"
-            stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-emerald)" />
-      <text x="240" y="820" font-size="9" fill="#34d399">CRM · checkpoints</text>
-
-      <!-- model_node → AI Gateway (Manhattan; horizontal en y=615 entre grafo y D1Saver) -->
-      <path d="M 1050 494 L 1050 615 L 798 615 L 798 846" fill="none"
-            stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-amber)" />
-
-      <!-- Deploy/trazas → LangSmith (vertical desde franja deploy) -->
-      <path d="M 1042 818 L 1042 846" fill="none"
-            stroke="#06b6d4" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)" />
-      <text x="1055" y="818" font-size="8.5" fill="#0891b2">trazas</text>
-
-      <!-- AI Gateway → GitHub Models -->
-      <path d="M 798 910 L 798 932 L 630 932 L 630 952" fill="none"
-            stroke="#a855f7" stroke-width="1.6" marker-end="url(#arrow-purple)" />
-      <text x="700" y="924" text-anchor="middle" font-size="8.5" fill="#c084fc">LLM</text>
-
-      <!-- ─────────── LEGEND ─────────── -->
-      <g font-size="10" font-family="system-ui, sans-serif">
-        <rect x="40" y="1095" width="1160" height="34" rx="6"
-              fill="currentColor" fill-opacity="0.03" />
-        <circle cx="52" cy="1112" r="5" fill="#22c55e" opacity="0.6" />
-        <text x="62" y="1116" fill="currentColor">Usuario</text>
-
-        <circle cx="128" cy="1112" r="5" fill="#6366f1" opacity="0.6" />
-        <text x="138" y="1116" fill="currentColor">Pages</text>
-
-        <circle cx="188" cy="1112" r="5" fill="#f97316" opacity="0.6" />
-        <text x="198" y="1116" fill="currentColor">Worker</text>
-
-        <circle cx="268" cy="1112" r="5" fill="#f59e0b" opacity="0.75" />
-        <text x="278" y="1116" fill="currentColor">AI Gateway</text>
-
-        <circle cx="378" cy="1112" r="5" fill="#06b6d4" opacity="0.75" />
-        <text x="388" y="1116" fill="currentColor">LangSmith</text>
-
-        <circle cx="488" cy="1112" r="5" fill="#10b981" opacity="0.6" />
-        <text x="498" y="1116" fill="currentColor">D1</text>
-
-        <circle cx="548" cy="1112" r="5" fill="#a855f7" opacity="0.6" />
-        <text x="558" y="1116" fill="currentColor">LLM</text>
-
-        <line x1="628" y1="1112" x2="658" y2="1112" stroke="#06b6d4" stroke-width="1.4" stroke-dasharray="4 3" />
-        <text x="666" y="1116" fill="currentColor">Trazas async</text>
-
-        <line x1="778" y1="1112" x2="808" y2="1112" stroke="#6366f1" stroke-width="1.6" />
-        <text x="816" y="1116" fill="currentColor">Flujo datos</text>
+      <g font-size="11" font-family="system-ui, sans-serif">
+        <rect x="72" y="1250" width="1416" height="38" rx="8" fill="currentColor" fill-opacity="0.03" />
+        <circle cx="92" cy="1269" r="6" fill="#22c55e" opacity="0.65" /><text x="104" y="1274" fill="currentColor">Usuario</text>
+        <circle cx="200" cy="1269" r="6" fill="#6366f1" opacity="0.65" /><text x="212" y="1274" fill="currentColor">Pages</text>
+        <circle cx="290" cy="1269" r="6" fill="#f97316" opacity="0.65" /><text x="302" y="1274" fill="currentColor">Worker</text>
+        <circle cx="400" cy="1269" r="6" fill="#f59e0b" opacity="0.8" /><text x="412" y="1274" fill="currentColor">AI Gateway</text>
+        <circle cx="540" cy="1269" r="6" fill="#06b6d4" opacity="0.8" /><text x="552" y="1274" fill="currentColor">LangSmith</text>
+        <circle cx="660" cy="1269" r="6" fill="#10b981" opacity="0.65" /><text x="672" y="1274" fill="currentColor">D1</text>
+        <circle cx="740" cy="1269" r="6" fill="#a855f7" opacity="0.65" /><text x="752" y="1274" fill="currentColor">LLM</text>
+        <line x1="860" y1="1269" x2="896" y2="1269" stroke="#06b6d4" stroke-width="1.6" stroke-dasharray="5 3" /><text x="904" y="1274" fill="currentColor">Trazas async</text>
+        <line x1="1040" y1="1269" x2="1076" y2="1269" stroke="#6366f1" stroke-width="1.8" /><text x="1084" y="1274" fill="currentColor">Flujo datos</text>
       </g>
 
-      <!-- ─────────── NOTES ─────────── -->
-      <rect x="40" y="1138" width="1160" height="32" rx="4"
-            fill="currentColor" fill-opacity="0.02" />
-      <text x="56" y="1153" font-size="9.5" fill="#888">
-        CORS · HITL <tspan font-family="ui-monospace, Consolas, monospace">/api/chat/resume</tspan> · BFF opc. <tspan font-family="ui-monospace, Consolas, monospace">BFF_API_TOKEN</tspan>. AI Gateway y LangSmith son cajas bajo el Worker; sin flechas CI para reducir cruces.
-      </text>
+      <rect x="72" y="1300" width="1416" height="44" rx="8" fill="currentColor" fill-opacity="0.02" />
+      <text x="88" y="1322" font-size="10.5" fill="#888">Canvas ampliado (1560×1360). Integración Gateway + LangSmith fuera del recuadro Worker. Rutas en L. Sin flechas CI.</text>
+      <text x="88" y="1338" font-size="10.5" fill="#888">BFF opcional <tspan font-family="ui-monospace, Consolas, monospace">BFF_API_TOKEN</tspan> · HITL <tspan font-family="ui-monospace, Consolas, monospace">/api/chat/resume</tspan>.</text>
     </svg>
+
   </div>
 
   <footer>
     Diagrama mantenido en los repositorios <strong>pantrux/ia-agent-mvp</strong>,
     <strong>pantrux/aaas-landing</strong> y <strong>pantrux/ia-agent-worker</strong> bajo
-    <code>docs/architecture.html</code>. Última actualización: 2026-05-13 — diagrama reorganizado (cajas bajo Worker, rutas ortogonales, sin flechas CI cruzadas).
+    <code>docs/architecture.html</code>. Última actualización: 2026-05-13 — canvas ampliado, integración fuera del Worker, más márgenes y tipografía.
   </footer>
 </body>
 </html>
