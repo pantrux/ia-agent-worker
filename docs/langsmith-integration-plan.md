@@ -2,7 +2,7 @@
 
 Integración de **LangSmith** para depuración, monitorización y trazas del agente **LangGraph.js** desplegado como Cloudflare Worker (este repo).
 
-Contexto del ecosistema: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
+Contexto del ecosistema: [PROJECT-OVERVIEW.md](./PROJECT-OVERVIEW.md).
 
 ## Alcance
 
@@ -33,7 +33,7 @@ La orquestación corre **en el Worker**; LangSmith recibe trazas desde el mismo 
 
 ### 1) Dependencias (npm)
 
-Añadir **`langsmith`** al `package.json` (p. ej. `^0.3.0`, alineado con `@langchain/core` / `@langchain/langgraph` del proyecto).
+Añadir **`langsmith`** al `package.json` solo si se requieren imports directos del SDK; verificar primero con `npm ls langsmith` qué versión ya resuelve `@langchain/core` y alinear el rango para evitar conflictos.
 
 ### 2) Variables de entorno en Cloudflare
 
@@ -42,6 +42,7 @@ En **`wrangler.toml`** / dashboard:
 | Variable | Notas |
 |----------|--------|
 | `LANGSMITH_TRACING` | `true` |
+| `LANGCHAIN_CALLBACKS_BACKGROUND` | `false` en serverless para forzar flush de callbacks antes de terminar la request |
 | `LANGSMITH_API_KEY` | Secreto: `wrangler secret put LANGSMITH_API_KEY` |
 | `LANGSMITH_PROJECT` | Nombre del proyecto en LangSmith (puede ir en `[vars]`) |
 
@@ -61,6 +62,7 @@ La forma exacta del config depende de la versión de **LangGraph.js**; seguir la
 
 - HTTPS saliente hacia la API de LangSmith debe estar permitido.
 - Si el SDK asume solo Node, revisar soporte edge / `fetch` en Workers.
+- Añadir `compatibility_flags = ["nodejs_compat"]` en `wrangler.toml` si el SDK usa APIs de Node internamente (`buffer`, `https`, etc.).
 
 ### 5) CI/CD
 
