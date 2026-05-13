@@ -1,4 +1,6 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
+import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
+import type { D1Database } from "@cloudflare/workers-types";
 import { AIMessage } from "@langchain/core/messages";
 import { GraphAnnotation, type GraphState } from "./state.js";
 import type { Env } from "./env.js";
@@ -22,8 +24,8 @@ function routeAfterValidation(state: GraphState): "model" | typeof END {
   return "model";
 }
 
-export function buildGraph(env: Env) {
-  const checkpointer = new D1Saver(env.DB);
+export function buildGraph(env: Env, options?: { checkpointer?: BaseCheckpointSaver }) {
+  const checkpointer = options?.checkpointer ?? new D1Saver(env.DB as D1Database);
 
   const graph = new StateGraph(GraphAnnotation)
     .addNode("router", createRouterNode(env))
