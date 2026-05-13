@@ -29,11 +29,11 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 
 | ID | Entregable | PR / referencia | Estado | Notas |
 |----|------------|-----------------|--------|-------|
-| T0.1 | Documento roadmap CF + LangSmith (`ROADMAP-CF-LANGSMITH.md`) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | En curso | Incluido en el mismo PR que bases dev; tras merge, pasar a **Ejecutado**. |
-| T0.2 | Este tablero (`ROADMAP-IMPLEMENTATION.md`) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | En curso | Mantener vivo post-merge. |
-| T0.3 | Agent Server local + `langgraph dev` (Studio solo dev) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | En curso | Alineado ADR-04 MVP (sin Studio en prod). |
-| T0.4 | Abstracción CRM (`CrmDatabase` + sql.js local / D1 Worker) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | En curso | Comparte código Worker ↔ Node para Studio. |
-| T0.5 | Metadata LangSmith `deployment` (var `DEPLOYMENT_ENV`) en código Worker | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | En curso | Falta configurar vars por entorno en Wrangler (ver Fase A). |
+| T0.1 | Documento roadmap CF + LangSmith (`ROADMAP-CF-LANGSMITH.md`) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) (merge 2026-05-13) | Ejecutado | — |
+| T0.2 | Este tablero (`ROADMAP-IMPLEMENTATION.md`) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | Ejecutado | Actualizar filas por hito. |
+| T0.3 | Agent Server local + `langgraph dev` (Studio solo dev) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | Ejecutado | — |
+| T0.4 | Abstracción CRM (`CrmDatabase` + sql.js local / D1 Worker) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | Ejecutado | — |
+| T0.5 | Metadata LangSmith `deployment` (var `DEPLOYMENT_ENV`) en código Worker | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | Ejecutado | Vars por entorno: ver Fase A / `wrangler.toml` `[env.preview]`. |
 | T0.6 | CI smoke remoto (`worker-smoke.yml` + `scripts/smoke-worker.mjs`) | — | Ejecutado | Integrado en `main` (sin PR único de feature); variable `WORKER_SMOKE_URL` en GitHub. |
 
 ---
@@ -44,7 +44,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 |----|-----------------------------|-----------------|--------|-------|
 | A1 | Reglas WAF + rate limit `/api/chat`, `/api/chat/resume` | — | Pendiente | Acción principal en **dashboard Cloudflare** (§2.0 del roadmap). |
 | A2 | Access o JWT en BFF | — | Pendiente | |
-| A3 | Secretos + proyectos LangSmith prod/preview | — | Pendiente | `LANGSMITH_PROJECT` / keys por entorno; sin duplicar secretos en `[vars]`. |
+| A3 | Secretos + proyectos LangSmith prod/preview | [PR #4](https://github.com/pantrux/ia-agent-worker/pull/4) | En curso | Tras merge: ejecutar secretos `--env preview` y proyecto LangSmith `ia-agent-worker-preview`. |
 | A4 | Logs estructurados + retención; metadata `thread_id` / canal | — | Pendiente | Parcialmente cubierto por LangSmith; revisar logs CF Worker. |
 
 ---
@@ -100,5 +100,6 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | Fecha | Cambio |
 |-------|--------|
 | 2026-05-13 | Creación del tablero; T0.1–T0.5 ligados a PR #3; T0.6 smoke CI marcado Ejecutado en `main`. |
+| 2026-05-13 | Merge [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) a `main`; T0.1–T0.5 → **Ejecutado**. [PR #4](https://github.com/pantrux/ia-agent-worker/pull/4): A3 (Wrangler `preview` + vars). |
 
 Actualiza esta tabla al cierre de cada hito relevante.
