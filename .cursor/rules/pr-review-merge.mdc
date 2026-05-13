@@ -31,3 +31,4 @@ Hasta entonces: **no merge**; seguir iterando en la rama del PR.
 
 - Preferir **GitHub CLI** (`gh pr view`, `gh pr checks`, `gh api` para threads) cuando el entorno esté autenticado.
 - Tras merge, actualizar `docs/ROADMAP-IMPLEMENTATION.md` si aplica.
+- **Idioma:** título, descripción, comentarios en GitHub y documentación del PR en **español** (regla detallada en `pr-documentacion-espanol.mdc`).
