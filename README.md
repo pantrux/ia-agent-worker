@@ -245,6 +245,17 @@ Navegador
 
 ### AI Gateway (PoC B1)
 
+#### Opción A — Automático (recomendado)
+
+1. Crea un [API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) con permiso **Account → AI Gateway → Edit** (y lectura de cuenta si el asistente de tokens lo pide).
+2. Copia [`.env.ai-gateway.example`](.env.ai-gateway.example) a **`.env.ai-gateway.local`**, pon `CLOUDFLARE_API_TOKEN=…` (no versiones ese fichero; está en `.gitignore`).
+3. En la raíz del repo: `npm run provision:ai-gateway`  
+   Crea si no existen el gateway `ia-agent-worker-llm` y el custom provider `github-models` → `https://models.github.ai/inference`. Al final imprime los valores para pegar en el Worker.
+4. Añade en **[vars]** de `wrangler.toml` (o en el dashboard del Worker) las tres variables que muestra el script; despliega con `npm run deploy`.
+5. Prueba desde el frontend con el mismo `POST` a `/api/chat`; en **AI Gateway → tu gateway** deberías ver peticiones.
+
+#### Opción B — Manual (dashboard)
+
 1. En el dashboard de Cloudflare, crea un **AI Gateway** y anota **account id** + **gateway id** (segmentos de la URL `…/v1/{account}/{gateway}/compat`).
 2. Para **GitHub Models** (`OPENAI_API_BASE=https://models.github.ai/inference`), crea un **custom provider** cuyo `base_url` sea `https://models.github.ai/inference` y un **slug** (p. ej. `github-models`).
 3. En el Worker, define `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID` y, si usas custom provider, `AI_GATEWAY_PROVIDER_SLUG` igual al slug del paso 2. El código enviará el modelo como `slug/openai/gpt-4o-mini` cuando `COPILOT_MODEL` sea `openai/gpt-4o-mini`.

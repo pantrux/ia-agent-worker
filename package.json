@@ -10,6 +10,7 @@
     "studio:tunnel": "langgraphjs dev -h 0.0.0.0 -p 2024 --tunnel",
     "studio:check": "node ./scripts/studio-check.mjs",
     "smoke:worker": "node ./scripts/smoke-worker.mjs",
+    "provision:ai-gateway": "node ./scripts/provision-ai-gateway.mjs",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create ia-agent-db",
     "db:migrate": "wrangler d1 execute ia-agent-db --file=schema.sql",
