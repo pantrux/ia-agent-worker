@@ -65,8 +65,9 @@ export function resolveAiGatewayLlmConfig(
       };
     }
     const customPrefix = `custom-${slugClean}/`;
-    const upstreamModel = stripCustomProviderModelPrefix(model, slugClean);
-    const compatModel = model.startsWith(customPrefix) ? model : `${customPrefix}${upstreamModel}`;
+    const compatModel = model.startsWith(customPrefix)
+      ? model
+      : `${customPrefix}${stripCustomProviderModelPrefix(model, slugClean)}`;
     return {
       apiKey: upstream.apiKey,
       baseUrl,
