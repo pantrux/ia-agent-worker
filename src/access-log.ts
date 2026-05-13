@@ -12,8 +12,10 @@ export interface AccessLogFields {
   operation: AccessOperation;
   status: number;
   durationMs: number;
+  /** ISO del instante de entrada al handler (alinear con Logpush / ventanas temporales). */
+  requestTs: string;
   thread_id?: string;
-  /** Sin stack completo: solo mensaje corto si aplica */
+  /** Sin stack ni mensaje crudo: código o nombre corto si aplica. */
   error?: string;
 }
 
@@ -27,7 +29,7 @@ export function logWorkerAccess(request: Request, env: Env, fields: AccessLogFie
   const payload = {
     msg: "ia_agent_access",
     level: fields.status >= 500 ? "error" : fields.status >= 400 ? "warn" : "info",
-    ts: new Date().toISOString(),
+    ts: fields.requestTs,
     method: request.method,
     path: url.pathname,
     status: fields.status,

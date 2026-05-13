@@ -46,6 +46,7 @@ export default {
         operation: "cors_preflight",
         status: res.status,
         durationMs: Date.now() - t0,
+        requestTs: new Date(t0).toISOString(),
       });
       return res;
     }
@@ -55,7 +56,12 @@ export default {
 
     if (path === "/ping" && request.method === "GET") {
       const res = jsonResponse({ status: "ok", service: "ia-agent-worker" }, 200, request, env);
-      logWorkerAccess(request, env, { operation: "ping", status: res.status, durationMs: Date.now() - t0 });
+      logWorkerAccess(request, env, {
+        operation: "ping",
+        status: res.status,
+        durationMs: Date.now() - t0,
+        requestTs: new Date(t0).toISOString(),
+      });
       return res;
     }
 
@@ -68,7 +74,12 @@ export default {
     }
 
     const res = jsonResponse({ error: "Not found" }, 404, request, env);
-    logWorkerAccess(request, env, { operation: "not_found", status: res.status, durationMs: Date.now() - t0 });
+    logWorkerAccess(request, env, {
+      operation: "not_found",
+      status: res.status,
+      durationMs: Date.now() - t0,
+      requestTs: new Date(t0).toISOString(),
+    });
     return res;
   },
 } satisfies ExportedHandler<Env>;
@@ -112,11 +123,13 @@ function configureLangSmithEnv(env: Env): void {
 
 async function handleChat(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();
+  const requestTs = new Date(t0).toISOString();
   const finish = (res: Response, threadId?: string, err?: string) => {
     logWorkerAccess(request, env, {
       operation: "chat",
       status: res.status,
       durationMs: Date.now() - t0,
+      requestTs,
       thread_id: threadId,
       error: err,
     });
@@ -139,21 +152,22 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     return finish(jsonResponse({ error: "thread_id must be a valid UUID" }, 400, request, env));
   }
   const threadId = parsedThreadId ?? crypto.randomUUID();
-  configureLangSmithEnv(env);
-  const graph = buildGraph(env);
-  const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
-  const config = {
-    configurable: { thread_id: threadId },
-    metadata: {
-      thread_id: threadId,
-      operation: "chat",
-      runtime: "cloudflare-worker",
-      ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
-    },
-    tags: ["api:chat", "langsmith", ...deploymentTags],
-  };
 
   try {
+    configureLangSmithEnv(env);
+    const graph = buildGraph(env);
+    const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
+    const config = {
+      configurable: { thread_id: threadId },
+      metadata: {
+        thread_id: threadId,
+        operation: "chat",
+        runtime: "cloudflare-worker",
+        ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
+      },
+      tags: ["api:chat", "langsmith", ...deploymentTags],
+    };
+
     const result = await graph.invoke(
       { messages: [new HumanMessage(body.message)] },
       config
@@ -197,17 +211,20 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
       );
     }
     console.error("Chat error:", e);
-    return finish(jsonResponse({ error: String(e) }, 500, request, env), threadId, String(e));
+    const errCode = e instanceof Error ? e.name : "internal_error";
+    return finish(jsonResponse({ error: "Internal server error" }, 500, request, env), threadId, errCode);
   }
 }
 
 async function handleResume(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();
+  const requestTs = new Date(t0).toISOString();
   const finish = (res: Response, threadId?: string, err?: string) => {
     logWorkerAccess(request, env, {
       operation: "resume",
       status: res.status,
       durationMs: Date.now() - t0,
+      requestTs,
       thread_id: threadId,
       error: err,
     });
@@ -229,21 +246,21 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
     return finish(jsonResponse({ error: "thread_id must be a valid UUID" }, 400, request, env));
   }
 
-  configureLangSmithEnv(env);
-  const graph = buildGraph(env);
-  const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
-  const config = {
-    configurable: { thread_id: threadId },
-    metadata: {
-      thread_id: threadId,
-      operation: "resume",
-      runtime: "cloudflare-worker",
-      ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
-    },
-    tags: ["api:resume", "langsmith", ...deploymentTags],
-  };
-
   try {
+    configureLangSmithEnv(env);
+    const graph = buildGraph(env);
+    const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
+    const config = {
+      configurable: { thread_id: threadId },
+      metadata: {
+        thread_id: threadId,
+        operation: "resume",
+        runtime: "cloudflare-worker",
+        ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
+      },
+      tags: ["api:resume", "langsmith", ...deploymentTags],
+    };
+
     const result = await graph.invoke(
       new Command({ resume: { approved: body.approved ?? false } }),
       config
@@ -269,6 +286,7 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
     );
   } catch (e: unknown) {
     console.error("Resume error:", e);
-    return finish(jsonResponse({ error: String(e) }, 500, request, env), threadId, String(e));
+    const errCode = e instanceof Error ? e.name : "internal_error";
+    return finish(jsonResponse({ error: "Internal server error" }, 500, request, env), threadId, errCode);
   }
 }
