@@ -1,0 +1,27 @@
+{
+  "name": "ia-agent-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Serverless IA Agent (LangGraph.js) on Cloudflare Workers + D1",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create ia-agent-db",
+    "db:migrate": "wrangler d1 execute ia-agent-db --file=schema.sql",
+    "db:seed": "wrangler d1 execute ia-agent-db --file=seed.sql",
+    "db:migrate:local": "wrangler d1 execute ia-agent-db --local --file=schema.sql",
+    "db:seed:local": "wrangler d1 execute ia-agent-db --local --file=seed.sql"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3",
+    "@langchain/langgraph": "^0.2",
+    "@langchain/openai": "^0.5",
+    "zod": "^3.23"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260501",
+    "typescript": "^5.7",
+    "wrangler": "^4"
+  }
+}

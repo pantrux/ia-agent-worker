@@ -1,0 +1,17 @@
+name = "ia-agent-worker"
+main = "src/index.ts"
+compatibility_date = "2025-10-08"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ia-agent-db"
+database_id = "" # Set after running: npx wrangler d1 create ia-agent-db
+
+[vars]
+ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
+COPILOT_MODEL = "gpt-5.4-mini"
+OPENAI_API_BASE = "https://api.individual.githubcopilot.com"
