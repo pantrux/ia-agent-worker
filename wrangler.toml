@@ -24,6 +24,10 @@ LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
 
+# B1 AI Gateway (opcional): añade a [vars] AI_GATEWAY_ACCOUNT_ID y AI_GATEWAY_ID; opcional AI_GATEWAY_PROVIDER_SLUG.
+#   Secreto recomendado: npx wrangler secret put AI_GATEWAY_API_TOKEN (cabecera cf-aig-authorization).
+#   Proveedor custom hacia GitHub Models: https://developers.cloudflare.com/ai-gateway/configuration/custom-providers/
+
 # Worker separado para staging/preview (mismo D1 que prod por defecto — valorar D1 dedicado).
 [env.preview]
 name = "ia-agent-worker-preview"
@@ -41,4 +45,5 @@ LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-preview"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 # Mismo secreto opcional BFF en preview: `wrangler secret put BFF_API_TOKEN --env preview`
+# AI Gateway en preview: mismas vars opcionales que prod; `wrangler secret put AI_GATEWAY_API_TOKEN --env preview` si aplica.
 DEPLOYMENT_ENV = "preview"

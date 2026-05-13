@@ -1,9 +1,8 @@
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import type { GraphState, Industry } from "../state.js";
 import type { Env } from "../env.js";
-import { getCopilotToken } from "../copilot-token.js";
+import { createChatOpenAI } from "../llm-client.js";
 
 const RouteSchema = z.object({
   industry: z.enum(["retail", "finance", "health", "unknown"]).describe("Primary industry for this turn."),
@@ -43,13 +42,8 @@ function getLastUserText(messages: GraphState["messages"]): string {
   return "";
 }
 
-async function createLLM(env: Env): Promise<ChatOpenAI> {
-  const { apiKey, baseUrl } = await getCopilotToken(env.COPILOT_GITHUB_TOKEN, env.OPENAI_API_BASE);
-  return new ChatOpenAI({
-    model: env.COPILOT_MODEL || "openai/gpt-4o-mini",
-    apiKey,
-    configuration: { baseURL: baseUrl },
-  });
+async function createLLM(env: Env) {
+  return createChatOpenAI(env);
 }
 
 export function createRouterNode(env: Env) {

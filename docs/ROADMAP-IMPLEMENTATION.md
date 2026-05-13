@@ -53,7 +53,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 
 | ID | Entregable | PR / referencia | Estado | Notas |
 |----|------------|-----------------|--------|-------|
-| B1 | AI Gateway (PoC staging → prod) | — | Pendiente | ADR-05 MVP: PoC en esta fase. |
+| B1 | AI Gateway (PoC staging → prod) | — | En curso | PoC en código: `src/ai-gateway.ts`, `src/llm-client.ts`, README; vars opcionales `AI_GATEWAY_*`. Dashboard: custom provider → GitHub Models. Enlazar PR al fusionar. |
 | B2 | Métricas Worker + dashboards LangSmith | — | Pendiente | |
 | B3 | Dataset mínimo + eval en CI (más allá del smoke `/ping`) | — | Pendiente | El smoke actual no sustituye eval de calidad. |
 
@@ -107,6 +107,6 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | 2026-05-13 | Merge [PR #5](https://github.com/pantrux/ia-agent-worker/pull/5); A4 → **Ejecutado** (logs estructurados en Worker). |
 | 2026-05-13 | A2 en curso: autenticación Bearer BFF (`BFF_API_TOKEN`); checklist A1 en [A1-checklist-waf.md](./A1-checklist-waf.md). |
 | 2026-05-13 | Abierto [PR #6](https://github.com/pantrux/ia-agent-worker/pull/6) (A2 Bearer BFF + checklist A1). |
-| 2026-05-13 | Merge [PR #6](https://github.com/pantrux/ia-agent-worker/pull/6); A2 → **Ejecutado** (BFF Bearer + smoke). |
+| 2026-05-13 | B1: enrutado opcional Cloudflare AI Gateway (compat) + documentación; tablero B1 **En curso** hasta PR/merge. |
 
 Actualiza esta tabla al cierre de cada hito relevante.
