@@ -53,8 +53,8 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 
 | ID | Entregable | PR / referencia | Estado | Notas |
 |----|------------|-----------------|--------|-------|
-| B1 | AI Gateway (PoC staging → prod) | [PR #7](https://github.com/pantrux/ia-agent-worker/pull/7) (merge 2026-05-13); seguimiento **provider-specific** → ver fila B1b | Ejecutado | PoC inicial: compat `…/compat`. **B1b** corrige el enrutado con custom provider + GitHub Models. |
-| B1b | AI Gateway: ruta **provider-specific** para custom provider (GitHub Models) | [PR #8](https://github.com/pantrux/ia-agent-worker/pull/8) (merge 2026-05-13, `252def3`) | Ejecutado | El endpoint Unified `/compat` con `model: custom-{slug}/…` podía resolver a paths upstream inválidos (p. ej. 404). Con `AI_GATEWAY_PROVIDER_SLUG`, el cliente usa `…/v1/{cuenta}/{gateway}/custom-{slug}`; el SDK añade `/chat/completions` → upstream `https://models.github.ai/inference/chat/completions`. README + `provision-ai-gateway.mjs` alineados. `EXPOSE_CHAT_ERROR` opt-in en código y `.dev.vars` local (no en `[vars]` de prod). |
+| B1 | AI Gateway (PoC staging → prod) | [PR #7](https://github.com/pantrux/ia-agent-worker/pull/7) (merge 2026-05-13) | Ejecutado | PoC: enrutado opcional hacia `…/v1/{account}/{gateway}/compat`. |
+| B1b | AI Gateway + **custom provider** (GitHub Models) sin romper el SDK OpenAI | [PR #8](https://github.com/pantrux/ia-agent-worker/pull/8) (merge 2026-05-13); [PR #9](https://github.com/pantrux/ia-agent-worker/pull/9) (merge 2026-05-13) | Ejecutado | **Evolución:** PR #8 probó URL **provider-specific** `…/custom-{slug}`; LangSmith seguía con `MODEL_NOT_FOUND` / rutas upstream inválidas con el cliente OpenAI. **PR #9 (definitivo):** se mantiene **`/compat`** y el modelo pasa a `custom-{slugClean}/{modelo}` cuando hay `AI_GATEWAY_PROVIDER_SLUG` (patrón Cloudflare + OpenAI SDK). README + `ai-gateway.ts` + `provision-ai-gateway.mjs` alineados. |
 | B2 | Métricas Worker + dashboards LangSmith | — | Pendiente | |
 | B3 | Dataset mínimo + eval en CI (más allá del smoke `/ping`) | — | Pendiente | El smoke actual no sustituye eval de calidad. |
 
@@ -114,5 +114,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | 2026-05-13 | Merge [PR #8](https://github.com/pantrux/ia-agent-worker/pull/8) a `main` (`252def3`); **B1b** → **Ejecutado**. Greptile (último commit) sin bloqueos; checks smoke + Workers Builds en verde. |
 | 2026-05-13 | Script `check:ai-gateway` + workflow «Provision AI Gateway» (API Token); despliegue Worker desde `main` con código al día; pendiente aprovisionar AI Gateway en CF mientras `CLOUDFLARE_API_TOKEN` esté vacío en local/repo. |
 | 2026-05-13 | **Operación:** `AI_GATEWAY_*` comentado en `wrangler.toml` (prod/preview); LLM directo a GitHub Models; plantilla `.env` en disco (gitignored). Smoke `/api/chat` OK. Reactivar gateway tras `CLOUDFLARE_API_TOKEN` + `provision:ai-gateway`. |
+| 2026-05-13 | **Tokens:** scripts AI Gateway leen **`CF_AI_GATEWAY_API_TOKEN`** primero (evita que `CLOUDFLARE_API_TOKEN` en `.env` rompa `wrangler deploy` con OAuth). Workflow mapea secret `CLOUDFLARE_API_TOKEN` → `CF_AI_GATEWAY_API_TOKEN`. |
+| 2026-05-13 | Merge [PR #9](https://github.com/pantrux/ia-agent-worker/pull/9) a `main`: AI Gateway **/compat** + modelo `custom-{slug}/…` para custom provider; nit CodeRabbit (strip de prefijo solo al construir `compatModel`). **B1b** actualizado en tablero para reflejar la decisión final (ya no depende de la ruta `…/custom-{slug}` en runtime). |
 
 Actualiza esta tabla al cierre de cada hito relevante.

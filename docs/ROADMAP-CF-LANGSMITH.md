@@ -49,6 +49,10 @@ Aplicar en **reglas de zona** (recomendado) o complementar con lógica en Worker
 
 CORS hoy: `ALLOWED_ORIGINS` en Worker — endurecer en prod (sin `*`).
 
+### Nota de implementación — AI Gateway + custom provider (2026-05-13)
+
+La visión de **ADR-05** (gateway delante del LLM, observabilidad y políticas en CF) **no cambia**. Lo que se refinó en implementación fue el **contrato con el SDK OpenAI** cuando el upstream es un **custom provider** (p. ej. GitHub Models): la ruta recomendada quedó en **`…/compat`** con el modelo en forma **`custom-{slug}/{modelo}`**, en lugar de anclar el cliente solo en la URL **provider-specific** `…/custom-{slug}` (eso generaba resoluciones upstream inválidas con LangSmith). Detalle: merge [PR #9](https://github.com/pantrux/ia-agent-worker/pull/9) en `ia-agent-worker`.
+
 ---
 
 ## 2. Fases del roadmap (entregables y salidas)
@@ -129,7 +133,7 @@ Orden sugerido; asignar dueño en tu tablero.
 1. ~~**Cerrar ADR-03/04**~~ Hecho por defecto MVP en §5 (reabrir solo si cambian requisitos).
 2. **Inventario WAF**: rutas Worker en §2.0; añadir dominio del front cuando exista; aplicar rate limit en zona a `/api/chat` y `/api/chat/resume`.
 3. **Proyectos LangSmith**: crear `…-prod` y `…-preview`; rotación de API keys documentada.
-4. **AI Gateway PoC** (si ADR-05 → sí): un gateway de staging, una ruta de chat usando gateway URL, validar en dashboard de CF.
+4. **AI Gateway PoC** (si ADR-05 → sí): un gateway de staging; el Worker usa **`/compat`** y, con **custom provider** (p. ej. GitHub Models), el modelo **`custom-{slug}/{openai/…}`** — validar en dashboard de CF y trazas LangSmith (sin `MODEL_NOT_FOUND`).
 5. **Dataset LangSmith v0**: exportar 20 conversaciones reales o sintéticas; definir 1 métrica simple (ej. “respuesta no vacía” + longitud máxima).
 6. **CI smoke**: workflow [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml) + variable `WORKER_SMOKE_URL`; opcional `SMOKE_INCLUDE_CHAT` (ver README).
 
