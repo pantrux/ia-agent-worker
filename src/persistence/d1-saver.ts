@@ -8,6 +8,22 @@ import {
 } from "@langchain/langgraph-checkpoint";
 import type { CheckpointMetadata, CheckpointPendingWrite, PendingWrite } from "@langchain/langgraph-checkpoint";
 
+/** Ensure checkpoint shape LangGraph expects after JSON round-trip / older rows. */
+function normalizeCheckpoint(checkpoint: Checkpoint): void {
+  if (!checkpoint.channel_values || typeof checkpoint.channel_values !== "object") {
+    checkpoint.channel_values = {};
+  }
+  if (!checkpoint.channel_versions || typeof checkpoint.channel_versions !== "object") {
+    checkpoint.channel_versions = {};
+  }
+  if (!checkpoint.versions_seen || typeof checkpoint.versions_seen !== "object") {
+    checkpoint.versions_seen = {};
+  }
+  if (!Array.isArray(checkpoint.pending_sends)) {
+    checkpoint.pending_sends = [];
+  }
+}
+
 /**
  * LangGraph checkpointer backed by Cloudflare D1 (SQLite).
  * Implements the 4 abstract methods of BaseCheckpointSaver.
@@ -54,10 +70,8 @@ export class D1Saver extends BaseCheckpointSaver {
     const cpData = row.checkpoint as string;
     const metaData = (row.metadata as string) || "{}";
 
-    const checkpoint = this.serde.loadsTyped(type, cpData) as Checkpoint;
-    if (!Array.isArray(checkpoint.pending_sends)) {
-      checkpoint.pending_sends = [];
-    }
+    const checkpoint = (await this.serde.loadsTyped(type, cpData)) as Checkpoint;
+    normalizeCheckpoint(checkpoint);
     const metadata = JSON.parse(metaData) as CheckpointMetadata;
 
     const writesStmt = this.db.prepare(
@@ -67,11 +81,14 @@ export class D1Saver extends BaseCheckpointSaver {
        ORDER BY idx`
     );
     const writesResult = await writesStmt.bind(threadId, checkpointNs, cpId).all();
-    const pendingWrites: CheckpointPendingWrite[] = (writesResult.results || []).map((w) => {
-      const wType = (w.type as string) || "json";
-      const value = this.serde.loadsTyped(wType, w.value as string);
-      return [w.task_id as string, w.channel as string, value];
-    });
+    const writeRows = writesResult.results || [];
+    const pendingWrites: CheckpointPendingWrite[] = await Promise.all(
+      writeRows.map(async (w) => {
+        const wType = (w.type as string) || "json";
+        const value = await this.serde.loadsTyped(wType, w.value as string);
+        return [w.task_id as string, w.channel as string, value] as CheckpointPendingWrite;
+      })
+    );
 
     const tupleConfig: RunnableConfig = {
       configurable: {
@@ -132,10 +149,8 @@ export class D1Saver extends BaseCheckpointSaver {
       const cpData = row.checkpoint as string;
       const metaData = (row.metadata as string) || "{}";
 
-      const checkpoint = this.serde.loadsTyped(type, cpData) as Checkpoint;
-      if (!Array.isArray(checkpoint.pending_sends)) {
-        checkpoint.pending_sends = [];
-      }
+      const checkpoint = (await this.serde.loadsTyped(type, cpData)) as Checkpoint;
+      normalizeCheckpoint(checkpoint);
       const metadata = JSON.parse(metaData) as CheckpointMetadata;
 
       yield {
