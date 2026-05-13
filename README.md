@@ -237,7 +237,7 @@ Navegador
 | `LANGCHAIN_CALLBACKS_BACKGROUND` | Var | En serverless, usar `false` para esperar flush de callbacks antes de cerrar la request. | `false` |
 | `BFF_API_TOKEN` | Secreto opcional | Si existe, `POST /api/chat` y `/api/chat/resume` exigen `Authorization: Bearer …`. | `wrangler secret put BFF_API_TOKEN` |
 | `EXPOSE_CHAT_ERROR` | Var opcional | Si es `true`/`1`/`yes`, los 500 de chat incluyen `detail` y trozo de `stack` (solo depuración; definir en `.dev.vars` local, **no** en `[vars]` de producción). | — |
-| `AI_GATEWAY_ACCOUNT_ID` | Var opcional | Cuenta Cloudflare; con `AI_GATEWAY_ID` activa el AI Gateway en la URL base del cliente. | — |
+| `AI_GATEWAY_ACCOUNT_ID` | Var opcional | Cuenta Cloudflare; con `AI_GATEWAY_ID` activa el AI Gateway en la URL base del cliente. Si **no** están definidas, el LLM usa solo `OPENAI_API_BASE` (p. ej. GitHub Models directo). | — |
 | `AI_GATEWAY_ID` | Var opcional | Identificador del gateway en la URL. | — |
 | `AI_GATEWAY_API_TOKEN` | Secreto opcional | Token para cabecera `cf-aig-authorization` si el gateway lo requiere. | `wrangler secret put AI_GATEWAY_API_TOKEN` |
 | `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). El Worker usa **`…/v1/{cuenta}/{gateway}/custom-{slug}`** (provider-specific): el cuerpo lleva **`COPILOT_MODEL`** tal cual (p. ej. `openai/gpt-4o-mini`). Sin esta variable: solo **`…/compat`**. | `github-models` |

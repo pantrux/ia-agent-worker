@@ -113,5 +113,6 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | 2026-05-13 | **PR #8 (revisión):** `EXPOSE_CHAT_ERROR` retirado de `[vars]` prod; helper `chatInternalErrorBody`; slug normalizado en `provision-ai-gateway.mjs`; guarda `slugClean` vacío en `ai-gateway.ts`. |
 | 2026-05-13 | Merge [PR #8](https://github.com/pantrux/ia-agent-worker/pull/8) a `main` (`252def3`); **B1b** → **Ejecutado**. Greptile (último commit) sin bloqueos; checks smoke + Workers Builds en verde. |
 | 2026-05-13 | Script `check:ai-gateway` + workflow «Provision AI Gateway» (API Token); despliegue Worker desde `main` con código al día; pendiente aprovisionar AI Gateway en CF mientras `CLOUDFLARE_API_TOKEN` esté vacío en local/repo. |
+| 2026-05-13 | **Operación:** `AI_GATEWAY_*` comentado en `wrangler.toml` (prod/preview); LLM directo a GitHub Models; plantilla `.env` en disco (gitignored). Smoke `/api/chat` OK. Reactivar gateway tras `CLOUDFLARE_API_TOKEN` + `provision:ai-gateway`. |
 
 Actualiza esta tabla al cierre de cada hito relevante.
