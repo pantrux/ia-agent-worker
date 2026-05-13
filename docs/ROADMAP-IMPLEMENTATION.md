@@ -43,7 +43,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | ID | Entregable (según roadmap) | PR / referencia | Estado | Notas |
 |----|-----------------------------|-----------------|--------|-------|
 | A1 | Reglas WAF + rate limit `/api/chat`, `/api/chat/resume` | — | Pendiente | Acción principal en **dashboard Cloudflare** (§2.0 del roadmap). Checklist repo: [A1-checklist-waf.md](./A1-checklist-waf.md). |
-| A2 | Access o JWT en BFF | [PR #6](https://github.com/pantrux/ia-agent-worker/pull/6) | En curso | Bearer opcional vía secreto `BFF_API_TOKEN`; ver README. |
+| A2 | Access o JWT en BFF | [PR #6](https://github.com/pantrux/ia-agent-worker/pull/6) (merge 2026-05-13) | Ejecutado | Bearer opcional vía secreto `BFF_API_TOKEN`; smoke con `WORKER_SMOKE_BFF_TOKEN` en Actions. Ver README. |
 | A3 | Secretos + proyectos LangSmith prod/preview | [PR #4](https://github.com/pantrux/ia-agent-worker/pull/4) (merge 2026-05-13) | Ejecutado | Wrangler `preview` + vars; **pendiente manual:** `wrangler secret put … --env preview`, proyecto LangSmith, D1 dedicado cuando toque. |
 | A4 | Logs estructurados + retención; metadata `thread_id` / canal | [PR #5](https://github.com/pantrux/ia-agent-worker/pull/5) (merge 2026-05-13) | Ejecutado | JSON `msg: ia_agent_access`, `requestTs` al inicio del handler; sin cuerpos de chat. Retención / Logpush: dashboard CF (manual). |
 
@@ -107,5 +107,6 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | 2026-05-13 | Merge [PR #5](https://github.com/pantrux/ia-agent-worker/pull/5); A4 → **Ejecutado** (logs estructurados en Worker). |
 | 2026-05-13 | A2 en curso: autenticación Bearer BFF (`BFF_API_TOKEN`); checklist A1 en [A1-checklist-waf.md](./A1-checklist-waf.md). |
 | 2026-05-13 | Abierto [PR #6](https://github.com/pantrux/ia-agent-worker/pull/6) (A2 Bearer BFF + checklist A1). |
+| 2026-05-13 | Merge [PR #6](https://github.com/pantrux/ia-agent-worker/pull/6); A2 → **Ejecutado** (BFF Bearer + smoke). |
 
 Actualiza esta tabla al cierre de cada hito relevante.
