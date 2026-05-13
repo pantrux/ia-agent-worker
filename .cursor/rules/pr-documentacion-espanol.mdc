@@ -1,0 +1,24 @@
+---
+description: PRs — documentación, comentarios y descripciones en español
+alwaysApply: true
+---
+
+# Pull requests: idioma español
+
+## Alcance
+
+En todo lo relativo a un **pull request** de este repositorio, el lenguaje para humanos debe ser **español**:
+
+- **Descripción del PR** (título y cuerpo en GitHub).
+- **Comentarios** en el PR: respuestas a reviews, hilos de conversación, comentarios generales (`gh pr comment`, etc.).
+- **Documentación** que forme parte del cambio: `README`, `docs/`, notas de release en el repo, tableros de roadmap cuando se actualicen con el PR.
+- **Comentarios en código** nuevos o modificados en el PR (explicaciones, docstrings orientados a mantenedores).
+
+## Excepciones razonables
+
+- Identificadores de código, nombres de APIs, tipos, rutas URL y mensajes de protocolo estándar de la industria pueden permanecer en **inglés** cuando sea la convención técnica habitual.
+- Citas textuales de especificaciones externas o logs de terceros no traducirlas artificialmente.
+
+## Agente
+
+Al preparar commits para un PR, redactar mensajes de commit y descripciones pensando en que la **trazabilidad en GitHub** quede en español salvo las excepciones anteriores.
