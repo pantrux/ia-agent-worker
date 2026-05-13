@@ -44,11 +44,11 @@ function getLastUserText(messages: GraphState["messages"]): string {
 }
 
 async function createLLM(env: Env): Promise<ChatOpenAI> {
-  const { apiKey, baseUrl } = await getCopilotToken(env.COPILOT_GITHUB_TOKEN);
+  const { apiKey, baseUrl } = await getCopilotToken(env.COPILOT_GITHUB_TOKEN, env.OPENAI_API_BASE);
   return new ChatOpenAI({
-    model: env.COPILOT_MODEL || "gpt-5.4-mini",
+    model: env.COPILOT_MODEL || "openai/gpt-4o-mini",
     apiKey,
-    configuration: { baseURL: baseUrl || env.OPENAI_API_BASE },
+    configuration: { baseURL: baseUrl },
   });
 }
 

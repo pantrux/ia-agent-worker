@@ -6,11 +6,11 @@ import { getToolsForIndustry } from "../tools/crm.js";
 import { getCopilotToken } from "../copilot-token.js";
 
 async function createLLM(env: Env, model?: string): Promise<ChatOpenAI> {
-  const { apiKey, baseUrl } = await getCopilotToken(env.COPILOT_GITHUB_TOKEN);
+  const { apiKey, baseUrl } = await getCopilotToken(env.COPILOT_GITHUB_TOKEN, env.OPENAI_API_BASE);
   return new ChatOpenAI({
-    model: model || env.COPILOT_MODEL || "gpt-5.4-mini",
+    model: model || env.COPILOT_MODEL || "openai/gpt-4o-mini",
     apiKey,
-    configuration: { baseURL: baseUrl || env.OPENAI_API_BASE },
+    configuration: { baseURL: baseUrl },
   });
 }
 

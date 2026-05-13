@@ -14,7 +14,19 @@ let cache: TokenCache = { token: "", expiresAt: 0, baseUrl: "" };
 const DEFAULT_BASE = "https://api.individual.githubcopilot.com";
 const EXCHANGE_URL = "https://api.github.com/copilot_internal/v2/token";
 
-export async function getCopilotToken(ghToken: string): Promise<{ apiKey: string; baseUrl: string }> {
+/**
+ * Get credentials for LLM API calls.
+ * - If baseUrl is NOT the Copilot internal API, skip exchange and use raw token (e.g. GitHub Models).
+ * - If baseUrl IS the Copilot API, attempt token exchange.
+ */
+export async function getCopilotToken(ghToken: string, baseUrl?: string): Promise<{ apiKey: string; baseUrl: string }> {
+  const resolvedBase = baseUrl || DEFAULT_BASE;
+
+  // GitHub Models and other non-Copilot endpoints: use token directly
+  if (!resolvedBase.includes("githubcopilot.com")) {
+    return { apiKey: ghToken, baseUrl: resolvedBase };
+  }
+
   const now = Date.now() / 1000;
   if (cache.token && now < cache.expiresAt - 30) {
     return { apiKey: cache.token, baseUrl: cache.baseUrl };
@@ -36,17 +48,16 @@ export async function getCopilotToken(ghToken: string): Promise<{ apiKey: string
       const token = String(data.token ?? "").trim();
       if (token) {
         const expiresAt = Number(data.expires_at) || now + 25 * 60;
-        const baseUrl = deriveBaseUrl(token, data);
-        cache = { token, expiresAt, baseUrl };
-        return { apiKey: token, baseUrl };
+        const derivedBase = deriveBaseUrl(token, data);
+        cache = { token, expiresAt, baseUrl: derivedBase };
+        return { apiKey: token, baseUrl: derivedBase };
       }
     }
   } catch {
     // Exchange failed — fall through to raw token
   }
 
-  // Fallback: use the raw token directly (works with fresh ghu_* tokens or PATs with Copilot scope)
-  return { apiKey: ghToken, baseUrl: DEFAULT_BASE };
+  return { apiKey: ghToken, baseUrl: resolvedBase };
 }
 
 function deriveBaseUrl(token: string, payload: Record<string, unknown>): string {
