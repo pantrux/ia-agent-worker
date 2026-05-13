@@ -14,4 +14,12 @@ export interface Env {
   LANGCHAIN_CALLBACKS_BACKGROUND?: string;
   /** Secreto opcional: si está definido, POST /api/chat y /api/chat/resume exigen `Authorization: Bearer …`. */
   BFF_API_TOKEN?: string;
+  /** Cloudflare account ID (AI Gateway). Con `AI_GATEWAY_ID`, baseURL → endpoint compat unificado. */
+  AI_GATEWAY_ACCOUNT_ID?: string;
+  /** Identificador del gateway en la URL (`…/v1/{account}/{AI_GATEWAY_ID}/compat`). */
+  AI_GATEWAY_ID?: string;
+  /** Token CF para cabecera `cf-aig-authorization` si el gateway exige autenticación. Secreto recomendado. */
+  AI_GATEWAY_API_TOKEN?: string;
+  /** Slug del proveedor personalizado (p. ej. GitHub Models vía custom provider): modelo enviado como `slug/COPILOT_MODEL`. */
+  AI_GATEWAY_PROVIDER_SLUG?: string;
 }

@@ -1,17 +1,11 @@
-import { ChatOpenAI } from "@langchain/openai";
 import { AIMessage, SystemMessage } from "@langchain/core/messages";
 import type { GraphState } from "../state.js";
 import type { Env } from "../env.js";
 import { getToolsForIndustry } from "../tools/crm.js";
-import { getCopilotToken } from "../copilot-token.js";
+import { createChatOpenAI } from "../llm-client.js";
 
-async function createLLM(env: Env, model?: string): Promise<ChatOpenAI> {
-  const { apiKey, baseUrl } = await getCopilotToken(env.COPILOT_GITHUB_TOKEN, env.OPENAI_API_BASE);
-  return new ChatOpenAI({
-    model: model || env.COPILOT_MODEL || "openai/gpt-4o-mini",
-    apiKey,
-    configuration: { baseURL: baseUrl },
-  });
+async function createLLM(env: Env, model?: string) {
+  return createChatOpenAI(env, model);
 }
 
 export function createModelNode(env: Env) {

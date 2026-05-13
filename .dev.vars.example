@@ -4,3 +4,8 @@
 COPILOT_GITHUB_TOKEN=
 # Opcional — si se define, POST /api/chat y /api/chat/resume exigen el mismo Bearer
 BFF_API_TOKEN=
+# Opcional — AI Gateway (compat): mismo patrón que wrangler.toml / README
+# AI_GATEWAY_ACCOUNT_ID=
+# AI_GATEWAY_ID=
+# AI_GATEWAY_API_TOKEN=
+# AI_GATEWAY_PROVIDER_SLUG=
