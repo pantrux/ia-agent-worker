@@ -55,6 +55,9 @@ export class D1Saver extends BaseCheckpointSaver {
     const metaData = (row.metadata as string) || "{}";
 
     const checkpoint = this.serde.loadsTyped(type, cpData) as Checkpoint;
+    if (!Array.isArray(checkpoint.pending_sends)) {
+      checkpoint.pending_sends = [];
+    }
     const metadata = JSON.parse(metaData) as CheckpointMetadata;
 
     const writesStmt = this.db.prepare(
@@ -130,6 +133,9 @@ export class D1Saver extends BaseCheckpointSaver {
       const metaData = (row.metadata as string) || "{}";
 
       const checkpoint = this.serde.loadsTyped(type, cpData) as Checkpoint;
+      if (!Array.isArray(checkpoint.pending_sends)) {
+        checkpoint.pending_sends = [];
+      }
       const metadata = JSON.parse(metaData) as CheckpointMetadata;
 
       yield {
