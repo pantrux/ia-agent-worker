@@ -44,7 +44,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 |----|-----------------------------|-----------------|--------|-------|
 | A1 | Reglas WAF + rate limit `/api/chat`, `/api/chat/resume` | — | Pendiente | Acción principal en **dashboard Cloudflare** (§2.0 del roadmap). |
 | A2 | Access o JWT en BFF | — | Pendiente | |
-| A3 | Secretos + proyectos LangSmith prod/preview | [PR #4](https://github.com/pantrux/ia-agent-worker/pull/4) | En curso | Tras merge: ejecutar secretos `--env preview` y proyecto LangSmith `ia-agent-worker-preview`. |
+| A3 | Secretos + proyectos LangSmith prod/preview | [PR #4](https://github.com/pantrux/ia-agent-worker/pull/4) (merge 2026-05-13) | Ejecutado | Wrangler `preview` + vars; **pendiente manual:** `wrangler secret put … --env preview`, proyecto LangSmith, D1 dedicado cuando toque. |
 | A4 | Logs estructurados + retención; metadata `thread_id` / canal | — | Pendiente | Parcialmente cubierto por LangSmith; revisar logs CF Worker. |
 
 ---
@@ -101,5 +101,6 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 |-------|--------|
 | 2026-05-13 | Creación del tablero; T0.1–T0.5 ligados a PR #3; T0.6 smoke CI marcado Ejecutado en `main`. |
 | 2026-05-13 | Merge [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) a `main`; T0.1–T0.5 → **Ejecutado**. [PR #4](https://github.com/pantrux/ia-agent-worker/pull/4): A3 (Wrangler `preview` + vars). |
+| 2026-05-13 | Merge [PR #4](https://github.com/pantrux/ia-agent-worker/pull/4); A3 → **Ejecutado** (config repo); respuesta Greptile D1 compartido en el hilo del PR. |
 
 Actualiza esta tabla al cierre de cada hito relevante.
