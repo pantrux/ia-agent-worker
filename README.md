@@ -249,7 +249,7 @@ Navegador
 #### Opción A — Automático (recomendado)
 
 1. Crea un [API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) con permiso **Account → AI Gateway → Edit** y permiso para **listar la cuenta** (p. ej. **Account → Account Settings → Read**, o un token de plantilla que incluya acceso a la cuenta), para que `GET https://api.cloudflare.com/client/v4/accounts` funcione sin `wrangler`.
-2. Copia [`.env.ai-gateway.example`](.env.ai-gateway.example) a **`.env.ai-gateway.local`**, pon `CLOUDFLARE_API_TOKEN=…` (no versiones ese fichero; está en `.gitignore`).
+2. Crea en la raíz del repo un fichero **`.env`** (gitignored) o **`.env.ai-gateway.local`**, y define `CLOUDFLARE_API_TOKEN=…` (plantillas: [`.env.example`](.env.example), [`.env.ai-gateway.example`](.env.ai-gateway.example)).
 3. En la raíz del repo: `npm run provision:ai-gateway`  
    Crea si no existen el gateway `ia-agent-worker-llm` y el custom provider `github-models` → `https://models.github.ai/inference`. Al final imprime los valores para pegar en el Worker.
 4. Añade en **[vars]** de `wrangler.toml` (o en el dashboard del Worker) las tres variables que muestra el script; despliega con `npm run deploy`.
@@ -257,7 +257,7 @@ Navegador
 
 #### Comprobar estado (API Cloudflare)
 
-- Con token en `.env.ai-gateway.local` (o `CLOUDFLARE_API_TOKEN` en el entorno): **`npm run check:ai-gateway`** — código de salida **0** si existen el gateway `AI_GATEWAY_ID` y el custom provider con slug `AI_GATEWAY_PROVIDER_SLUG`; **2** si falta el API Token (el OAuth de `wrangler login` no sustituye al token del panel para esta API).
+- Con token en **`.env`** o **`.env.ai-gateway.local`** en la raíz del repo (o `CLOUDFLARE_API_TOKEN` en el entorno): **`npm run check:ai-gateway`** — código de salida **0** si existen el gateway `AI_GATEWAY_ID` y el custom provider con slug `AI_GATEWAY_PROVIDER_SLUG`; **2** si falta el API Token (el OAuth de `wrangler login` no sustituye al token del panel para esta API).
 - En **GitHub Actions**, workflow **«Provision AI Gateway»** (`workflow_dispatch`): crea el secret **`CLOUDFLARE_API_TOKEN`** en el repo (mismos permisos que arriba) y ejecútalo una vez; opcionalmente variables `CLOUDFLARE_ACCOUNT_ID`, `AI_GATEWAY_ID`, `AI_GATEWAY_PROVIDER_SLUG`, `AI_GATEWAY_CUSTOM_BASE_URL` si no usas los valores por defecto.
 
 #### Si `/api/chat` devuelve 500 y en logs aparece `MODEL_NOT_FOUND` / `404 page not found`

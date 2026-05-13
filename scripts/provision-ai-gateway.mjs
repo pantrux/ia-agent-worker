@@ -11,55 +11,20 @@
  *           AI_GATEWAY_PROVIDER_SLUG (default: github-models),
  *           AI_GATEWAY_CUSTOM_BASE_URL (default: https://models.github.ai/inference).
  *
- * Carga opcional: fichero .env.ai-gateway.local (no versionar; ver .env.ai-gateway.example).
+ * Carga opcional: raíz del repo — `.env` y `.env.ai-gateway.local` (no versionar; ver `.env.example` y `.env.ai-gateway.example`).
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { config, parse } from "dotenv";
+import { loadRepoEnvFiles, warnIfCloudflareApiTokenEmpty } from "./merge-repo-env.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const localEnv = resolve(root, ".env.ai-gateway.local");
+const rootEnv = resolve(root, ".env");
 
-config({ path: resolve(root, ".env") });
-
-/** Lee .env.ai-gateway.local sin depender solo de config() (BOM, CRLF, orden). */
-function mergeEnvLocalFile(absPath) {
-  if (!existsSync(absPath)) return false;
-  try {
-    const raw = readFileSync(absPath, "utf8").replace(/^\uFEFF/, "");
-    const parsed = parse(raw);
-    for (const [k, v] of Object.entries(parsed)) {
-      let t = String(v ?? "").trim();
-      if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
-        t = t.slice(1, -1).trim();
-      }
-      if (t) process.env[k] = t;
-    }
-    return true;
-  } catch (e) {
-    console.error("Error leyendo", absPath, ":", e.message);
-    return false;
-  }
-}
-
-mergeEnvLocalFile(localEnv);
-
-if (!(process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim() && existsSync(localEnv)) {
-  try {
-    const raw = readFileSync(localEnv, "utf8").replace(/^\uFEFF/, "");
-    const parsed = parse(raw);
-    const rawTok = parsed.CLOUDFLARE_API_TOKEN ?? parsed.CF_API_TOKEN;
-    if (rawTok !== undefined && String(rawTok).trim() === "") {
-      console.error(
-        "CLOUDFLARE_API_TOKEN (o CF_API_TOKEN) aparece vacío en .env.ai-gateway.local. Elimina la línea o pega el token del panel de Cloudflare (no sirve el OAuth de `wrangler login` para esta API)."
-      );
-    }
-  } catch {
-    /* ignore */
-  }
-}
+loadRepoEnvFiles(root);
+warnIfCloudflareApiTokenEmpty(root);
 
 const API = "https://api.cloudflare.com/client/v4";
 
@@ -70,18 +35,17 @@ const customBaseUrl = (process.env.AI_GATEWAY_CUSTOM_BASE_URL || "https://models
 const token = (process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
 if (!token) {
-  const localOk = existsSync(localEnv);
+  const hasRoot = existsSync(rootEnv);
+  const hasGw = existsSync(localEnv);
   console.error(
     "Falta CLOUDFLARE_API_TOKEN (o CF_API_TOKEN) en el entorno tras cargar variables.\n" +
-      `  Fichero buscado: ${localEnv}\n` +
-      `  ¿Existe .env.ai-gateway.local? ${localOk ? "sí" : "no"}\n` +
-      "Comprueba una línea ASCII, sin comillas tipográficas, por ejemplo:\n" +
-      "  CLOUDFLARE_API_TOKEN=tu_token_aqui\n" +
+      "  Añade el token en la raíz del repo, en **.env** (recomendado) o en **.env.ai-gateway.local** (no versionar; ver .env.example).\n" +
+      `  ¿Existe .env? ${hasRoot ? "sí" : "no"}  |  ¿Existe .env.ai-gateway.local? ${hasGw ? "sí" : "no"}\n` +
+      "  Crea el token con permiso «Account — AI Gateway — Edit»:\n" +
+      "  https://dash.cloudflare.com/?to=/:account/api-tokens\n" +
       "Alternativa (PowerShell, solo esta sesión):\n" +
       "  $env:CLOUDFLARE_API_TOKEN=\"...\"\n" +
-      "  npm run provision:ai-gateway\n\n" +
-      "Crea el token con permiso «Account — AI Gateway — Edit»:\n" +
-      "https://dash.cloudflare.com/?to=/:account/api-tokens"
+      "  npm run provision:ai-gateway\n\n"
   );
   process.exit(1);
 }
