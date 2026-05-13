@@ -15,16 +15,36 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { config } from "dotenv";
+import { config, parse } from "dotenv";
 
 const root = resolve(import.meta.dirname, "..");
 const localEnv = resolve(root, ".env.ai-gateway.local");
-if (existsSync(localEnv)) {
-  config({ path: localEnv });
-}
+
 config({ path: resolve(root, ".env") });
+
+/** Lee .env.ai-gateway.local sin depender solo de config() (BOM, CRLF, orden). */
+function mergeEnvLocalFile(absPath) {
+  if (!existsSync(absPath)) return false;
+  try {
+    const raw = readFileSync(absPath, "utf8").replace(/^\uFEFF/, "");
+    const parsed = parse(raw);
+    for (const [k, v] of Object.entries(parsed)) {
+      let t = String(v ?? "").trim();
+      if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+        t = t.slice(1, -1).trim();
+      }
+      if (t) process.env[k] = t;
+    }
+    return true;
+  } catch (e) {
+    console.error("Error leyendo", absPath, ":", e.message);
+    return false;
+  }
+}
+
+mergeEnvLocalFile(localEnv);
 
 const API = "https://api.cloudflare.com/client/v4";
 
@@ -62,12 +82,18 @@ if (!accountId) {
 }
 
 if (!token) {
+  const localOk = existsSync(localEnv);
   console.error(
-    "Falta CLOUDFLARE_API_TOKEN (o CF_API_TOKEN).\n" +
-      "Crea un API Token en Cloudflare con permiso «Account — AI Gateway — Edit» (y lectura de cuenta si aplica).\n" +
-      "Ejemplo (PowerShell):\n" +
+    "Falta CLOUDFLARE_API_TOKEN (o CF_API_TOKEN) en el entorno tras cargar variables.\n" +
+      `  Fichero buscado: ${localEnv}\n` +
+      `  ¿Existe .env.ai-gateway.local? ${localOk ? "sí" : "no"}\n` +
+      "Comprueba una línea ASCII, sin comillas tipográficas, por ejemplo:\n" +
+      "  CLOUDFLARE_API_TOKEN=tu_token_aqui\n" +
+      "Alternativa (PowerShell, solo esta sesión):\n" +
       "  $env:CLOUDFLARE_API_TOKEN=\"...\"\n" +
-      "  npm run provision:ai-gateway"
+      "  npm run provision:ai-gateway\n\n" +
+      "Crea el token con permiso «Account — AI Gateway — Edit»:\n" +
+      "https://dash.cloudflare.com/?to=/:account/api-tokens"
   );
   process.exit(1);
 }
