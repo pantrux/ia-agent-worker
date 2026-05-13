@@ -247,7 +247,7 @@ Navegador
 
 #### Opción A — Automático (recomendado)
 
-1. Crea un [API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) con permiso **Account → AI Gateway → Edit** (y lectura de cuenta si el asistente de tokens lo pide).
+1. Crea un [API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) con permiso **Account → AI Gateway → Edit** y permiso para **listar la cuenta** (p. ej. **Account → Account Settings → Read**, o un token de plantilla que incluya acceso a la cuenta), para que `GET https://api.cloudflare.com/client/v4/accounts` funcione sin `wrangler`.
 2. Copia [`.env.ai-gateway.example`](.env.ai-gateway.example) a **`.env.ai-gateway.local`**, pon `CLOUDFLARE_API_TOKEN=…` (no versiones ese fichero; está en `.gitignore`).
 3. En la raíz del repo: `npm run provision:ai-gateway`  
    Crea si no existen el gateway `ia-agent-worker-llm` y el custom provider `github-models` → `https://models.github.ai/inference`. Al final imprime los valores para pegar en el Worker.
