@@ -25,6 +25,24 @@ function normalizeCheckpoint(checkpoint: Checkpoint): void {
 }
 
 /**
+ * Normalize whatever D1 returned for a BLOB/TEXT column into a UTF-8 string.
+ * D1 BLOB columns may come back as ArrayBuffer; older rows or odd bindings
+ * may come back as a plain string already.
+ */
+function toStringPayload(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v instanceof ArrayBuffer) return new TextDecoder().decode(v);
+  if (ArrayBuffer.isView(v)) return new TextDecoder().decode(v as ArrayBufferView);
+  return String(v ?? "");
+}
+
+/** Convert serializer output (Uint8Array for "json") into something safe for D1. */
+function serializedToText(data: Uint8Array | string): string {
+  if (typeof data === "string") return data;
+  return new TextDecoder().decode(data);
+}
+
+/**
  * LangGraph checkpointer backed by Cloudflare D1 (SQLite).
  * Implements the 4 abstract methods of BaseCheckpointSaver.
  */
@@ -67,8 +85,8 @@ export class D1Saver extends BaseCheckpointSaver {
     const cpId = row.checkpoint_id as string;
     const parentId = row.parent_checkpoint_id as string | null;
     const type = (row.type as string) || "json";
-    const cpData = row.checkpoint as string;
-    const metaData = (row.metadata as string) || "{}";
+    const cpData = toStringPayload(row.checkpoint);
+    const metaData = toStringPayload(row.metadata) || "{}";
 
     const checkpoint = (await this.serde.loadsTyped(type, cpData)) as Checkpoint;
     normalizeCheckpoint(checkpoint);
@@ -85,7 +103,7 @@ export class D1Saver extends BaseCheckpointSaver {
     const pendingWrites: CheckpointPendingWrite[] = await Promise.all(
       writeRows.map(async (w) => {
         const wType = (w.type as string) || "json";
-        const value = await this.serde.loadsTyped(wType, w.value as string);
+        const value = await this.serde.loadsTyped(wType, toStringPayload(w.value));
         return [w.task_id as string, w.channel as string, value] as CheckpointPendingWrite;
       })
     );
@@ -146,8 +164,8 @@ export class D1Saver extends BaseCheckpointSaver {
       const cpId = row.checkpoint_id as string;
       const parentId = row.parent_checkpoint_id as string | null;
       const type = (row.type as string) || "json";
-      const cpData = row.checkpoint as string;
-      const metaData = (row.metadata as string) || "{}";
+      const cpData = toStringPayload(row.checkpoint);
+      const metaData = toStringPayload(row.metadata) || "{}";
 
       const checkpoint = (await this.serde.loadsTyped(type, cpData)) as Checkpoint;
       normalizeCheckpoint(checkpoint);
@@ -177,6 +195,7 @@ export class D1Saver extends BaseCheckpointSaver {
     const parentCheckpointId = config.configurable?.checkpoint_id as string | undefined;
 
     const [type, data] = this.serde.dumpsTyped(checkpoint);
+    const dataStr = serializedToText(data);
     const metaStr = JSON.stringify(metadata);
 
     const stmt = this.db.prepare(
@@ -184,7 +203,7 @@ export class D1Saver extends BaseCheckpointSaver {
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     );
     await stmt
-      .bind(threadId, checkpointNs, checkpoint.id, parentCheckpointId ?? null, type, data, metaStr)
+      .bind(threadId, checkpointNs, checkpoint.id, parentCheckpointId ?? null, type, dataStr, metaStr)
       .run();
 
     return {
@@ -209,12 +228,13 @@ export class D1Saver extends BaseCheckpointSaver {
 
     const stmts = writes.map(([channel, value], idx) => {
       const [type, data] = this.serde.dumpsTyped(value);
+      const dataStr = serializedToText(data);
       return this.db
         .prepare(
           `INSERT OR REPLACE INTO checkpoint_writes (thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, value)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .bind(threadId, checkpointNs, checkpointId, taskId, idx, channel as string, type, data);
+        .bind(threadId, checkpointNs, checkpointId, taskId, idx, channel as string, type, dataStr);
     });
 
     if (stmts.length > 0) {
