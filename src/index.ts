@@ -71,7 +71,8 @@ interface ResumeRequest {
   approved: boolean;
 }
 
-const THREAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const THREAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+let langSmithEnvWarned = false;
 
 function parseThreadId(raw: string | undefined): string | null {
   const value = raw?.trim();
@@ -82,7 +83,10 @@ function parseThreadId(raw: string | undefined): string | null {
 function configureLangSmithEnv(env: Env): void {
   const proc = (globalThis as { process?: { env: Record<string, string | undefined> } }).process;
   if (!proc?.env) {
-    console.warn("[LangSmith] process.env no disponible; tracing desactivado.");
+    if (!langSmithEnvWarned) {
+      console.warn("[LangSmith] process.env no disponible; tracing desactivado.");
+      langSmithEnvWarned = true;
+    }
     return;
   }
   if (!env.LANGSMITH_API_KEY) return;
