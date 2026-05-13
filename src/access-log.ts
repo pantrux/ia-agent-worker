@@ -5,6 +5,7 @@ export type AccessOperation =
   | "ping"
   | "chat"
   | "resume"
+  | "bff_auth"
   | "not_found"
   | "unknown";
 

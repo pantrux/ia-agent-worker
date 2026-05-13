@@ -12,4 +12,6 @@ export interface Env {
   LANGSMITH_TRACING?: string;
   LANGSMITH_PROJECT?: string;
   LANGCHAIN_CALLBACKS_BACKGROUND?: string;
+  /** Secreto opcional: si está definido, POST /api/chat y /api/chat/resume exigen `Authorization: Bearer …`. */
+  BFF_API_TOKEN?: string;
 }

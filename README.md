@@ -31,8 +31,8 @@ Port completo del agente [`pantrux/ia-agent-mvp`](https://github.com/pantrux/ia-
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/ping` | Healthcheck |
-| POST | `/api/chat` | Enviar mensaje al agente |
-| POST | `/api/chat/resume` | Reanudar tras HITL (aprobar/denegar) |
+| POST | `/api/chat` | Enviar mensaje al agente. Si el Worker tiene `BFF_API_TOKEN`, enviar `Authorization: Bearer …`. |
+| POST | `/api/chat/resume` | Reanudar tras HITL (aprobar/denegar); misma regla Bearer si aplica. |
 
 ### POST /api/chat
 
@@ -74,7 +74,26 @@ npx wrangler secret put COPILOT_GITHUB_TOKEN
 
 # Secreto para trazas en LangSmith
 npx wrangler secret put LANGSMITH_API_KEY
+
+# Opcional (A2): token compartido para el BFF — exige Bearer en POST /api/chat y /api/chat/resume
+npx wrangler secret put BFF_API_TOKEN
 ```
+
+## Autenticación del BFF (Bearer, A2)
+
+Si defines el secreto **`BFF_API_TOKEN`** en el Worker (`npx wrangler secret put BFF_API_TOKEN` y, en preview, `--env preview`), las rutas **`POST /api/chat`** y **`POST /api/chat/resume`** rechazan peticiones sin cabecera válida:
+
+```http
+Authorization: Bearer <mismo valor que BFF_API_TOKEN>
+```
+
+Si el secreto **no** está definido, el comportamiento es el de antes (útil en desarrollo). En **producción** conviene definirlo y rotarlo con el proceso habitual de secretos.
+
+Desarrollo local: copia [`.dev.vars.example`](.dev.vars.example) a `.dev.vars` y rellena `BFF_API_TOKEN` si quieres probar el flujo autenticado.
+
+Smoke remoto (`npm run smoke:worker` con `SMOKE_INCLUDE_CHAT`): si el Worker exige Bearer, define **`WORKER_SMOKE_BFF_TOKEN`** con el mismo valor (en GitHub Actions: secreto `WORKER_SMOKE_BFF_TOKEN`).
+
+Checklist **WAF / rate limit (A1)** en Cloudflare: [docs/A1-checklist-waf.md](docs/A1-checklist-waf.md).
 
 ## Desarrollo local
 
@@ -149,6 +168,7 @@ npx wrangler deploy --env preview
 # Secretos por entorno (mismos nombres que en prod, valores pueden ser distintos)
 npx wrangler secret put COPILOT_GITHUB_TOKEN --env preview
 npx wrangler secret put LANGSMITH_API_KEY --env preview
+npx wrangler secret put BFF_API_TOKEN --env preview
 ```
 
 La URL pública será `https://ia-agent-worker-preview.<subdominio>.workers.dev`. Úsala en `WORKER_SMOKE_URL` del CI si quieres validar preview en lugar de prod.

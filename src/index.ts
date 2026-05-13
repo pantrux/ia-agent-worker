@@ -3,6 +3,7 @@ import { Command } from "@langchain/langgraph";
 import type { Env } from "./env.js";
 import { buildGraph } from "./graph.js";
 import { logWorkerAccess } from "./access-log.js";
+import { verifyBffApiAuth } from "./bff-auth.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
@@ -66,10 +67,34 @@ export default {
     }
 
     if (path === "/api/chat" && request.method === "POST") {
+      const auth = verifyBffApiAuth(request, env);
+      if (!auth.ok) {
+        const res = jsonResponse({ error: "No autorizado" }, 401, request, env);
+        logWorkerAccess(request, env, {
+          operation: "bff_auth",
+          status: res.status,
+          durationMs: Date.now() - t0,
+          requestTs: new Date(t0).toISOString(),
+          error: auth.reason,
+        });
+        return res;
+      }
       return handleChat(request, env);
     }
 
     if (path === "/api/chat/resume" && request.method === "POST") {
+      const auth = verifyBffApiAuth(request, env);
+      if (!auth.ok) {
+        const res = jsonResponse({ error: "No autorizado" }, 401, request, env);
+        logWorkerAccess(request, env, {
+          operation: "bff_auth",
+          status: res.status,
+          durationMs: Date.now() - t0,
+          requestTs: new Date(t0).toISOString(),
+          error: auth.reason,
+        });
+        return res;
+      }
       return handleResume(request, env);
     }
 

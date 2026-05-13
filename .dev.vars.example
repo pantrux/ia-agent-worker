@@ -1,0 +1,6 @@
+# Copiar a `.dev.vars` (no versionar). Wrangler carga estos valores como secretos/vars locales.
+# Ver README: COPILOT_GITHUB_TOKEN, LANGSMITH_API_KEY, BFF_API_TOKEN opcional.
+
+COPILOT_GITHUB_TOKEN=
+# Opcional — si se define, POST /api/chat y /api/chat/resume exigen el mismo Bearer
+BFF_API_TOKEN=
