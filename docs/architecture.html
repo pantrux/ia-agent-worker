@@ -82,7 +82,7 @@
   </header>
 
   <div class="diagram-wrap" role="img" aria-label="Diagrama de arquitectura del ecosistema Orquesta (serverless)">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1295" role="presentation">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1175" role="presentation">
       <defs>
         <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
           <path d="M0,0 L0,6 L7,3 z" fill="#94a3b8" />
@@ -193,7 +193,7 @@
       </text>
 
       <!-- ─────────── WORKER COLUMN (right) ─────────── -->
-      <rect x="640" y="200" width="560" height="600" rx="14"
+      <rect x="640" y="200" width="560" height="722" rx="14"
             fill="#f97316" fill-opacity="0.06" stroke="#f97316" stroke-width="1.5" stroke-opacity="0.55" />
       <text x="920" y="227" text-anchor="middle" font-size="14" font-weight="700" fill="#fb923c">
         Cloudflare Worker (serverless)
@@ -238,7 +238,7 @@
       <text x="1050" y="427" text-anchor="middle" font-size="10" font-weight="700" fill="#c084fc">model_node</text>
       <text x="1050" y="444" text-anchor="middle" font-size="9" fill="#888">ChatOpenAI .bindTools()</text>
       <text x="1050" y="460" text-anchor="middle" font-size="9" fill="#888">model + fallback</text>
-      <text x="1050" y="476" text-anchor="middle" font-size="9" fill="#888">→ GitHub Models (AI Gateway /compat opc.)</text>
+      <text x="1050" y="476" text-anchor="middle" font-size="9" fill="#888">→ LLM (Gateway opc. · ver abajo)</text>
 
       <rect x="680" y="508" width="240" height="92" rx="6"
             fill="#10b981" fill-opacity="0.08" stroke="#10b981" stroke-opacity="0.35" />
@@ -282,115 +282,86 @@
         AI_GATEWAY_ACCOUNT_ID · AI_GATEWAY_ID · AI_GATEWAY_PROVIDER_SLUG · AI_GATEWAY_API_TOKEN (opc.) · BFF_API_TOKEN (opc.) · DEPLOYMENT_ENV (opc.)
       </text>
 
-      <!-- Deploy -->
-      <rect x="660" y="771" width="520" height="30" rx="6"
-            fill="#06b6d4" fill-opacity="0.06" stroke="#06b6d4" stroke-opacity="0.4" />
-      <text x="920" y="790" text-anchor="middle" font-size="9.5" fill="#67e8f9">
-        LangSmith tracing: metadata (thread_id, operation, runtime) + tags por endpoint
+      <!-- Deploy + trazas (una sola franja; detalle en cajas inferiores) -->
+      <rect x="660" y="765" width="520" height="52" rx="8"
+            fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.14" />
+      <text x="920" y="786" text-anchor="middle" font-size="9.5" fill="#888">
+        Deploy: push a <tspan font-family="ui-monospace, Consolas, monospace">main</tspan> → Workers Builds · <tspan font-family="ui-monospace, Consolas, monospace">wrangler deploy</tspan>
+      </text>
+      <text x="920" y="804" text-anchor="middle" font-size="9" fill="#67e8f9">
+        Trazas LangSmith (SDK) → caja «LangSmith» debajo · <tspan font-family="ui-monospace, Consolas, monospace">LANGSMITH_*</tspan> en Secrets
       </text>
 
-      <rect x="660" y="807" width="520" height="30" rx="6"
-            fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.12" />
-      <text x="920" y="826" text-anchor="middle" font-size="9.5" fill="#888">
-        Deploy: push a main → Workers Builds CI ejecuta <tspan font-family="ui-monospace, Consolas, monospace">wrangler deploy</tspan>
-      </text>
+      <!-- Salidas del Worker: dos cajas alineadas (sin bandas a todo el ancho) -->
+      <rect x="668" y="822" width="504" height="96" rx="12"
+            fill="#f97316" fill-opacity="0.04" stroke="#f97316" stroke-opacity="0.35" />
+      <text x="920" y="838" text-anchor="middle" font-size="9" font-weight="600" fill="#fb923c">Salidas hacia servicios externos</text>
 
-      <!-- ─────────── AI GATEWAY LAYER (visible) ─────────── -->
-      <rect x="120" y="838" width="1000" height="78" rx="14"
-            fill="#f59e0b" fill-opacity="0.14" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.85" />
-      <text x="620" y="862" text-anchor="middle" font-size="14" font-weight="700" fill="#d97706"
-            font-family="system-ui, sans-serif">
-        Cloudflare AI Gateway — capa opcional (LLM)
-      </text>
-      <text x="620" y="882" text-anchor="middle" font-size="9.5" fill="currentColor">
-        Base OpenAI-compat: <tspan font-family="ui-monospace, Consolas, monospace">…/v1/{account}/{gateway}/compat</tspan>
-        · con <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_PROVIDER_SLUG</tspan> el cuerpo usa modelo <tspan font-family="ui-monospace, Consolas, monospace">custom-{slug}/…</tspan>
-      </text>
-      <text x="620" y="900" text-anchor="middle" font-size="9" fill="#888">
-        Sin <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_ACCOUNT_ID</tspan> / <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_ID</tspan> el Worker llama directo a <tspan font-family="ui-monospace, Consolas, monospace">OPENAI_API_BASE</tspan> (p. ej. GitHub Models).
-      </text>
+      <rect x="682" y="846" width="232" height="64" rx="10"
+            fill="#f59e0b" fill-opacity="0.16" stroke="#f59e0b" stroke-width="1.8" stroke-opacity="0.9" />
+      <text x="798" y="866" text-anchor="middle" font-size="11" font-weight="700" fill="#d97706">AI Gateway</text>
+      <text x="798" y="884" text-anchor="middle" font-size="8.5" fill="currentColor">…/compat · <tspan font-family="ui-monospace, Consolas, monospace">AI_GATEWAY_*</tspan></text>
+      <text x="798" y="898" text-anchor="middle" font-size="8" fill="#888">Opcional · proxy OpenAI-compat</text>
 
-      <!-- ─────────── LANGSMITH LAYER (observabilidad SaaS) ─────────── -->
-      <rect x="120" y="918" width="1000" height="72" rx="14"
-            fill="#06b6d4" fill-opacity="0.14" stroke="#06b6d4" stroke-width="2" stroke-opacity="0.8" />
-      <text x="620" y="942" text-anchor="middle" font-size="14" font-weight="700" fill="#0891b2"
-            font-family="system-ui, sans-serif">
-        LangSmith — capa de observabilidad (SaaS)
-      </text>
-      <text x="620" y="962" text-anchor="middle" font-size="9.5" fill="currentColor">
-        Trazas asíncronas del Worker: <tspan font-family="ui-monospace, Consolas, monospace">LANGSMITH_API_KEY</tspan> (Secrets), runs/spans, filtros por <tspan font-family="ui-monospace, Consolas, monospace">thread_id</tspan>, tags por endpoint.
-      </text>
-      <text x="620" y="978" text-anchor="middle" font-size="9" fill="#888">
-        Proyectos <tspan font-family="ui-monospace, Consolas, monospace">LANGSMITH_PROJECT</tspan> prod/preview; metadata <tspan font-family="ui-monospace, Consolas, monospace">deployment</tspan> vía <tspan font-family="ui-monospace, Consolas, monospace">DEPLOYMENT_ENV</tspan>.
-      </text>
+      <rect x="926" y="846" width="232" height="64" rx="10"
+            fill="#06b6d4" fill-opacity="0.14" stroke="#06b6d4" stroke-width="1.8" stroke-opacity="0.85" />
+      <text x="1042" y="866" text-anchor="middle" font-size="11" font-weight="700" fill="#0891b2">LangSmith</text>
+      <text x="1042" y="884" text-anchor="middle" font-size="8.5" fill="currentColor">runs/spans · <tspan font-family="ui-monospace, Consolas, monospace">LANGSMITH_PROJECT</tspan></text>
+      <text x="1042" y="898" text-anchor="middle" font-size="8" fill="#888">SaaS observabilidad LLM</text>
 
       <!-- ─────────── EXTERNAL SERVICES ─────────── -->
-      <text x="620" y="1002" text-anchor="middle" font-size="13" font-weight="700" fill="#94a3b8">
+      <text x="620" y="934" text-anchor="middle" font-size="13" font-weight="700" fill="#94a3b8">
         Servicios externos
       </text>
 
       <!-- D1 -->
-      <rect x="40" y="1022" width="380" height="152" rx="12"
+      <rect x="40" y="952" width="380" height="128" rx="12"
             fill="#10b981" fill-opacity="0.07" stroke="#10b981" stroke-opacity="0.45" />
-      <text x="230" y="1048" text-anchor="middle" font-size="12" font-weight="700" fill="#34d399">
+      <text x="230" y="976" text-anchor="middle" font-size="12" font-weight="700" fill="#34d399">
         Cloudflare D1 — ia-agent-db
       </text>
-      <text x="230" y="1067" text-anchor="middle" font-size="10" fill="#888">SQLite serverless · binding env.DB</text>
+      <text x="230" y="994" text-anchor="middle" font-size="9.5" fill="#888">SQLite · binding <tspan font-family="ui-monospace, Consolas, monospace">env.DB</tspan></text>
 
-      <line x1="60" y1="1079" x2="400" y2="1079" stroke="#10b981" stroke-opacity="0.25" />
+      <line x1="60" y1="1004" x2="400" y2="1004" stroke="#10b981" stroke-opacity="0.25" />
 
-      <text x="60" y="1099" font-size="10" font-weight="600" fill="currentColor">CRM mock</text>
-      <text x="60" y="1115" font-size="9" fill="#888">customers · orders · leads</text>
-      <text x="60" y="1129" font-size="9" fill="#888">seed.sql (cust-001..003)</text>
+      <text x="60" y="1020" font-size="9.5" font-weight="600" fill="currentColor">CRM mock</text>
+      <text x="60" y="1034" font-size="8.8" fill="#888">customers · orders · leads · seed</text>
 
-      <text x="230" y="1099" font-size="10" font-weight="600" fill="currentColor">LangGraph checkpointer</text>
-      <text x="230" y="1115" font-size="9" fill="#888">checkpoints · checkpoint_writes</text>
-      <text x="230" y="1129" font-size="9" fill="#888">payload TEXT (JSON UTF-8)</text>
+      <text x="230" y="1020" font-size="9.5" font-weight="600" fill="currentColor">Checkpointer</text>
+      <text x="230" y="1034" font-size="8.8" fill="#888">checkpoints · writes · payload JSON</text>
 
       <!-- GitHub Models -->
-      <rect x="440" y="1022" width="380" height="152" rx="12"
+      <rect x="440" y="952" width="380" height="128" rx="12"
             fill="#a855f7" fill-opacity="0.07" stroke="#a855f7" stroke-opacity="0.45" />
-      <text x="630" y="1048" text-anchor="middle" font-size="12" font-weight="700" fill="#c084fc">
+      <text x="630" y="976" text-anchor="middle" font-size="12" font-weight="700" fill="#c084fc">
         GitHub Models API
       </text>
-      <text x="630" y="1067" text-anchor="middle" font-size="10" fill="#888">https://models.github.ai/inference</text>
+      <text x="630" y="994" text-anchor="middle" font-size="9.5" fill="#888"><tspan font-family="ui-monospace, Consolas, monospace">models.github.ai</tspan> · OpenAI-compat</text>
 
-      <line x1="460" y1="1079" x2="800" y2="1079" stroke="#a855f7" stroke-opacity="0.25" />
+      <line x1="460" y1="1004" x2="800" y2="1004" stroke="#a855f7" stroke-opacity="0.25" />
 
-      <text x="630" y="1099" text-anchor="middle" font-size="10" font-weight="600" fill="currentColor">
-        Compatible OpenAI Chat Completions
-      </text>
-      <text x="630" y="1119" text-anchor="middle" font-size="9" fill="#888">
-        Destino upstream del chat (OpenAI-compat); el Worker puede apuntar aquí directo o vía la capa Gateway.
-      </text>
-      <text x="630" y="1137" text-anchor="middle" font-size="9" fill="#888">
-        modelo: openai/gpt-4o-mini (configurable)
-      </text>
-      <text x="630" y="1153" text-anchor="middle" font-size="9" fill="#888">
-        auth: token <tspan font-family="ui-monospace, Consolas, monospace">gh auth token</tspan> (Bearer)
-      </text>
-      <text x="630" y="1168" text-anchor="middle" font-size="9" fill="#888">
-        copilot-token.ts: passthrough si no es endpoint Copilot
-      </text>
+      <text x="630" y="1022" text-anchor="middle" font-size="9.5" font-weight="600" fill="currentColor">Chat Completions</text>
+      <text x="630" y="1038" text-anchor="middle" font-size="8.8" fill="#888">Modelo configurable · Bearer GitHub</text>
+      <text x="630" y="1054" text-anchor="middle" font-size="8.5" fill="#888">Destino LLM (directo o vía AI Gateway arriba)</text>
 
-      <!-- GitHub (CI/CD — sin LangSmith; ver capa LangSmith arriba) -->
-      <rect x="840" y="1022" width="360" height="152" rx="12"
+      <!-- GitHub (solo CI/repos) -->
+      <rect x="840" y="952" width="360" height="128" rx="12"
             fill="#94a3b8" fill-opacity="0.08" stroke="#94a3b8" stroke-opacity="0.45" />
-      <text x="1020" y="1048" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">
-        GitHub — repos y CI/CD
+      <text x="1020" y="976" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">
+        GitHub — CI/CD
       </text>
 
-      <line x1="860" y1="1067" x2="1180" y2="1067" stroke="#94a3b8" stroke-opacity="0.25" />
+      <line x1="860" y1="994" x2="1180" y2="994" stroke="#94a3b8" stroke-opacity="0.25" />
 
-      <text x="860" y="1095" font-size="10" font-weight="600" fill="currentColor">pantrux/aaas-landing</text>
-      <text x="860" y="1112" font-size="9" fill="#888">push main → Cloudflare Pages</text>
+      <text x="860" y="1016" font-size="9.5" font-weight="600" fill="currentColor">aaas-landing</text>
+      <text x="860" y="1031" font-size="8.8" fill="#888">push <tspan font-family="ui-monospace, Consolas, monospace">main</tspan> → Pages</text>
 
-      <text x="860" y="1138" font-size="10" font-weight="600" fill="currentColor">pantrux/ia-agent-worker</text>
-      <text x="1020" y="1138" font-size="9" fill="#888">push main → Workers Builds (deploy)</text>
+      <text x="860" y="1052" font-size="9.5" font-weight="600" fill="currentColor">ia-agent-worker</text>
+      <text x="1020" y="1052" font-size="8.8" fill="#888">push <tspan font-family="ui-monospace, Consolas, monospace">main</tspan> → Workers Builds</text>
 
-      <text x="860" y="1162" font-size="9" fill="#888" font-style="italic">Observabilidad LLM → capa LangSmith (arriba), no en GitHub.</text>
+      <text x="860" y="1070" font-size="8.5" fill="#888" font-style="italic">Flechas CI omitidas (evitan cruces). CI en GitHub Actions.</text>
 
-      <!-- ─────────── ARROWS ─────────── -->
+      <!-- ─────────── ARROWS (rutas ortogonales; sin cruces CI) ─────────── -->
       <!-- User → Pages -->
       <path d="M 540 154 C 460 174, 380 188, 320 198" fill="none"
             stroke="#6366f1" stroke-width="1.6" marker-end="url(#arrow-indigo)" />
@@ -401,78 +372,62 @@
             stroke="#f97316" stroke-width="1.8" marker-end="url(#arrow-orange)" />
       <text x="850" y="170" text-anchor="middle" font-size="9.5" fill="#fb923c">POST /api/chat (CORS)</text>
 
-      <!-- Worker → D1 -->
-      <path d="M 770 820 C 600 900, 360 980, 235 1022" fill="none"
+      <!-- Worker → D1 (sale por la izquierda del grafo) -->
+      <path d="M 680 652 C 320 700 120 820 230 952" fill="none"
             stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-emerald)" />
-      <text x="500" y="918" text-anchor="middle" font-size="9.5" fill="#34d399">CRM SQL · checkpoints</text>
+      <text x="240" y="820" font-size="9" fill="#34d399">CRM · checkpoints</text>
 
-      <!-- Worker → AI Gateway (LLM saliente) -->
-      <path d="M 920 818 L 920 838" fill="none"
+      <!-- model_node → AI Gateway (Manhattan; horizontal en y=615 entre grafo y D1Saver) -->
+      <path d="M 1050 494 L 1050 615 L 798 615 L 798 846" fill="none"
             stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-amber)" />
-      <text x="938" y="832" font-size="9" fill="#d97706">LLM →</text>
 
-      <!-- Worker → LangSmith (trazas) -->
-      <path d="M 1080 785 C 1120 840 1050 880 1020 918" fill="none"
-            stroke="#06b6d4" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#arrow-cyan)" />
-      <text x="1120" y="848" text-anchor="end" font-size="9" fill="#0891b2">trazas → LangSmith</text>
+      <!-- Deploy/trazas → LangSmith (vertical desde franja deploy) -->
+      <path d="M 1042 818 L 1042 846" fill="none"
+            stroke="#06b6d4" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow-cyan)" />
+      <text x="1055" y="818" font-size="8.5" fill="#0891b2">trazas</text>
 
       <!-- AI Gateway → GitHub Models -->
-      <path d="M 620 916 C 620 960 630 998 630 1022" fill="none"
+      <path d="M 798 910 L 798 932 L 630 932 L 630 952" fill="none"
             stroke="#a855f7" stroke-width="1.6" marker-end="url(#arrow-purple)" />
-      <text x="620" y="972" text-anchor="middle" font-size="9" fill="#c084fc">OpenAI-compat → upstream</text>
-
-      <!-- GitHub → Pages -->
-      <path d="M 990 1022 C 800 720, 460 660, 310 622" fill="none"
-            stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow-gray)" />
-
-      <!-- GitHub → Worker -->
-      <path d="M 1050 1022 C 1100 820, 1140 810, 1130 820" fill="none"
-            stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow-gray)" />
-      <text x="1170" y="838" text-anchor="end" font-size="9" fill="#94a3b8">CI auto-deploy</text>
+      <text x="700" y="924" text-anchor="middle" font-size="8.5" fill="#c084fc">LLM</text>
 
       <!-- ─────────── LEGEND ─────────── -->
       <g font-size="10" font-family="system-ui, sans-serif">
-        <rect x="40" y="1195" width="1160" height="36" rx="6"
+        <rect x="40" y="1095" width="1160" height="34" rx="6"
               fill="currentColor" fill-opacity="0.03" />
-        <circle cx="52" cy="1213" r="5" fill="#22c55e" opacity="0.6" />
-        <text x="62" y="1217" fill="currentColor">Usuario</text>
+        <circle cx="52" cy="1112" r="5" fill="#22c55e" opacity="0.6" />
+        <text x="62" y="1116" fill="currentColor">Usuario</text>
 
-        <circle cx="128" cy="1213" r="5" fill="#6366f1" opacity="0.6" />
-        <text x="138" y="1217" fill="currentColor">Pages</text>
+        <circle cx="128" cy="1112" r="5" fill="#6366f1" opacity="0.6" />
+        <text x="138" y="1116" fill="currentColor">Pages</text>
 
-        <circle cx="188" cy="1213" r="5" fill="#f97316" opacity="0.6" />
-        <text x="198" y="1217" fill="currentColor">Worker</text>
+        <circle cx="188" cy="1112" r="5" fill="#f97316" opacity="0.6" />
+        <text x="198" y="1116" fill="currentColor">Worker</text>
 
-        <circle cx="268" cy="1213" r="5" fill="#f59e0b" opacity="0.75" />
-        <text x="278" y="1217" fill="currentColor">AI Gateway</text>
+        <circle cx="268" cy="1112" r="5" fill="#f59e0b" opacity="0.75" />
+        <text x="278" y="1116" fill="currentColor">AI Gateway</text>
 
-        <circle cx="378" cy="1213" r="5" fill="#06b6d4" opacity="0.75" />
-        <text x="388" y="1217" fill="currentColor">LangSmith</text>
+        <circle cx="378" cy="1112" r="5" fill="#06b6d4" opacity="0.75" />
+        <text x="388" y="1116" fill="currentColor">LangSmith</text>
 
-        <circle cx="488" cy="1213" r="5" fill="#10b981" opacity="0.6" />
-        <text x="498" y="1217" fill="currentColor">D1</text>
+        <circle cx="488" cy="1112" r="5" fill="#10b981" opacity="0.6" />
+        <text x="498" y="1116" fill="currentColor">D1</text>
 
-        <circle cx="548" cy="1213" r="5" fill="#a855f7" opacity="0.6" />
-        <text x="558" y="1217" fill="currentColor">LLM upstream</text>
+        <circle cx="548" cy="1112" r="5" fill="#a855f7" opacity="0.6" />
+        <text x="558" y="1116" fill="currentColor">LLM</text>
 
-        <line x1="668" y1="1213" x2="698" y2="1213" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4" />
-        <text x="706" y="1217" fill="currentColor">CI/CD</text>
+        <line x1="628" y1="1112" x2="658" y2="1112" stroke="#06b6d4" stroke-width="1.4" stroke-dasharray="4 3" />
+        <text x="666" y="1116" fill="currentColor">Trazas async</text>
 
-        <line x1="768" y1="1213" x2="798" y2="1213" stroke="#6366f1" stroke-width="1.6" />
-        <text x="806" y="1217" fill="currentColor">Flujo datos</text>
-
-        <line x1="888" y1="1213" x2="918" y2="1213" stroke="#06b6d4" stroke-width="1.6" stroke-dasharray="4 3" />
-        <text x="926" y="1217" fill="currentColor">Trazas (async)</text>
+        <line x1="778" y1="1112" x2="808" y2="1112" stroke="#6366f1" stroke-width="1.6" />
+        <text x="816" y="1116" fill="currentColor">Flujo datos</text>
       </g>
 
       <!-- ─────────── NOTES ─────────── -->
-      <rect x="40" y="1240" width="1160" height="38" rx="4"
+      <rect x="40" y="1138" width="1160" height="32" rx="4"
             fill="currentColor" fill-opacity="0.02" />
-      <text x="56" y="1256" font-size="9.5" fill="#888">
-        Notas: CORS vía ALLOWED_ORIGINS. HITL: POST /api/chat/resume. Capas inferiores: AI Gateway (LLM proxy opc.) y LangSmith (observabilidad SaaS) son independientes de GitHub CI.
-      </text>
-      <text x="56" y="1272" font-size="9.5" fill="#888">
-        BFF opcional: <tspan font-family="ui-monospace, Consolas, monospace">Authorization: Bearer</tspan> con <tspan font-family="ui-monospace, Consolas, monospace">BFF_API_TOKEN</tspan> en /api/chat y /api/chat/resume.
+      <text x="56" y="1153" font-size="9.5" fill="#888">
+        CORS · HITL <tspan font-family="ui-monospace, Consolas, monospace">/api/chat/resume</tspan> · BFF opc. <tspan font-family="ui-monospace, Consolas, monospace">BFF_API_TOKEN</tspan>. AI Gateway y LangSmith son cajas bajo el Worker; sin flechas CI para reducir cruces.
       </text>
     </svg>
   </div>
@@ -480,7 +435,7 @@
   <footer>
     Diagrama mantenido en los repositorios <strong>pantrux/ia-agent-mvp</strong>,
     <strong>pantrux/aaas-landing</strong> y <strong>pantrux/ia-agent-worker</strong> bajo
-    <code>docs/architecture.html</code>. Última actualización: 2026-05-13 — capas explícitas AI Gateway + LangSmith (observabilidad).
+    <code>docs/architecture.html</code>. Última actualización: 2026-05-13 — diagrama reorganizado (cajas bajo Worker, rutas ortogonales, sin flechas CI cruzadas).
   </footer>
 </body>
 </html>
