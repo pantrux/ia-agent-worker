@@ -71,6 +71,17 @@ interface ResumeRequest {
   approved: boolean;
 }
 
+function configureLangSmithEnv(env: Env): void {
+  const proc = (globalThis as { process?: { env: Record<string, string | undefined> } }).process;
+  if (!proc?.env) return;
+  if (env.LANGSMITH_API_KEY) proc.env.LANGSMITH_API_KEY = env.LANGSMITH_API_KEY;
+  if (env.LANGSMITH_TRACING) proc.env.LANGSMITH_TRACING = env.LANGSMITH_TRACING;
+  if (env.LANGSMITH_PROJECT) proc.env.LANGSMITH_PROJECT = env.LANGSMITH_PROJECT;
+  if (env.LANGCHAIN_CALLBACKS_BACKGROUND) {
+    proc.env.LANGCHAIN_CALLBACKS_BACKGROUND = env.LANGCHAIN_CALLBACKS_BACKGROUND;
+  }
+}
+
 async function handleChat(request: Request, env: Env): Promise<Response> {
   let body: ChatRequest;
   try {
@@ -84,8 +95,13 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
   }
 
   const threadId = body.thread_id || crypto.randomUUID();
+  configureLangSmithEnv(env);
   const graph = buildGraph(env);
-  const config = { configurable: { thread_id: threadId } };
+  const config = {
+    configurable: { thread_id: threadId },
+    metadata: { thread_id: threadId, operation: "chat", runtime: "cloudflare-worker" },
+    tags: ["api:chat", "langsmith"],
+  };
 
   try {
     const result = await graph.invoke(
@@ -141,8 +157,13 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "thread_id is required" }, 400, request, env);
   }
 
+  configureLangSmithEnv(env);
   const graph = buildGraph(env);
-  const config = { configurable: { thread_id: body.thread_id } };
+  const config = {
+    configurable: { thread_id: body.thread_id },
+    metadata: { thread_id: body.thread_id, operation: "resume", runtime: "cloudflare-worker" },
+    tags: ["api:resume", "langsmith"],
+  };
 
   try {
     const result = await graph.invoke(

@@ -71,6 +71,9 @@ npx wrangler d1 execute ia-agent-db --local --file=seed.sql
 
 # Secreto para LLM
 npx wrangler secret put COPILOT_GITHUB_TOKEN
+
+# Secreto para trazas en LangSmith
+npx wrangler secret put LANGSMITH_API_KEY
 ```
 
 ## Desarrollo local
@@ -132,5 +135,9 @@ Navegador
 | `ALLOWED_ORIGINS` | Var | Orígenes CORS (separados por coma). Usa `*` para abrir todos. | `*,http://localhost:3000` |
 | `COPILOT_MODEL` | Var | Modelo LLM. | `openai/gpt-4o-mini` |
 | `OPENAI_API_BASE` | Var | Base URL del LLM. | `https://models.github.ai/inference` |
+| `LANGSMITH_API_KEY` | Secreto | API key de LangSmith para enviar runs/traces. | `lsv2_…` |
+| `LANGSMITH_TRACING` | Var | Activa tracing de LangSmith. | `true` |
+| `LANGSMITH_PROJECT` | Var | Proyecto destino para las trazas. | `ia-agent-worker-demo` |
+| `LANGCHAIN_CALLBACKS_BACKGROUND` | Var | En serverless, usar `false` para esperar flush de callbacks antes de cerrar la request. | `false` |
 
 > Si quieres apuntar al endpoint real de GitHub Copilot (`https://api.individual.githubcopilot.com`), `src/copilot-token.ts` intentará intercambiar el GitHub token por un session token Copilot. Si no, usa el GitHub token tal cual.

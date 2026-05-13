@@ -17,6 +17,7 @@
     "@langchain/core": "^0.3",
     "@langchain/langgraph": "^0.2",
     "@langchain/openai": "^0.5",
+    "langsmith": "^0.3.76",
     "zod": "^3.23"
   },
   "devDependencies": {
