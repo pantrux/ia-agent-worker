@@ -8,4 +8,5 @@ BFF_API_TOKEN=
 # AI_GATEWAY_ACCOUNT_ID=
 # AI_GATEWAY_ID=
 # AI_GATEWAY_API_TOKEN=
-# AI_GATEWAY_PROVIDER_SLUG=
+# Opcional — depuración: 500 de /api/chat con detail/stack (no en prod pública)
+# EXPOSE_CHAT_ERROR=true

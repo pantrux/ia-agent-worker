@@ -36,6 +36,21 @@ function jsonResponse(data: unknown, status: number, request: Request, env: Env)
   return new Response(JSON.stringify(data), { status, headers });
 }
 
+/** Cuerpo JSON para 500 en chat/resume; `detail`/`stack` solo si `EXPOSE_CHAT_ERROR` está activo (no usar en prod pública). */
+function chatInternalErrorBody(env: Env, e: unknown): Record<string, unknown> {
+  const body: Record<string, unknown> = { error: "Internal server error" };
+  const expose =
+    env.EXPOSE_CHAT_ERROR === "true" ||
+    env.EXPOSE_CHAT_ERROR === "1" ||
+    env.EXPOSE_CHAT_ERROR === "yes";
+  if (expose) {
+    const msg = e instanceof Error ? e.message : String(e);
+    body.detail = msg.slice(0, 1200);
+    if (e instanceof Error && e.stack) body.stack = e.stack.split("\n").slice(0, 12).join("\n");
+  }
+  return body;
+}
+
 function jsonBffUnauthorized(request: Request, env: Env, t0: number, reason: BffAuthFailureReason): Response {
   const res = jsonResponse({ error: "No autorizado" }, 401, request, env);
   res.headers.set("WWW-Authenticate", 'Bearer realm="bff"');
@@ -230,17 +245,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     }
     console.error("Chat error:", e);
     const errCode = e instanceof Error ? e.name : "internal_error";
-    const expose =
-      env.EXPOSE_CHAT_ERROR === "true" ||
-      env.EXPOSE_CHAT_ERROR === "1" ||
-      env.EXPOSE_CHAT_ERROR === "yes";
-    const body: Record<string, unknown> = { error: "Internal server error" };
-    if (expose) {
-      const msg = e instanceof Error ? e.message : String(e);
-      body.detail = msg.slice(0, 1200);
-      if (e instanceof Error && e.stack) body.stack = e.stack.split("\n").slice(0, 12).join("\n");
-    }
-    return finish(jsonResponse(body, 500, request, env), threadId, errCode);
+    return finish(jsonResponse(chatInternalErrorBody(env, e), 500, request, env), threadId, errCode);
   }
 }
 
@@ -315,16 +320,6 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
   } catch (e: unknown) {
     console.error("Resume error:", e);
     const errCode = e instanceof Error ? e.name : "internal_error";
-    const expose =
-      env.EXPOSE_CHAT_ERROR === "true" ||
-      env.EXPOSE_CHAT_ERROR === "1" ||
-      env.EXPOSE_CHAT_ERROR === "yes";
-    const body: Record<string, unknown> = { error: "Internal server error" };
-    if (expose) {
-      const msg = e instanceof Error ? e.message : String(e);
-      body.detail = msg.slice(0, 1200);
-      if (e instanceof Error && e.stack) body.stack = e.stack.split("\n").slice(0, 12).join("\n");
-    }
-    return finish(jsonResponse(body, 500, request, env), threadId, errCode);
+    return finish(jsonResponse(chatInternalErrorBody(env, e), 500, request, env), threadId, errCode);
   }
 }

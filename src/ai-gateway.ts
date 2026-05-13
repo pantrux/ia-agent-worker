@@ -55,7 +55,16 @@ export function resolveAiGatewayLlmConfig(
 
   const slug = env.AI_GATEWAY_PROVIDER_SLUG?.trim();
   if (slug) {
-    const slugClean = slug.replace(/^custom-/, "");
+    const slugClean = slug.replace(/^custom-/, "").trim();
+    if (!slugClean) {
+      const baseUrl = aiGatewayCompatBaseUrl(accountId, gatewayId);
+      return {
+        apiKey: upstream.apiKey,
+        baseUrl,
+        model,
+        ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
+      };
+    }
     const baseUrl = aiGatewayCustomProviderBaseUrl(accountId, gatewayId, slugClean);
     const resolvedModel = stripCustomProviderModelPrefix(model, slugClean);
     return {

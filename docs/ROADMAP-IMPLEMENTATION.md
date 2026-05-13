@@ -54,7 +54,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | ID | Entregable | PR / referencia | Estado | Notas |
 |----|------------|-----------------|--------|-------|
 | B1 | AI Gateway (PoC staging → prod) | [PR #7](https://github.com/pantrux/ia-agent-worker/pull/7) (merge 2026-05-13); seguimiento **provider-specific** → ver fila B1b | Ejecutado | PoC inicial: compat `…/compat`. **B1b** corrige el enrutado con custom provider + GitHub Models. |
-| B1b | AI Gateway: ruta **provider-specific** para custom provider (GitHub Models) | [PR #8](https://github.com/pantrux/ia-agent-worker/pull/8) | En curso | El endpoint Unified `/compat` con `model: custom-{slug}/…` podía resolver a paths upstream inválidos (p. ej. 404). Con `AI_GATEWAY_PROVIDER_SLUG`, el cliente usa `…/v1/{cuenta}/{gateway}/custom-{slug}`; el SDK añade `/chat/completions` → upstream `https://models.github.ai/inference/chat/completions`. README + `provision-ai-gateway.mjs` alineados. Opt-in `EXPOSE_CHAT_ERROR` en `index.ts` / `wrangler.toml` para depuración de 500 (apagar en prod). |
+| B1b | AI Gateway: ruta **provider-specific** para custom provider (GitHub Models) | [PR #8](https://github.com/pantrux/ia-agent-worker/pull/8) | En curso | El endpoint Unified `/compat` con `model: custom-{slug}/…` podía resolver a paths upstream inválidos (p. ej. 404). Con `AI_GATEWAY_PROVIDER_SLUG`, el cliente usa `…/v1/{cuenta}/{gateway}/custom-{slug}`; el SDK añade `/chat/completions` → upstream `https://models.github.ai/inference/chat/completions`. README + `provision-ai-gateway.mjs` alineados. `EXPOSE_CHAT_ERROR` opt-in en código y `.dev.vars` local (no en `[vars]` de prod). |
 | B2 | Métricas Worker + dashboards LangSmith | — | Pendiente | |
 | B3 | Dataset mínimo + eval en CI (más allá del smoke `/ping`) | — | Pendiente | El smoke actual no sustituye eval de calidad. |
 
@@ -110,5 +110,6 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | 2026-05-13 | Abierto [PR #6](https://github.com/pantrux/ia-agent-worker/pull/6) (A2 Bearer BFF + checklist A1). |
 | 2026-05-13 | Merge [PR #7](https://github.com/pantrux/ia-agent-worker/pull/7); B1 → **Ejecutado** (enrutado opcional AI Gateway compat + documentación). |
 | 2026-05-13 | **B1b:** abierto [PR #8](https://github.com/pantrux/ia-agent-worker/pull/8) — provider-specific AI Gateway + `EXPOSE_CHAT_ERROR` opt-in; al merge: B1b → **Ejecutado**. |
+| 2026-05-13 | **PR #8 (revisión):** `EXPOSE_CHAT_ERROR` retirado de `[vars]` prod; helper `chatInternalErrorBody`; slug normalizado en `provision-ai-gateway.mjs`; guarda `slugClean` vacío en `ai-gateway.ts`. |
 
 Actualiza esta tabla al cierre de cada hito relevante.

@@ -49,7 +49,8 @@ mergeEnvLocalFile(localEnv);
 const API = "https://api.cloudflare.com/client/v4";
 
 const gatewayId = (process.env.AI_GATEWAY_ID || "ia-agent-worker-llm").trim();
-const providerSlug = (process.env.AI_GATEWAY_PROVIDER_SLUG || "github-models").trim();
+const providerSlug =
+  (process.env.AI_GATEWAY_PROVIDER_SLUG || "github-models").trim().replace(/^custom-/, "").trim() || "github-models";
 const customBaseUrl = (process.env.AI_GATEWAY_CUSTOM_BASE_URL || "https://models.github.ai/inference").trim();
 const token = (process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
@@ -252,7 +253,7 @@ try {
 }
 
 const compatUrl = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/compat`;
-const customBase = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/custom-${providerSlug.replace(/^custom-/, "")}`;
+const customBase = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/custom-${providerSlug}`;
 
 console.log(`
 --- Listo ---
