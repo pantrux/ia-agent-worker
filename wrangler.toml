@@ -9,7 +9,7 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "ia-agent-db"
-database_id = "" # Set after running: npx wrangler d1 create ia-agent-db
+database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
 [vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
