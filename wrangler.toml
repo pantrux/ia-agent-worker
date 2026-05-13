@@ -28,6 +28,7 @@ DEPLOYMENT_ENV = "production"
 AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
 AI_GATEWAY_ID = "ia-agent-worker-llm"
 AI_GATEWAY_PROVIDER_SLUG = "github-models"
+EXPOSE_CHAT_ERROR = "true"
 
 # Worker separado para staging/preview (mismo D1 que prod por defecto — valorar D1 dedicado).
 [env.preview]

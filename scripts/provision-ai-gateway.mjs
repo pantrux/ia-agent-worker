@@ -252,16 +252,20 @@ try {
 }
 
 const compatUrl = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/compat`;
+const customBase = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/custom-${providerSlug.replace(/^custom-/, "")}`;
 
 console.log(`
 --- Listo ---
-Compat URL (referencia): ${compatUrl}
+Compat URL (sin AI_GATEWAY_PROVIDER_SLUG): ${compatUrl}
+Custom provider base (con AI_GATEWAY_PROVIDER_SLUG=${providerSlug}): ${customBase}
 
 Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]):
 
   AI_GATEWAY_ACCOUNT_ID = ${accountId}
   AI_GATEWAY_ID         = ${gatewayId}
   AI_GATEWAY_PROVIDER_SLUG = ${providerSlug}
+
+Con slug, el Worker usa la ruta provider-specific; el modelo en el cuerpo es el de GitHub (p. ej. openai/gpt-4o-mini), sin prefijo custom-.
 
 Luego: npm run deploy   (o tu pipeline)
 

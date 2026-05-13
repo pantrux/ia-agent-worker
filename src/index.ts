@@ -230,7 +230,17 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     }
     console.error("Chat error:", e);
     const errCode = e instanceof Error ? e.name : "internal_error";
-    return finish(jsonResponse({ error: "Internal server error" }, 500, request, env), threadId, errCode);
+    const expose =
+      env.EXPOSE_CHAT_ERROR === "true" ||
+      env.EXPOSE_CHAT_ERROR === "1" ||
+      env.EXPOSE_CHAT_ERROR === "yes";
+    const body: Record<string, unknown> = { error: "Internal server error" };
+    if (expose) {
+      const msg = e instanceof Error ? e.message : String(e);
+      body.detail = msg.slice(0, 1200);
+      if (e instanceof Error && e.stack) body.stack = e.stack.split("\n").slice(0, 12).join("\n");
+    }
+    return finish(jsonResponse(body, 500, request, env), threadId, errCode);
   }
 }
 
@@ -305,6 +315,16 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
   } catch (e: unknown) {
     console.error("Resume error:", e);
     const errCode = e instanceof Error ? e.name : "internal_error";
-    return finish(jsonResponse({ error: "Internal server error" }, 500, request, env), threadId, errCode);
+    const expose =
+      env.EXPOSE_CHAT_ERROR === "true" ||
+      env.EXPOSE_CHAT_ERROR === "1" ||
+      env.EXPOSE_CHAT_ERROR === "yes";
+    const body: Record<string, unknown> = { error: "Internal server error" };
+    if (expose) {
+      const msg = e instanceof Error ? e.message : String(e);
+      body.detail = msg.slice(0, 1200);
+      if (e instanceof Error && e.stack) body.stack = e.stack.split("\n").slice(0, 12).join("\n");
+    }
+    return finish(jsonResponse(body, 500, request, env), threadId, errCode);
   }
 }
