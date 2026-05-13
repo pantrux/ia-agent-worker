@@ -5,4 +5,4 @@ dist/
 .dev.vars
 .wrangler/
 .langgraph_api
-*.log
+.bff-rotation-once.txt
