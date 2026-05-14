@@ -13,6 +13,7 @@
     "provision:ai-gateway": "node ./scripts/provision-ai-gateway.mjs",
     "check:ai-gateway": "node ./scripts/cf-ai-gateway-status.mjs",
     "rotate:bff-secret": "node ./scripts/rotate-bff-secret.mjs",
+    "pull:copilot-token": "node ./scripts/pull-copilot-token-from-worker.mjs",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create ia-agent-db",
     "db:migrate": "wrangler d1 execute ia-agent-db --file=schema.sql",
