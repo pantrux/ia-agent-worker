@@ -26,18 +26,53 @@ export function normalizeModelIdForGithubModelsInference(baseUrl: string, modelI
   return m;
 }
 
+const GITHUB_MODELS_USER_INFERENCE = "https://models.github.ai/inference";
+
+/** Reescribe la base de inferencia global a la ruta por organización si aplica. */
+export function rewriteGithubModelsBaseForOrg(baseUrl: string, orgLogin: string | undefined): string {
+  const org = orgLogin?.trim();
+  if (!org) return baseUrl;
+  const normalized = baseUrl.replace(/\/+$/, "");
+  if (normalized.toLowerCase() === GITHUB_MODELS_USER_INFERENCE) {
+    return `https://models.github.ai/orgs/${encodeURIComponent(org)}/inference`;
+  }
+  return baseUrl;
+}
+
+/** Cabeceras que documenta GitHub para la API REST de inferencia (además de `Authorization: Bearer`). */
+export function githubModelsInferenceDefaultHeaders(env: Env): Record<string, string> {
+  const ver = env.GITHUB_MODELS_API_VERSION?.trim() || "2026-03-10";
+  return {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": ver,
+  };
+}
+
 /** ChatOpenAI con credenciales Copilot/GitHub Models y enrutado opcional vía Cloudflare AI Gateway (compat o custom provider). */
 export async function createChatOpenAI(env: Env, model?: string): Promise<ChatOpenAI> {
-  const upstream = await getCopilotToken(env.COPILOT_GITHUB_TOKEN, env.OPENAI_API_BASE);
+  const upstreamRaw = await getCopilotToken(env.COPILOT_GITHUB_TOKEN, env.OPENAI_API_BASE);
+  const upstream = {
+    ...upstreamRaw,
+    baseUrl: rewriteGithubModelsBaseForOrg(upstreamRaw.baseUrl, env.GITHUB_MODELS_ORG),
+  };
   const baseModel = model ?? env.COPILOT_MODEL ?? DEFAULT_COPILOT_MODEL;
   const resolvedModel = normalizeModelIdForGithubModelsInference(upstream.baseUrl, baseModel);
   const cfg = resolveAiGatewayLlmConfig(env, upstream, resolvedModel);
+
+  const defaultHeaders: Record<string, string> = { ...(cfg.defaultHeaders ?? {}) };
+  if (cfg.baseUrl.toLowerCase().includes("models.github.ai")) {
+    const gh = githubModelsInferenceDefaultHeaders(env);
+    for (const [k, v] of Object.entries(gh)) {
+      if (defaultHeaders[k] === undefined) defaultHeaders[k] = v;
+    }
+  }
+
   return new ChatOpenAI({
     model: cfg.model,
     apiKey: cfg.apiKey,
     configuration: {
       baseURL: cfg.baseUrl,
-      ...(cfg.defaultHeaders ? { defaultHeaders: cfg.defaultHeaders } : {}),
+      ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
     },
   });
 }

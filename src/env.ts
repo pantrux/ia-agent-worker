@@ -31,4 +31,12 @@ export interface Env {
   AI_GATEWAY_PROVIDER_PATH?: string;
   /** Si es `true` o `1`, las respuestas 500 de `/api/chat` y `/api/chat/resume` incluyen `detail` con el mensaje de error (solo depuración; no usar en prod pública). */
   EXPOSE_CHAT_ERROR?: string;
+  /**
+   * Login de la organización GitHub (slug). Si está definido y `OPENAI_API_BASE` es la inferencia global
+   * `https://models.github.ai/inference`, las peticiones usan `https://models.github.ai/orgs/{org}/inference`
+   * (atribución a org; a veces es el único contexto con modelos habilitados).
+   */
+  GITHUB_MODELS_ORG?: string;
+  /** Cabecera `X-GitHub-Api-Version` hacia `models.github.ai`. Por defecto `2026-03-10` (REST Models). */
+  GITHUB_MODELS_API_VERSION?: string;
 }

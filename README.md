@@ -254,12 +254,16 @@ Navegador
 | `AI_GATEWAY_API_TOKEN` | Secreto opcional | Token para cabecera `cf-aig-authorization` si el gateway lo requiere. | `wrangler secret put AI_GATEWAY_API_TOKEN` |
 | `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). Con slug (GitHub Models), el cliente apunta a **`…/custom-{slug}/{path}`** (`path` = `AI_GATEWAY_PROVIDER_PATH` o `inference` por defecto) y el JSON usa el id del catálogo (p. ej. `openai/gpt-4o-mini`). El `base_url` del proveedor en Cloudflare debe ser **`https://models.github.ai`**. Sin slug: **`…/compat`** con el `model` tal cual. | `github-models` |
 | `AI_GATEWAY_PROVIDER_PATH` | Var opcional | Segmento de ruta tras `…/custom-{slug}/` (sin slashes extremos). GitHub Models: **`inference`**. | `inference` |
+| `GITHUB_MODELS_ORG` | Var opcional | Login de la org GitHub. Si `OPENAI_API_BASE` es `https://models.github.ai/inference`, las peticiones van a **`…/orgs/{org}/inference`** (cuando solo la org tiene modelos habilitados). | — |
+| `GITHUB_MODELS_API_VERSION` | Var opcional | Valor de la cabecera `X-GitHub-Api-Version` hacia GitHub Models. | `2026-03-10` |
 
 > Si quieres apuntar al endpoint real de GitHub Copilot (`https://api.individual.githubcopilot.com`), `src/copilot-token.ts` intentará intercambiar el GitHub token por un session token Copilot. Si no, usa el GitHub token tal cual.
 
 > **Openclaw vs GitHub Models en este repo:** [openclaw/openclaw](https://github.com/openclaw/openclaw) documenta ids cortos de Copilot (p. ej. `gpt-5.4-mini` en `extensions/github-copilot/models-defaults.ts`) contra la API interna. Aquí, con **`OPENAI_API_BASE`** apuntando a **`models.github.ai`**, el cuerpo debe usar el id del **catálogo REST** (`publisher/modelo`, p. ej. `openai/gpt-4o-mini`). Si defines `COPILOT_MODEL` sin `/` y la base incluye `models.github.ai`, el Worker añade el prefijo **`openai/`** automáticamente para nombres tipo `gpt-*` / `o*`.
 
 ### AI Gateway (PoC B1)
+
+#### Opción A — Automático (recomendado)
 
 1. Crea un [API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) con permiso **Account → AI Gateway → Edit** y permiso para **listar la cuenta** (p. ej. **Account → Account Settings → Read**, o un token de plantilla que incluya acceso a la cuenta), para que `GET https://api.cloudflare.com/client/v4/accounts` funcione sin `wrangler`.
 2. Crea en la raíz del repo un fichero **`.env`** (gitignored) o **`.env.ai-gateway.local`**, y define **`CF_AI_GATEWAY_API_TOKEN=…`** (recomendado; plantillas: [`.env.example`](.env.example), [`.env.ai-gateway.example`](.env.ai-gateway.example)). Evita poner un token solo de AI Gateway en **`CLOUDFLARE_API_TOKEN`** dentro de `.env` si usas `wrangler deploy` con OAuth: Wrangler leería ese token y puede fallar sin permiso Workers.
@@ -281,11 +285,12 @@ Navegador
 
 #### Si en logs o LangSmith aparece **`403`** / **`No access to model`**
 
-Eso indica que la petición **ya llega** a GitHub Models (ruta e id reconocibles), pero **tu cuenta o token no tienen permiso** para inferir ese modelo concreto (no es un bug del Worker ni de LangChain).
+Eso indica que la petición **ya llega** a GitHub Models (ruta e id reconocibles), pero **GitHub deniega el uso** de ese modelo con tu token o contexto (no es un fallo de LangChain).
 
-1. **Token:** para inferencia suele hacer falta un PAT con permisos de **Models** según [documentación de inferencia](https://docs.github.com/en/rest/models/inference). Un `gh auth token` sin alcance de modelos puede listar o fallar distinto según el endpoint; revisa el PAT usado en `COPILOT_GITHUB_TOKEN`.
-2. **Organización / empresa:** los propietarios pueden tener que activar **GitHub Models** o la política de acceso a modelos para la org; en entornos restringidos algunos modelos quedan bloqueados aunque existan en catálogo.
-3. **Qué modelo te corresponde:** ejecuta **`npm run list:github-models`** con el mismo token que el Worker y elige un **`id`** del listado como `COPILOT_MODEL`. Si el catálogo responde 401/403, el problema está en el token antes de llegar al chat.
+1. **Token:** la inferencia REST exige alcance **`models: read`** en PAT *fine-grained* (u otro token admitido). Ver [Inferencia (REST)](https://docs.github.com/en/rest/models/inference). Un token solo de `repo` o un `gh auth token` sin permisos de modelos suele producir **403** en chat aunque otras APIs respondan.
+2. **Organización:** si los modelos están habilitados para una **org** y no para tu usuario, define en el Worker la variable **`GITHUB_MODELS_ORG`** con el *login* de la org (p. ej. `mi-org`): el Worker usará `https://models.github.ai/orgs/{org}/inference` en lugar de la inferencia global.
+3. **Catálogo:** con el mismo token que el Worker, **`npm run list:github-models`**. Si falla con 401/403, corrige el token antes de probar chat. Si lista modelos, usa un **`id`** del listado en **`COPILOT_MODEL`**.
+4. **Cabeceras REST:** el Worker envía `Accept: application/vnd.github+json` y `X-GitHub-Api-Version` (por defecto `2026-03-10`; opcional **`GITHUB_MODELS_API_VERSION`**) en llamadas cuya base es `models.github.ai`, como indica la documentación de GitHub.
 
 #### Opción B — Manual (dashboard)
 
