@@ -219,7 +219,14 @@ async function ensureCustomProvider() {
     console.log(`Actualizando base_url de «${providerSlug}»: ${current || "(vacío)"} → ${desired}`);
     await cf(`/ai-gateway/custom-providers/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ base_url: desired }),
+      body: JSON.stringify({
+        name: existing.name ?? "GitHub Models (inference)",
+        slug: existing.slug ?? providerSlug,
+        base_url: desired,
+        description:
+          existing.description ?? "OpenAI-compatible upstream for ia-agent-worker (GitHub Models).",
+        enable: existing.enable !== false,
+      }),
     });
     console.log(`Custom provider «${providerSlug}» actualizado.`);
     return;
@@ -263,8 +270,9 @@ Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]):
   AI_GATEWAY_ACCOUNT_ID = ${accountId}
   AI_GATEWAY_ID         = ${gatewayId}
   AI_GATEWAY_PROVIDER_SLUG = ${providerSlug}
+  # Opcional (GitHub Models): AI_GATEWAY_PROVIDER_PATH = inference
 
-Con slug, el Worker usa la URL del gateway \`…/custom-{slug}/inference\` (OpenAI SDK añade \`/chat/completions\`).
+Con slug, el Worker usa la URL del gateway \`…/custom-{slug}/{path}\` (por defecto \`path=inference\`; OpenAI SDK añade \`/chat/completions\`).
 El custom provider en Cloudflare debe tener base_url = host \`https://models.github.ai\` (sin \`/inference\`; si quedó la URL antigua, este script la corrige con PATCH).
 
 Luego: npm run deploy   (o tu pipeline)

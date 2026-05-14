@@ -251,7 +251,8 @@ Navegador
 | `AI_GATEWAY_ACCOUNT_ID` | Var opcional | Cuenta Cloudflare; con `AI_GATEWAY_ID` activa el AI Gateway en la URL base del cliente. Si **no** están definidas, el LLM usa solo `OPENAI_API_BASE` (p. ej. GitHub Models directo). | — |
 | `AI_GATEWAY_ID` | Var opcional | Identificador del gateway en la URL. | — |
 | `AI_GATEWAY_API_TOKEN` | Secreto opcional | Token para cabecera `cf-aig-authorization` si el gateway lo requiere. | `wrangler secret put AI_GATEWAY_API_TOKEN` |
-| `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). Con slug (GitHub Models), el cliente apunta a **`…/custom-{slug}/inference`** y el JSON usa el id del catálogo (`openai/gpt-5-mini`). El `base_url` del proveedor en Cloudflare debe ser **`https://models.github.ai`** (`npm run provision:ai-gateway` lo crea o corrige). Sin slug: **`…/compat`** con el `model` tal cual. | `github-models` |
+| `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). Con slug (GitHub Models), el cliente apunta a **`…/custom-{slug}/{path}`** (`path` = `AI_GATEWAY_PROVIDER_PATH` o `inference` por defecto) y el JSON usa el id del catálogo (`openai/gpt-5-mini`). El `base_url` del proveedor en Cloudflare debe ser **`https://models.github.ai`**. Sin slug: **`…/compat`** con el `model` tal cual. | `github-models` |
+| `AI_GATEWAY_PROVIDER_PATH` | Var opcional | Segmento de ruta tras `…/custom-{slug}/` (sin slashes extremos). GitHub Models: **`inference`**. | `inference` |
 
 > Si quieres apuntar al endpoint real de GitHub Copilot (`https://api.individual.githubcopilot.com`), `src/copilot-token.ts` intentará intercambiar el GitHub token por un session token Copilot. Si no, usa el GitHub token tal cual.
 
