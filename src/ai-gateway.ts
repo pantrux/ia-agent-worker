@@ -20,16 +20,23 @@ export function aiGatewayCustomProviderBaseUrl(accountId: string, gatewayId: str
 
 export type UpstreamLlmCredentials = { apiKey: string; baseUrl: string };
 
+function isAiGatewayExplicitlyDisabled(env: Env): boolean {
+  const v = env.AI_GATEWAY_DISABLED?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
 function stripCustomProviderModelPrefix(model: string, slugClean: string): string {
   const prefix = `custom-${slugClean}/`;
   return model.startsWith(prefix) ? model.slice(prefix.length) : model;
 }
 
 /**
+ * Si **`AI_GATEWAY_DISABLED`** es `1`/`true`/`yes`/`on`, devuelve credenciales upstream sin gateway (prueba directa a `OPENAI_API_BASE`).
+ *
  * Si `AI_GATEWAY_ACCOUNT_ID` e `AI_GATEWAY_ID` están definidos, enruta las llamadas por AI Gateway.
  *
  * - Con **`AI_GATEWAY_PROVIDER_SLUG`** (p. ej. GitHub Models): endpoint **específico del proveedor**
- *   `…/custom-{slug}/{AI_GATEWAY_PROVIDER_PATH o inference}` + `model` del catálogo (`openai/gpt-5.4-mini`). El SDK añade `/chat/completions`
+ *   `…/custom-{slug}/{AI_GATEWAY_PROVIDER_PATH o inference}` + `model` del catálogo (p. ej. `openai/gpt-4o-mini`). El SDK añade `/chat/completions`
  *   → en el gateway queda `…/custom-{slug}/{path}/chat/completions`, que Cloudflare concatena con
  *   `base_url` del proveedor (debe ser el host `https://models.github.ai`, ver `provision-ai-gateway.mjs`).
  *   La ruta unificada `/compat` reenvía como OpenAI estándar y suele producir **404** contra
@@ -43,6 +50,10 @@ export function resolveAiGatewayLlmConfig(
   upstream: UpstreamLlmCredentials,
   model: string
 ): { apiKey: string; baseUrl: string; model: string; defaultHeaders?: Record<string, string> } {
+  if (isAiGatewayExplicitlyDisabled(env)) {
+    return { apiKey: upstream.apiKey, baseUrl: upstream.baseUrl, model };
+  }
+
   const accountId = env.AI_GATEWAY_ACCOUNT_ID?.trim();
   const gatewayId = env.AI_GATEWAY_ID?.trim();
   if (!accountId || !gatewayId) {

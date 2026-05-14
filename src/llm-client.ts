@@ -3,11 +3,8 @@ import type { Env } from "./env.js";
 import { getCopilotToken } from "./copilot-token.js";
 import { resolveAiGatewayLlmConfig } from "./ai-gateway.js";
 
-/**
- * Valor por defecto alineado con el catálogo GitHub Models (`publisher/modelo`).
- * Openclaw lista ids cortos de Copilot (`gpt-5.4-mini`); aquí usamos el id del catálogo REST.
- */
-export const DEFAULT_COPILOT_MODEL = "openai/gpt-5.4-mini";
+/** Default estable en catálogo GitHub Models; alineado con trazas que ya funcionaron en producción. */
+export const DEFAULT_COPILOT_MODEL = "openai/gpt-4o-mini";
 
 /**
  * Si la base es inferencia GitHub Models, el cuerpo `model` debe ser `{publisher}/{nombre}`.
