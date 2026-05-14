@@ -105,6 +105,15 @@ npx wrangler dev
 
 Requiere: D1 local (aplicar schema/seed con `--local`).
 
+### Listar modelos del catálogo (GitHub Models)
+
+Con `COPILOT_GITHUB_TOKEN` en `.env` o sesión `gh auth login -h github.com`, consulta el catálogo oficial ([documentación](https://docs.github.com/en/rest/models/catalog?apiVersion=2026-03-10#list-all-models)):
+
+```bash
+npm run list:github-models
+npm run list:github-models -- --json
+```
+
 ## LangSmith Studio (grafo local)
 
 [LangSmith Studio](https://docs.langchain.com/langsmith/studio) necesita el **Agent Server** de LangGraph, no el HTTP del Worker. Este repo expone el mismo grafo vía [`langgraph.json`](langgraph.json) y [`src/agent-server/graph.ts`](src/agent-server/graph.ts): en Node.js usa **sql.js** (SQLite en memoria) con el mismo `schema.sql` / `seed.sql` que el CRM en D1, y **MemorySaver** como checkpointer (el Worker sigue usando **D1Saver** en producción).

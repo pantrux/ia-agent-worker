@@ -12,6 +12,7 @@
     "smoke:worker": "node ./scripts/smoke-worker.mjs",
     "provision:ai-gateway": "node ./scripts/provision-ai-gateway.mjs",
     "check:ai-gateway": "node ./scripts/cf-ai-gateway-status.mjs",
+    "list:github-models": "node ./scripts/list-github-models-catalog.mjs",
     "rotate:bff-secret": "node ./scripts/rotate-bff-secret.mjs",
     "rotate:copilot-github-token": "node ./scripts/rotate-copilot-github-token.mjs",
     "deploy": "wrangler deploy",
