@@ -23,9 +23,16 @@
 | POST | `/api/chat` | Send message to agent (`{ "message": "...", "thread_id?": "..." }`) |
 | POST | `/api/chat/resume` | Resume HITL flow (`{ "thread_id": "...", "approved": true/false }`) |
 
-### Important notes
+### Secrets management
 
-- **`COPILOT_GITHUB_TOKEN`** must be set in `.dev.vars` for the LLM to work. The default `gh auth token` does NOT have GitHub Models API access — a PAT with `models:read` scope or a Copilot-enabled token is required.
+All secrets are managed via **local files** (gitignored), never through GitHub repo secrets:
+
+- **`.dev.vars`** — Wrangler loads these as Worker secrets/vars at dev time. Copy from `.dev.vars.example`.
+- **`.env`** — Used by helper scripts (`provision:ai-gateway`, `check:ai-gateway`, Studio). Copy from `.env.example`.
+
+Key secret: **`COPILOT_GITHUB_TOKEN`** in `.dev.vars` — required for LLM calls. Needs a GitHub PAT with `models:read` scope (the default `gh auth token` does NOT have Models API access).
+
+### Important notes
 - After `npm install`, always run `npm run db:migrate:local && npm run db:seed:local` to initialize the local D1 SQLite database before starting the worker.
 - Wrangler automatically creates the local D1 database under `.wrangler/state/v3/d1/`. This directory is gitignored.
 - The worker defaults to port 8787 but the landing page expects port 8765 — always start with `--port 8765`.
