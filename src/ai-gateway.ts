@@ -8,8 +8,7 @@ export function aiGatewayCompatBaseUrl(accountId: string, gatewayId: string): st
 }
 
 /**
- * URL `…/custom-{slug}` (provider-specific). Reservada por si hace falta; el flujo OpenAI SDK
- * recomendado con custom providers es **`/compat`** + modelo `custom-{slug}/…`.
+ * URL `…/custom-{slug}` (provider-specific, sin `/compat`).
  * @see https://developers.cloudflare.com/ai-gateway/configuration/custom-providers/
  */
 export function aiGatewayCustomProviderBaseUrl(accountId: string, gatewayId: string, slugWithoutCustomPrefix: string): string {
@@ -29,8 +28,12 @@ function stripCustomProviderModelPrefix(model: string, slugClean: string): strin
 /**
  * Si `AI_GATEWAY_ACCOUNT_ID` e `AI_GATEWAY_ID` están definidos, enruta las llamadas por AI Gateway.
  *
- * - Con **`AI_GATEWAY_PROVIDER_SLUG`**: API unificada **`/compat`** y modelo `custom-{slug}/{modelo}`
- *   (patrón recomendado por Cloudflare para el SDK OpenAI con custom providers).
+ * - Con **`AI_GATEWAY_PROVIDER_SLUG`** (p. ej. GitHub Models): endpoint **específico del proveedor**
+ *   `…/custom-{slug}/{AI_GATEWAY_PROVIDER_PATH o inference}` + `model` del catálogo (`openai/gpt-5-mini`). El SDK añade `/chat/completions`
+ *   → en el gateway queda `…/custom-{slug}/{path}/chat/completions`, que Cloudflare concatena con
+ *   `base_url` del proveedor (debe ser el host `https://models.github.ai`, ver `provision-ai-gateway.mjs`).
+ *   La ruta unificada `/compat` reenvía como OpenAI estándar y suele producir **404** contra
+ *   `models.github.ai/inference` (no existe `/v1/chat/completions` allí).
  * - Sin slug: **`/compat`** con el `model` tal cual.
  *
  * `AI_GATEWAY_API_TOKEN` opcional → `cf-aig-authorization`.
@@ -55,8 +58,8 @@ export function resolveAiGatewayLlmConfig(
   const slug = env.AI_GATEWAY_PROVIDER_SLUG?.trim();
   if (slug) {
     const slugClean = slug.replace(/^custom-/, "").trim();
-    const baseUrl = aiGatewayCompatBaseUrl(accountId, gatewayId);
     if (!slugClean) {
+      const baseUrl = aiGatewayCompatBaseUrl(accountId, gatewayId);
       return {
         apiKey: upstream.apiKey,
         baseUrl,
@@ -64,14 +67,15 @@ export function resolveAiGatewayLlmConfig(
         ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
       };
     }
-    const customPrefix = `custom-${slugClean}/`;
-    const compatModel = model.startsWith(customPrefix)
-      ? model
-      : `${customPrefix}${stripCustomProviderModelPrefix(model, slugClean)}`;
+    const gatewayRoot = aiGatewayCustomProviderBaseUrl(accountId, gatewayId, slugClean);
+    const rawPath = env.AI_GATEWAY_PROVIDER_PATH?.trim().replace(/^\/+/, "").replace(/\/+$/, "") ?? "";
+    const providerPath = rawPath || "inference";
+    const baseUrl = `${gatewayRoot}/${providerPath}`;
+    const upstreamModel = stripCustomProviderModelPrefix(model, slugClean);
     return {
       apiKey: upstream.apiKey,
       baseUrl,
-      model: compatModel,
+      model: upstreamModel,
       ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
     };
   }

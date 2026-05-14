@@ -38,6 +38,7 @@ export async function loadStudioEnv(): Promise<Env> {
     AI_GATEWAY_ID: process.env.AI_GATEWAY_ID,
     AI_GATEWAY_API_TOKEN: process.env.AI_GATEWAY_API_TOKEN,
     AI_GATEWAY_PROVIDER_SLUG: process.env.AI_GATEWAY_PROVIDER_SLUG,
+    AI_GATEWAY_PROVIDER_PATH: process.env.AI_GATEWAY_PROVIDER_PATH,
   };
 }
 

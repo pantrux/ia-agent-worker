@@ -9,7 +9,9 @@
  *
  * Opcional: AI_GATEWAY_ID (default: ia-agent-worker-llm),
  *           AI_GATEWAY_PROVIDER_SLUG (default: github-models),
- *           AI_GATEWAY_CUSTOM_BASE_URL (default: https://models.github.ai/inference).
+ *           AI_GATEWAY_CUSTOM_BASE_URL (default: https://models.github.ai) — solo el host; el Worker
+ *           usa la ruta del gateway `…/custom-{slug}/inference/chat/completions` y Cloudflare concatena
+ *           con este base_url (ver docs «provider-specific»). No uses …/inference aquí o duplicará el segmento.
  *
  * Carga opcional: raíz del repo — `.env` y `.env.ai-gateway.local` (no versionar; ver `.env.example` y `.env.ai-gateway.example`).
  */
@@ -31,7 +33,7 @@ const API = "https://api.cloudflare.com/client/v4";
 const gatewayId = (process.env.AI_GATEWAY_ID || "ia-agent-worker-llm").trim();
 const providerSlug =
   (process.env.AI_GATEWAY_PROVIDER_SLUG || "github-models").trim().replace(/^custom-/, "").trim() || "github-models";
-const customBaseUrl = (process.env.AI_GATEWAY_CUSTOM_BASE_URL || "https://models.github.ai/inference").trim();
+const customBaseUrl = (process.env.AI_GATEWAY_CUSTOM_BASE_URL || "https://models.github.ai").trim();
 const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
 if (!token) {
@@ -199,9 +201,34 @@ async function ensureGateway() {
 async function ensureCustomProvider() {
   const list = await cf(`/ai-gateway/custom-providers?per_page=100`);
   const providers = extractProviderList(list);
-  const exists = providers.some((p) => p && p.slug === providerSlug);
-  if (exists) {
-    console.log(`Custom provider slug «${providerSlug}» ya existe.`);
+  const desired = customBaseUrl.replace(/\/+$/, "");
+  const existing = providers.find((p) => p && p.slug === providerSlug);
+  if (existing) {
+    const current = String(existing.base_url ?? "")
+      .trim()
+      .replace(/\/+$/, "");
+    if (current === desired) {
+      console.log(`Custom provider «${providerSlug}» ya existe (base_url OK).`);
+      return;
+    }
+    const id = existing.id;
+    if (!id) {
+      console.warn(`Custom provider «${providerSlug}» existe pero sin id en API; no se puede PATCH. Revisa el dashboard.`);
+      return;
+    }
+    console.log(`Actualizando base_url de «${providerSlug}»: ${current || "(vacío)"} → ${desired}`);
+    await cf(`/ai-gateway/custom-providers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: existing.name ?? "GitHub Models (inference)",
+        slug: existing.slug ?? providerSlug,
+        base_url: desired,
+        description:
+          existing.description ?? "OpenAI-compatible upstream for ia-agent-worker (GitHub Models).",
+        enable: existing.enable !== false,
+      }),
+    });
+    console.log(`Custom provider «${providerSlug}» actualizado.`);
     return;
   }
   console.log(`Creando custom provider «${providerSlug}» → ${customBaseUrl} …`);
@@ -210,7 +237,7 @@ async function ensureCustomProvider() {
     body: JSON.stringify({
       name: "GitHub Models (inference)",
       slug: providerSlug,
-      base_url: customBaseUrl,
+      base_url: desired,
       description: "OpenAI-compatible upstream for ia-agent-worker (GitHub Models).",
       enable: true,
     }),
@@ -243,8 +270,10 @@ Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]):
   AI_GATEWAY_ACCOUNT_ID = ${accountId}
   AI_GATEWAY_ID         = ${gatewayId}
   AI_GATEWAY_PROVIDER_SLUG = ${providerSlug}
+  # Opcional (GitHub Models): AI_GATEWAY_PROVIDER_PATH = inference
 
-Con slug, el Worker usa la ruta provider-specific; el modelo en el cuerpo es el de GitHub (p. ej. openai/gpt-5-mini), sin prefijo custom-.
+Con slug, el Worker usa la URL del gateway \`…/custom-{slug}/{path}\` (por defecto \`path=inference\`; OpenAI SDK añade \`/chat/completions\`).
+El custom provider en Cloudflare debe tener base_url = host \`https://models.github.ai\` (sin \`/inference\`; si quedó la URL antigua, este script la corrige con PATCH).
 
 Luego: npm run deploy   (o tu pipeline)
 

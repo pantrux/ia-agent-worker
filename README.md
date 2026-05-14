@@ -230,8 +230,8 @@ Navegador
                                                     └─ checkpoints · checkpoint_writes
              │
              └─► ChatOpenAI ───► GitHub Models API (o Copilot)
-                                  base: OPENAI_API_BASE (p. ej. models.github.ai)
-                                  opcional: Cloudflare AI Gateway (`/compat`; con slug → modelo `custom-{slug}/…`)
+                                  base: OPENAI_API_BASE (p. ej. models.github.ai/inference)
+                                  opcional: AI Gateway ruta específica `…/custom-{slug}/inference` + model id catálogo
 ```
 
 ## Variables de entorno
@@ -251,7 +251,8 @@ Navegador
 | `AI_GATEWAY_ACCOUNT_ID` | Var opcional | Cuenta Cloudflare; con `AI_GATEWAY_ID` activa el AI Gateway en la URL base del cliente. Si **no** están definidas, el LLM usa solo `OPENAI_API_BASE` (p. ej. GitHub Models directo). | — |
 | `AI_GATEWAY_ID` | Var opcional | Identificador del gateway en la URL. | — |
 | `AI_GATEWAY_API_TOKEN` | Secreto opcional | Token para cabecera `cf-aig-authorization` si el gateway lo requiere. | `wrangler secret put AI_GATEWAY_API_TOKEN` |
-| `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). Con slug, el Worker usa **`…/compat`** y el modelo pasa como **`custom-{slug}/{COPILOT_MODEL}`** (API unificada de AI Gateway). Sin slug: solo **`…/compat`** con el `model` tal cual. | `github-models` |
+| `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). Con slug (GitHub Models), el cliente apunta a **`…/custom-{slug}/{path}`** (`path` = `AI_GATEWAY_PROVIDER_PATH` o `inference` por defecto) y el JSON usa el id del catálogo (`openai/gpt-5-mini`). El `base_url` del proveedor en Cloudflare debe ser **`https://models.github.ai`**. Sin slug: **`…/compat`** con el `model` tal cual. | `github-models` |
+| `AI_GATEWAY_PROVIDER_PATH` | Var opcional | Segmento de ruta tras `…/custom-{slug}/` (sin slashes extremos). GitHub Models: **`inference`**. | `inference` |
 
 > Si quieres apuntar al endpoint real de GitHub Copilot (`https://api.individual.githubcopilot.com`), `src/copilot-token.ts` intentará intercambiar el GitHub token por un session token Copilot. Si no, usa el GitHub token tal cual.
 
@@ -262,7 +263,7 @@ Navegador
 1. Crea un [API Token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) con permiso **Account → AI Gateway → Edit** y permiso para **listar la cuenta** (p. ej. **Account → Account Settings → Read**, o un token de plantilla que incluya acceso a la cuenta), para que `GET https://api.cloudflare.com/client/v4/accounts` funcione sin `wrangler`.
 2. Crea en la raíz del repo un fichero **`.env`** (gitignored) o **`.env.ai-gateway.local`**, y define **`CF_AI_GATEWAY_API_TOKEN=…`** (recomendado; plantillas: [`.env.example`](.env.example), [`.env.ai-gateway.example`](.env.ai-gateway.example)). Evita poner un token solo de AI Gateway en **`CLOUDFLARE_API_TOKEN`** dentro de `.env` si usas `wrangler deploy` con OAuth: Wrangler leería ese token y puede fallar sin permiso Workers.
 3. En la raíz del repo: `npm run provision:ai-gateway`  
-   Crea si no existen el gateway `ia-agent-worker-llm` y el custom provider `github-models` → `https://models.github.ai/inference`. Al final imprime los valores para pegar en el Worker.
+   Crea si no existen el gateway `ia-agent-worker-llm` y el custom provider `github-models` con **base_url** `https://models.github.ai` (host; si ya existía con `…/inference`, lo actualiza). Al final imprime los valores para pegar en el Worker.
 4. Añade en **[vars]** de `wrangler.toml` (o en el dashboard del Worker) las tres variables que muestra el script; despliega con `npm run deploy`.
 5. Prueba desde el frontend con el mismo `POST` a `/api/chat`; en **AI Gateway → tu gateway** deberías ver peticiones.
 
@@ -273,11 +274,12 @@ Navegador
 
 #### Si `/api/chat` devuelve 500 y en logs aparece `MODEL_NOT_FOUND` / `404 page not found`
 
-Suele faltar el **custom provider** o el **gateway** en la cuenta de Cloudflare. Ejecuta `npm run provision:ai-gateway` (local) o el workflow **Provision AI Gateway**, luego **`npm run check:ai-gateway`** hasta obtener salida 0.
+1. Falta el **custom provider** o el **gateway**: ejecuta `npm run provision:ai-gateway` (local) o el workflow **Provision AI Gateway**, luego **`npm run check:ai-gateway`** hasta salida 0.
+2. **GitHub Models + AI Gateway:** el proveedor personalizado debe tener **`base_url` = `https://models.github.ai`** (sin `/inference`). Con la URL antigua, el reenvío puede apuntar a una ruta inexistente (`…/inference/v1/…`) y GitHub responde **404**; LangChain lo muestra como `MODEL_NOT_FOUND`. Vuelve a ejecutar `provision:ai-gateway` y **despliega** el Worker con la versión actual del código (`…/custom-{slug}/inference` en la base del cliente).
 
 #### Opción B — Manual (dashboard)
 
 1. En el dashboard de Cloudflare, crea un **AI Gateway** y anota **account id** + **gateway id** (segmentos de la URL `…/v1/{account}/{gateway}/…`).
-2. Para **GitHub Models** (`OPENAI_API_BASE=https://models.github.ai/inference`), crea un **custom provider** cuyo `base_url` sea `https://models.github.ai/inference` y un **slug** (p. ej. `github-models`).
-3. En el Worker, define `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID` y `AI_GATEWAY_PROVIDER_SLUG` (sin `custom-`). Con slug, las llamadas van a **`…/compat/chat/completions`** y el JSON lleva **`"model": "custom-{slug}/openai/…"`** (patrón unificado de Cloudflare). Ver [custom providers](https://developers.cloudflare.com/ai-gateway/configuration/custom-providers/).
+2. Para **GitHub Models** (`OPENAI_API_BASE=https://models.github.ai/inference` en el Worker para llamadas directas), crea un **custom provider** con **`base_url` = `https://models.github.ai`** (solo el host) y slug `github-models`.
+3. En el Worker, define `AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_ID` y `AI_GATEWAY_PROVIDER_SLUG`. Las peticiones van a **`…/custom-{slug}/inference/chat/completions`** en el gateway; el cuerpo lleva **`"model": "openai/gpt-5-mini"`** (id de catálogo, sin prefijo `custom-`). Ver [custom providers](https://developers.cloudflare.com/ai-gateway/configuration/custom-providers/) (ruta específica del proveedor cuando el upstream no sigue solo `/v1/chat/completions`).
 4. Si tu gateway exige autenticación de cliente, guarda `AI_GATEWAY_API_TOKEN` como secreto (`wrangler secret put AI_GATEWAY_API_TOKEN`). Referencia compat (sin slug): [Unified API](https://developers.cloudflare.com/ai-gateway/usage/chat-completion/).

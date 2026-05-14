@@ -48,7 +48,7 @@ Navegador
 Cloudflare Worker (ia-agent-worker)
   ├─ LangGraph.js (router → model ⇄ tools → validation)
   ├─ D1Saver + CRM tools → Cloudflare D1
-  ├─ ChatOpenAI → GitHub Models (https://models.github.ai/inference, p. ej. openai/gpt-5-mini)
+  ├─ ChatOpenAI → GitHub Models (`https://models.github.ai/inference/...`); opcionalmente vía AI Gateway (`…/custom-{slug}/inference/...` + `base_url` del proveedor = `https://models.github.ai`)
   └─ LangSmith (si LANGSMITH_API_KEY)
 ```
 
