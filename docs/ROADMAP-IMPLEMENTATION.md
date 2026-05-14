@@ -35,6 +35,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | T0.4 | Abstracción CRM (`CrmDatabase` + sql.js local / D1 Worker) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | Ejecutado | — |
 | T0.5 | Metadata LangSmith `deployment` (var `DEPLOYMENT_ENV`) en código Worker | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | Ejecutado | Vars por entorno: ver Fase A / `wrangler.toml` `[env.preview]`. |
 | T0.6 | CI smoke remoto (`worker-smoke.yml` + `scripts/smoke-worker.mjs`) | — | Ejecutado | Integrado en `main` (sin PR único de feature); variable `WORKER_SMOKE_URL` en GitHub. |
+| T0.7 | Modelo GitHub Models (`openai/gpt-5-mini`), rotación `COPILOT_GITHUB_TOKEN`, catálogo y doc BFF/Pages | [PR #14](https://github.com/pantrux/ia-agent-worker/pull/14) (merge 2026-05-14) | Ejecutado | Scripts `rotate:copilot-github-token` y `list:github-models`; token AI Gateway `CF_AI_GATEWAY_API_TOKEN` en scripts/ejemplos; vars AI Gateway activas en `wrangler.toml`; README y `PROJECT-OVERVIEW` (proxy Pages, dominio propio). |
 
 ---
 
