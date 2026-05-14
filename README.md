@@ -279,6 +279,14 @@ Navegador
 2. Falta el **custom provider** o el **gateway**: ejecuta `npm run provision:ai-gateway` (local) o el workflow **Provision AI Gateway**, luego **`npm run check:ai-gateway`** hasta salida 0.
 3. **GitHub Models + AI Gateway:** el proveedor personalizado debe tener **`base_url` = `https://models.github.ai`** (sin `/inference`). Con la URL antigua, el reenvío puede apuntar a una ruta inexistente (`…/inference/v1/…`) y GitHub responde **404**; LangChain lo muestra como `MODEL_NOT_FOUND`. Vuelve a ejecutar `provision:ai-gateway` y **despliega** el Worker con la versión actual del código (`…/custom-{slug}/inference` en la base del cliente).
 
+#### Si en logs o LangSmith aparece **`403`** / **`No access to model`**
+
+Eso indica que la petición **ya llega** a GitHub Models (ruta e id reconocibles), pero **tu cuenta o token no tienen permiso** para inferir ese modelo concreto (no es un bug del Worker ni de LangChain).
+
+1. **Token:** para inferencia suele hacer falta un PAT con permisos de **Models** según [documentación de inferencia](https://docs.github.com/en/rest/models/inference). Un `gh auth token` sin alcance de modelos puede listar o fallar distinto según el endpoint; revisa el PAT usado en `COPILOT_GITHUB_TOKEN`.
+2. **Organización / empresa:** los propietarios pueden tener que activar **GitHub Models** o la política de acceso a modelos para la org; en entornos restringidos algunos modelos quedan bloqueados aunque existan en catálogo.
+3. **Qué modelo te corresponde:** ejecuta **`npm run list:github-models`** con el mismo token que el Worker y elige un **`id`** del listado como `COPILOT_MODEL`. Si el catálogo responde 401/403, el problema está en el token antes de llegar al chat.
+
 #### Opción B — Manual (dashboard)
 
 1. En el dashboard de Cloudflare, crea un **AI Gateway** y anota **account id** + **gateway id** (segmentos de la URL `…/v1/{account}/{gateway}/…`).
