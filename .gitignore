@@ -6,3 +6,4 @@ dist/
 .wrangler/
 .langgraph_api
 .bff-rotation-once.txt
+.copilot-token-rotation-once.txt

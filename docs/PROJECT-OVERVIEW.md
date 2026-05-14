@@ -38,30 +38,24 @@ Representación gráfica autocontenida (HTML + SVG, se abre en cualquier navegad
 Navegador
   │
   ├─ GET sitio + /demo  ─────────► Cloudflare Pages (aaas-landing)
-  │                                Next.js export estático, HTML/JS/CSS
+  │                                Next.js export estático
   │
-  └─ POST /api/chat (CORS) ──────► Cloudflare Worker (ia-agent-worker)
-                                    │
-                                    ├─ LangGraph.js StateGraph
-                                    │   router → model ⇄ tools → validation
-                                    │
-                                    ├─ D1Saver (checkpointer)  ┐
-                                    │                          ├─► Cloudflare D1
-                                    └─ CRM tools (SQL queries) ┘   (customers, orders, leads,
-                                                                    checkpoints, checkpoint_writes)
-                                    │
-                                    └─ ChatOpenAI → GitHub Models API
-                                                    https://models.github.ai/inference
-                                                    modelo: openai/gpt-4o-mini
-                                    │
-                                    └─ LangSmith Tracing API
-                                                    runs/traces con metadata
-                                                    (thread_id, operation, runtime)
+  ├─ POST /api/chat (mismo origen Pages) ─► Pages Functions (functions/api/chat/*)
+  │       → reenvío a ia-agent-worker con Authorization: Bearer … si BFF_API_TOKEN en Pages
+  │
+  └─ (solo sin A2 o con token en cliente) POST directo *.workers.dev → CORS + ALLOWED_ORIGINS
+
+Cloudflare Worker (ia-agent-worker)
+  ├─ LangGraph.js (router → model ⇄ tools → validation)
+  ├─ D1Saver + CRM tools → Cloudflare D1
+  ├─ ChatOpenAI → GitHub Models (https://models.github.ai/inference, p. ej. openai/gpt-4o-mini)
+  └─ LangSmith (si LANGSMITH_API_KEY)
 ```
 
 Notas:
 
-- El cliente del chat **llama al Worker directamente** (no hay Pages Functions de proxy). El Worker autoriza orígenes con `ALLOWED_ORIGINS`.
+- **Producción con A2 (`BFF_API_TOKEN` en el Worker):** el chat del landing debe ir **al mismo origen** que Pages (`POST /api/chat` relativo) para que las **Pages Functions** (`aaas-landing`, `functions/api/chat/worker-proxy.ts`) reenvíen al Worker e inyecten `Authorization: Bearer …` con el secreto homónimo en Pages. Si el bundle del navegador apunta **directo** al `*.workers.dev` sin esa cabecera, el Worker responde **401** `{"error":"No autorizado"}`. Ver README de **`pantrux/aaas-landing`** (`AGENT_API_URL`, `BFF_API_TOKEN`, `NEXT_PUBLIC_CHAT_SAME_ORIGIN` en dominio propio).
+- **Sin** `BFF_API_TOKEN` en el Worker, el cliente puede llamar al Worker por CORS; `ALLOWED_ORIGINS` debe incluir el origen del sitio.
 - D1 alberga tanto la **simulación CRM** como los **checkpoints** de LangGraph (mismos esquemas, base `ia-agent-db`).
 - Autenticación al LLM: el secreto `COPILOT_GITHUB_TOKEN` es un token de `gh auth token`; el código (`src/copilot-token.ts`) intenta intercambiar a token Copilot y, si la base URL no es la de Copilot, lo usa **tal cual** contra GitHub Models.
 - Observabilidad: el Worker publica trazas en LangSmith cuando está presente `LANGSMITH_API_KEY`; se adjuntan `metadata` y `tags` por operación (`chat` y `resume`).
@@ -81,8 +75,9 @@ Notas:
 
 | Pieza | Detalle |
 |-------|---------|
-| `lib/site.ts` | Resuelve `AGENT_API_BASE`. En producción está **hardcodeado** a la URL del Worker (`https://ia-agent-worker.<subdominio>.workers.dev`). |
-| `components/demo/agent-chat.tsx` | Componente cliente que hace `fetch(POST /api/chat)` y `fetch(POST /api/chat/resume)` directos al Worker. Gestiona thread_id en `localStorage` y auto-scroll interno (la página no se mueve al enviar). |
+| `lib/site.ts` | `getAgentApiBase()`: en `*.pages.dev` / `*.cloudflarepages.dev` suele devolver **`""`** (mismo origen → proxy). Con **dominio propio** en Pages hace falta **`NEXT_PUBLIC_CHAT_SAME_ORIGIN=1`** en variables de build para el mismo comportamiento. `NEXT_PUBLIC_AGENT_API_URL` fuerza URL del Worker en el cliente (rompe el proxy A2 si el Worker exige Bearer). |
+| `functions/api/chat/*` | Proxy servidor: `AGENT_API_URL` + opcional **`BFF_API_TOKEN`** (mismo valor que el secreto del Worker) → reenvío a `/api/chat` y `/api/chat/resume`. |
+| `components/demo/agent-chat.tsx` | `fetch(POST …)` respecto a `getAgentApiBase()` (mismo origen o Worker). |
 | `app/[locale]/demo/page.tsx` | Wrapper RSC que renderiza el `AgentChat`. |
 | `public/_redirects` | `/` → `/es/` (manejado por Cloudflare Pages). |
 
@@ -90,7 +85,7 @@ Notas:
 
 - **GitHub Actions / Cloudflare Pages CI**: cada `git push` a `main` dispara build.
 - Build: `npm run build` → carpeta `out/`.
-- No requiere variables de entorno para que `/demo` funcione (la URL del Worker viene compilada). Opcionalmente se puede sobreescribir con `NEXT_PUBLIC_AGENT_API_URL`.
+- Si el Worker tiene **`BFF_API_TOKEN`**, en el proyecto **Pages** deben existir **`AGENT_API_URL`** (URL del Worker) y **`BFF_API_TOKEN`** (mismo valor). Sin eso, o si el cliente llama directo al Worker sin Bearer, el chat falla con **401**. Documentación canónica del flujo: README y `docs/PROJECT-OVERVIEW.md` de **`pantrux/aaas-landing`**.
 
 ---
 

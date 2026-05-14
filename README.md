@@ -91,6 +91,8 @@ Si el secreto **no** está definido, el comportamiento es el de antes (útil en 
 
 Desarrollo local: copia [`.dev.vars.example`](.dev.vars.example) a `.dev.vars` y rellena `BFF_API_TOKEN` si quieres probar el flujo autenticado.
 
+**Chat en `aaas-landing` (producción):** el navegador no debe llamar al `*.workers.dev` sin Bearer. Con `BFF_API_TOKEN` en el Worker, en **Cloudflare Pages** del landing configura `AGENT_API_URL` y `BFF_API_TOKEN` (mismo valor); el proxy en `functions/api/chat/*` añade la cabecera. Si usas **dominio propio** en Pages, define también `NEXT_PUBLIC_CHAT_SAME_ORIGIN=1` en el build (ver README de `aaas-landing`). Si no, el cliente puede ir directo al Worker y recibirás `{"error":"No autorizado"}`.
+
 Smoke remoto (`npm run smoke:worker` con `SMOKE_INCLUDE_CHAT`): si el Worker exige Bearer, define **`WORKER_SMOKE_BFF_TOKEN`** con el mismo valor (en GitHub Actions: secreto `WORKER_SMOKE_BFF_TOKEN`).
 
 Checklist **WAF / rate limit (A1)** en Cloudflare: [docs/A1-checklist-waf.md](docs/A1-checklist-waf.md).
@@ -229,7 +231,7 @@ Navegador
 |----------|------|-------------|----------------|
 | `COPILOT_GITHUB_TOKEN` | Secreto | Token GitHub (PAT o `gh auth token`). Reusado como Bearer hacia GitHub Models. | `gho_…` / `ghu_…` |
 | `ALLOWED_ORIGINS` | Var | Orígenes CORS (separados por coma). Usa `*` para abrir todos. | `*,http://localhost:3000` |
-| `COPILOT_MODEL` | Var | Modelo LLM. | `openai/gpt-4o-mini` |
+| `COPILOT_MODEL` | Var | Modelo LLM (primario). Fallback en código: `openai/gpt-4o-mini` si falla soporte/acceso. | `openai/gpt-5.4-mini` |
 | `OPENAI_API_BASE` | Var | Base URL del LLM. | `https://models.github.ai/inference` |
 | `LANGSMITH_API_KEY` | Secreto | API key de LangSmith para enviar runs/traces. | `lsv2_…` |
 | `LANGSMITH_TRACING` | Var | Activa tracing de LangSmith. | `true` |

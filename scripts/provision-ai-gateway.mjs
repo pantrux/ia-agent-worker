@@ -4,7 +4,7 @@
  * usando la API v4 de Cloudflare. Idempotente.
  *
  * Requisitos:
- * - CLOUDFLARE_API_TOKEN con permisos «AI Gateway — Edit» (y permiso para listar cuentas, p. ej. «User — User Details — Read» o token de cuenta con «Account — Read»).
+ * - **CF_AI_GATEWAY_API_TOKEN** (recomendado) o `CLOUDFLARE_API_TOKEN` / `CF_API_TOKEN`: permisos «AI Gateway — Edit» (y listar cuentas). Usa `CF_AI_GATEWAY_API_TOKEN` en `.env` para no interferir con `wrangler deploy` (Wrangler también lee `CLOUDFLARE_API_TOKEN`).
  * - CLOUDFLARE_ACCOUNT_ID (opcional: si falta, se obtiene con GET /accounts usando el token, o como último recurso `wrangler whoami --json` vía Node).
  *
  * Opcional: AI_GATEWAY_ID (default: ia-agent-worker-llm),
@@ -32,19 +32,18 @@ const gatewayId = (process.env.AI_GATEWAY_ID || "ia-agent-worker-llm").trim();
 const providerSlug =
   (process.env.AI_GATEWAY_PROVIDER_SLUG || "github-models").trim().replace(/^custom-/, "").trim() || "github-models";
 const customBaseUrl = (process.env.AI_GATEWAY_CUSTOM_BASE_URL || "https://models.github.ai/inference").trim();
-const token = (process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
+const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
 if (!token) {
   const hasRoot = existsSync(rootEnv);
   const hasGw = existsSync(localEnv);
   console.error(
-    "Falta CLOUDFLARE_API_TOKEN (o CF_API_TOKEN) en el entorno tras cargar variables.\n" +
-      "  Añade el token en la raíz del repo, en **.env** (recomendado) o en **.env.ai-gateway.local** (no versionar; ver .env.example).\n" +
+    "Falta CF_AI_GATEWAY_API_TOKEN (recomendado) o CLOUDFLARE_API_TOKEN / CF_API_TOKEN tras cargar `.env`.\n" +
+      "  Define **CF_AI_GATEWAY_API_TOKEN** en `.env` con el token solo de AI Gateway; evita `CLOUDFLARE_API_TOKEN` en `.env` si usas `wrangler deploy` con OAuth (Wrangler tomaría ese token y fallaría sin permiso Workers).\n" +
       `  ¿Existe .env? ${hasRoot ? "sí" : "no"}  |  ¿Existe .env.ai-gateway.local? ${hasGw ? "sí" : "no"}\n` +
-      "  Crea el token con permiso «Account — AI Gateway — Edit»:\n" +
-      "  https://dash.cloudflare.com/?to=/:account/api-tokens\n" +
+      "  Crear token: https://dash.cloudflare.com/?to=/:account/api-tokens\n" +
       "Alternativa (PowerShell, solo esta sesión):\n" +
-      "  $env:CLOUDFLARE_API_TOKEN=\"...\"\n" +
+      "  $env:CF_AI_GATEWAY_API_TOKEN=\"...\"\n" +
       "  npm run provision:ai-gateway\n\n"
   );
   process.exit(1);
@@ -225,7 +224,7 @@ try {
   await ensureCustomProvider();
 } catch (e) {
   if (e.status === 403 || e.status === 401) {
-    console.error("Token inválido o sin permisos de AI Gateway. Revisa CLOUDFLARE_API_TOKEN.");
+    console.error("Token inválido o sin permisos de AI Gateway. Revisa CF_AI_GATEWAY_API_TOKEN o CLOUDFLARE_API_TOKEN.");
   }
   console.error(e.message || e);
   process.exit(1);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Lista gateways y custom providers del AI Gateway (API v4).
- * Usa CLOUDFLARE_API_TOKEN o CF_API_TOKEN desde **.env** o **.env.ai-gateway.local** en la raíz del repo (mismo orden que `provision-ai-gateway.mjs`).
+ * Usa **CF_AI_GATEWAY_API_TOKEN** (recomendado) o `CLOUDFLARE_API_TOKEN` / `CF_API_TOKEN` desde **.env** o **.env.ai-gateway.local**.
  *
  * Exit: 0 si existen el gateway `AI_GATEWAY_ID` y el slug `AI_GATEWAY_PROVIDER_SLUG`; 1 si falta alguno; 2 sin token.
  */
@@ -17,18 +17,18 @@ loadRepoEnvFiles(root);
 warnIfCloudflareApiTokenEmpty(root);
 
 const API = "https://api.cloudflare.com/client/v4";
-const token = (process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
+const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 const gatewayId = (process.env.AI_GATEWAY_ID || "ia-agent-worker-llm").trim();
 const providerSlug =
   (process.env.AI_GATEWAY_PROVIDER_SLUG || "github-models").trim().replace(/^custom-/, "").trim() || "github-models";
 
 if (!token) {
   console.error(
-    "Falta CLOUDFLARE_API_TOKEN (API Token del panel, no basta OAuth de `wrangler login`).\n" +
-      "  Añádelo en la raíz del repo: **.env** (recomendado) o **.env.ai-gateway.local** (ver `.env.example`).\n" +
+    "Falta CF_AI_GATEWAY_API_TOKEN (recomendado) o CLOUDFLARE_API_TOKEN / CF_API_TOKEN.\n" +
+      "  Pon **CF_AI_GATEWAY_API_TOKEN** en `.env` (token solo AI Gateway) para no chocar con `wrangler deploy`.\n" +
       `  ¿Existe .env? ${existsSync(rootEnv) ? "sí" : "no"}  |  ¿Existe .env.ai-gateway.local? ${existsSync(localEnv) ? "sí" : "no"}\n` +
       "  Permisos: Account → AI Gateway → Edit; conviene Account → Read para listar cuentas.\n" +
-      "  Tras guardar: npm run provision:ai-gateway   o   workflow «Provision AI Gateway» en GitHub Actions."
+      "  Tras guardar: npm run provision:ai-gateway   o   workflow «Provision AI Gateway» en GitHub Actions (secret CLOUDFLARE_API_TOKEN → CF_AI_GATEWAY_API_TOKEN)."
   );
   process.exit(2);
 }
@@ -96,7 +96,7 @@ console.log(`  ¿slug «${providerSlug}» existe? ${slugOk ? "sí" : "NO"}\n`);
 
 if (!gwOk || !slugOk) {
   console.error(
-    "Acción: ejecuta en local `npm run provision:ai-gateway` (con token) o el workflow «Provision AI Gateway» en GitHub (secret CLOUDFLARE_API_TOKEN)."
+      "Acción: ejecuta en local `npm run provision:ai-gateway` (con **CF_AI_GATEWAY_API_TOKEN** o token compatible) o el workflow «Provision AI Gateway» en GitHub (secret CLOUDFLARE_API_TOKEN)."
   );
   process.exit(1);
 }
