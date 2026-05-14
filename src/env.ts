@@ -20,7 +20,7 @@ export interface Env {
   AI_GATEWAY_ID?: string;
   /** Token de Cloudflare para la cabecera `cf-aig-authorization` si el gateway exige autenticación; conviene definirlo como secreto. */
   AI_GATEWAY_API_TOKEN?: string;
-  /** Slug del custom provider (sin prefijo `custom-`). Si está definido, el cliente usa `…/custom-{slug}` (provider-specific) y el campo `model` es el del upstream (p. ej. `openai/gpt-4o-mini`). */
+  /** Slug del custom provider (sin prefijo `custom-`). Si está definido, el cliente usa `…/custom-{slug}` (provider-specific) y el campo `model` es el del upstream (p. ej. `openai/gpt-5-mini`). */
   AI_GATEWAY_PROVIDER_SLUG?: string;
   /** Si es `true` o `1`, las respuestas 500 de `/api/chat` y `/api/chat/resume` incluyen `detail` con el mensaje de error (solo depuración; no usar en prod pública). */
   EXPOSE_CHAT_ERROR?: string;

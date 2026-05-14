@@ -4,6 +4,9 @@ import type { Env } from "../env.js";
 import { getToolsForIndustry } from "../tools/crm.js";
 import { createChatOpenAI } from "../llm-client.js";
 
+/** Coincide con `COPILOT_MODEL` por defecto en `wrangler.toml` y el catálogo GitHub Models (`npm run list:github-models`). */
+const DEFAULT_MODEL = "openai/gpt-5-mini";
+
 async function createLLM(env: Env, model?: string) {
   return createChatOpenAI(env, model);
 }
@@ -21,27 +24,11 @@ export function createModelNode(env: Env) {
         `Prefer tools over guessing. Keep answers concise.`
     );
 
-    const llm = await createLLM(env);
+    const usedModel = env.COPILOT_MODEL?.trim() || DEFAULT_MODEL;
+    const llm = await createLLM(env, usedModel);
     const bound = llm.bindTools(tools);
-
-    let response: AIMessage;
-    let usedModel = env.COPILOT_MODEL || "gpt-5.4-mini";
-
-    try {
-      const result = await bound.invoke([systemMsg, ...state.messages]);
-      response = result as AIMessage;
-    } catch (e: unknown) {
-      const errText = String(e);
-      if (!errText.includes("model_not_supported") && !errText.toLowerCase().includes("requested model is not supported")) {
-        throw e;
-      }
-      const fallbackModel = "gpt-5.4";
-      if (fallbackModel === usedModel) throw e;
-      const fbLlm = (await createLLM(env, fallbackModel)).bindTools(tools);
-      const result = await fbLlm.invoke([systemMsg, ...state.messages]);
-      response = result as AIMessage;
-      usedModel = fallbackModel;
-    }
+    const result = await bound.invoke([systemMsg, ...state.messages]);
+    const response = result as AIMessage;
 
     return {
       messages: [response],

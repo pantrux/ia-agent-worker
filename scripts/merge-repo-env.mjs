@@ -34,7 +34,7 @@ export function loadRepoEnvFiles(rootDir) {
 }
 
 /**
- * Avisa si CLOUDFLARE_API_TOKEN / CF_API_TOKEN están definidos pero vacíos (error típico al copiar plantillas).
+ * Avisa si tokens de API Cloudflare están definidos pero vacíos (error típico al copiar plantillas).
  * @param {string} rootDir
  */
 export function warnIfCloudflareApiTokenEmpty(rootDir) {
@@ -44,7 +44,7 @@ export function warnIfCloudflareApiTokenEmpty(rootDir) {
     try {
       const raw = readFileSync(p, "utf8").replace(/^\uFEFF/, "");
       const parsed = parse(raw);
-      for (const key of ["CLOUDFLARE_API_TOKEN", "CF_API_TOKEN"]) {
+      for (const key of ["CF_AI_GATEWAY_API_TOKEN", "CLOUDFLARE_API_TOKEN", "CF_API_TOKEN"]) {
         if (parsed[key] !== undefined && String(parsed[key]).trim() === "") {
           console.error(
             `${key} aparece vacío en ${name}. Pon el valor del panel de Cloudflare o elimina la línea.`
