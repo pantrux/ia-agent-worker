@@ -25,7 +25,7 @@ export function createModelNode(env: Env) {
     );
 
     const usedModel = env.COPILOT_MODEL?.trim() || DEFAULT_MODEL;
-    const llm = await createLLM(env);
+    const llm = await createLLM(env, usedModel);
     const bound = llm.bindTools(tools);
     const result = await bound.invoke([systemMsg, ...state.messages]);
     const response = result as AIMessage;
