@@ -74,7 +74,11 @@ console.log("OK: COPILOT_GITHUB_TOKEN en Worker producción.");
 
 const prev = putWrangler("COPILOT_GITHUB_TOKEN", token, ["--env", "preview"]);
 if (prev.status !== 0) {
-  console.error("wrangler secret put COPILOT_GITHUB_TOKEN --env preview falló:\n", prev.stderr || prev.stdout);
+  console.error(
+    "wrangler secret put COPILOT_GITHUB_TOKEN --env preview falló:\n",
+    prev.stderr || prev.stdout,
+    "\nNota: producción ya pudo quedar con el token nuevo; al corregir preview, reintenta con el mismo valor o alinea el secreto en el panel de Cloudflare.\n"
+  );
   process.exit(1);
 }
 console.log("OK: COPILOT_GITHUB_TOKEN en Worker preview.");
@@ -85,6 +89,11 @@ try {
   // ignorar
 }
 writeFileSync(outFile, token, "utf8");
+
+console.error(
+  "\n[Seguridad] El token quedó en texto plano en .copilot-token-rotation-once.txt (gitignored). " +
+    "Borra ese archivo en cuanto copies el valor a .env / .dev.vars / Cursor; si interrumpes el script, revisa que no quede una copia antigua.\n"
+);
 
 console.log(`
 Copia local: el mismo valor está en .copilot-token-rotation-once.txt (gitignored).

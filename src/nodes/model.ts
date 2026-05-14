@@ -9,13 +9,18 @@ const DEFAULT_PRIMARY_MODEL = "openai/gpt-5.4-mini";
 /** Si el primario falla (modelo no soportado / sin acceso 403, etc.), se intenta este. */
 const FALLBACK_MODEL = "openai/gpt-4o-mini";
 
+/**
+ * Indica si el error del upstream permite un segundo intento con `FALLBACK_MODEL`
+ * (p. ej. modelo no disponible o sin acceso explícito a ese id de modelo).
+ * Los mensajes varían entre proveedores; se usa comparación en minúsculas donde aplica.
+ */
 function shouldRetryWithFallbackModel(err: unknown): boolean {
   const t = String(err);
   const lower = t.toLowerCase();
-  if (t.includes("model_not_supported")) return true;
+  if (lower.includes("model_not_supported")) return true;
   if (lower.includes("requested model is not supported")) return true;
-  if (t.includes("No access to model")) return true;
-  if (t.includes("403") && lower.includes("model")) return true;
+  if (lower.includes("no access to model")) return true;
+  if (lower.includes("403") && (lower.includes("no access to model") || lower.includes("model not"))) return true;
   return false;
 }
 
