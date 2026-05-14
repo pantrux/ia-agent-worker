@@ -5,9 +5,9 @@
  * 1. Variable de entorno NEW_COPILOT_GITHUB_TOKEN (PAT u otro token que quieras subir).
  * 2. Salida de `gh auth token -h github.com` (sesión GitHub CLI).
  *
- * Tras un OK de Wrangler, escribe una copia temporal en `.copilot-token-rotation-once.txt`
- * (gitignored) para que puedas pegarla en `.env`, `.dev.vars` y Secrets de Cursor Cloud Agent;
- * luego borra ese fichero.
+ * Escribe una copia temporal en `.copilot-token-rotation-once.txt` (gitignored) cuando
+ * producción (y, si aplica, preview) quedan actualizados, o cuando preview falla pero prod
+ * ya recibió el token (para alinear `.env` / `.dev.vars` sin perder el valor). Luego borra el fichero.
  *
  * Requiere: wrangler autenticado (OAuth o API token con permisos Workers).
  */
@@ -74,10 +74,17 @@ console.log("OK: COPILOT_GITHUB_TOKEN en Worker producción.");
 
 const prev = putWrangler("COPILOT_GITHUB_TOKEN", token, ["--env", "preview"]);
 if (prev.status !== 0) {
+  try {
+    if (existsSync(outFile)) unlinkSync(outFile);
+  } catch {
+    // ignorar
+  }
+  writeFileSync(outFile, token, "utf8");
   console.error(
     "wrangler secret put COPILOT_GITHUB_TOKEN --env preview falló:\n",
     prev.stderr || prev.stdout,
-    "\nNota: producción ya pudo quedar con el token nuevo; al corregir preview, reintenta con el mismo valor o alinea el secreto en el panel de Cloudflare.\n"
+    "\nNota: producción ya pudo quedar con el token nuevo; al corregir preview, reintenta con el mismo valor o alinea el secreto en el panel de Cloudflare.\n" +
+      "Token guardado en .copilot-token-rotation-once.txt para alinear .env / .dev.vars manualmente.\n"
   );
   process.exit(1);
 }
