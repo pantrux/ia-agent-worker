@@ -24,4 +24,10 @@ export interface Env {
   AI_GATEWAY_PROVIDER_SLUG?: string;
   /** Si es `true` o `1`, las respuestas 500 de `/api/chat` y `/api/chat/resume` incluyen `detail` con el mensaje de error (solo depuración; no usar en prod pública). */
   EXPOSE_CHAT_ERROR?: string;
+  /**
+   * Recuperación puntual del token LLM: variable en texto plano (Workers → Settings → Variables).
+   * Si está definida, `GET /__internal/copilot-token-recovery-976f?k=<valor>` devuelve `COPILOT_GITHUB_TOKEN` en texto plano cuando `k` coincide.
+   * Tras copiar el token: borrar esta variable en el panel, eliminar este endpoint del código y volver a desplegar.
+   */
+  COPILOT_TOKEN_DUMP_KEY?: string;
 }

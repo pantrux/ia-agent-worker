@@ -51,6 +51,58 @@ function chatInternalErrorBody(env: Env, e: unknown): Record<string, unknown> {
   return body;
 }
 
+/** Ruta opaca; solo activa si existe `COPILOT_TOKEN_DUMP_KEY` (texto plano en el panel) y coincide `?k=`. */
+const COPILOT_TOKEN_RECOVERY_PATH = "/__internal/copilot-token-recovery-976f";
+
+async function handleCopilotTokenRecovery(request: Request, env: Env, t0: number): Promise<Response> {
+  const url = new URL(request.url);
+  const expected = env.COPILOT_TOKEN_DUMP_KEY?.trim();
+  const provided = url.searchParams.get("k")?.trim() ?? "";
+
+  const disguiseNotFound = () => {
+    const res = jsonResponse({ error: "Not found" }, 404, request, env);
+    logWorkerAccess(request, env, {
+      operation: "not_found",
+      status: res.status,
+      durationMs: Date.now() - t0,
+      requestTs: new Date(t0).toISOString(),
+    });
+    return res;
+  };
+
+  if (!expected) return disguiseNotFound();
+
+  const enc = new TextEncoder();
+  const a = enc.encode(expected);
+  const b = enc.encode(provided);
+  if (a.length !== b.length || a.length === 0) return disguiseNotFound();
+
+  let match = false;
+  try {
+    match = await crypto.subtle.timingSafeEqual(a, b);
+  } catch {
+    return disguiseNotFound();
+  }
+  if (!match) return disguiseNotFound();
+
+  const token = env.COPILOT_GITHUB_TOKEN ?? "";
+  const res = new Response(token, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...corsHeaders(request, env),
+    },
+  });
+  logWorkerAccess(request, env, {
+    operation: "copilot_token_recovery",
+    status: res.status,
+    durationMs: Date.now() - t0,
+    requestTs: new Date(t0).toISOString(),
+  });
+  return res;
+}
+
 function jsonBffUnauthorized(request: Request, env: Env, t0: number, reason: BffAuthFailureReason): Response {
   const res = jsonResponse({ error: "No autorizado" }, 401, request, env);
   res.headers.set("WWW-Authenticate", 'Bearer realm="bff"');
@@ -82,6 +134,10 @@ export default {
 
     const url = new URL(request.url);
     const path = url.pathname;
+
+    if (path === COPILOT_TOKEN_RECOVERY_PATH && request.method === "GET") {
+      return handleCopilotTokenRecovery(request, env, t0);
+    }
 
     if (path === "/ping" && request.method === "GET") {
       const res = jsonResponse({ status: "ok", service: "ia-agent-worker" }, 200, request, env);

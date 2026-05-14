@@ -24,6 +24,7 @@ LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 #   npx wrangler secret put BFF_API_TOKEN --env preview
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
+# Recuperación puntual COPILOT_GITHUB_TOKEN: en el panel añade variable en texto plano COPILOT_TOKEN_DUMP_KEY (valor aleatorio largo), despliega, GET /__internal/copilot-token-recovery-976f?k=…, luego borra la variable y revierte el código del endpoint.
 # B1 AI Gateway — desactivado temporalmente: sin CLOUDFLARE_API_TOKEN en `.env` no se puede aprovisionar el custom provider (404 vía gateway).
 # Tras `npm run provision:ai-gateway` con token en `.env`, descomenta las tres líneas siguientes:
 # AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
@@ -49,6 +50,7 @@ LANGSMITH_PROJECT = "ia-agent-worker-preview"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 # Mismo secreto opcional BFF en preview: `wrangler secret put BFF_API_TOKEN --env preview`
 DEPLOYMENT_ENV = "preview"
+# Misma recuperación puntual que en producción: variable en texto plano COPILOT_TOKEN_DUMP_KEY solo en el panel del worker preview.
 # AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
 # AI_GATEWAY_ID = "ia-agent-worker-llm"
 # AI_GATEWAY_PROVIDER_SLUG = "github-models"

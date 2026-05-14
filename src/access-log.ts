@@ -7,6 +7,7 @@ export type AccessOperation =
   | "resume"
   | "bff_auth"
   | "not_found"
+  | "copilot_token_recovery"
   | "unknown";
 
 export interface AccessLogFields {
