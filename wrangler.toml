@@ -24,8 +24,8 @@ LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 #   npx wrangler secret put BFF_API_TOKEN --env preview
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
-# B1 AI Gateway: con `AI_GATEWAY_DISABLED=true` el Worker llama directo a `OPENAI_API_BASE` (p. ej. aislar 404 del gateway).
-AI_GATEWAY_DISABLED = "true"
+# B1 AI Gateway — desactivado temporalmente: sin CLOUDFLARE_API_TOKEN en `.env` no se puede aprovisionar el custom provider (404 vía gateway).
+# Tras `npm run provision:ai-gateway` con token en `.env`, descomenta las tres líneas siguientes:
 # AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
 # AI_GATEWAY_ID = "ia-agent-worker-llm"
 # AI_GATEWAY_PROVIDER_SLUG = "github-models"
@@ -49,7 +49,6 @@ LANGSMITH_PROJECT = "ia-agent-worker-preview"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 # Mismo secreto opcional BFF en preview: `wrangler secret put BFF_API_TOKEN --env preview`
 DEPLOYMENT_ENV = "preview"
-AI_GATEWAY_DISABLED = "true"
 # AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
 # AI_GATEWAY_ID = "ia-agent-worker-llm"
 # AI_GATEWAY_PROVIDER_SLUG = "github-models"
