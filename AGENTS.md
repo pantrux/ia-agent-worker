@@ -25,12 +25,12 @@
 
 ### Secrets management
 
-All secrets are managed via **local files** (gitignored), never through GitHub repo secrets:
+Secrets live in **local files** (gitignored). In Cursor Cloud, the update script auto-generates `.dev.vars` from environment variables injected via Cursor Secrets.
 
-- **`.dev.vars`** — Wrangler loads these as Worker secrets/vars at dev time. Copy from `.dev.vars.example`.
-- **`.env`** — Used by helper scripts (`provision:ai-gateway`, `check:ai-gateway`, Studio). Copy from `.env.example`.
+- **`.dev.vars`** — Wrangler loads these as Worker secrets/vars at dev time. Template: `.dev.vars.example`.
+- **`.env`** — Used by helper scripts (Studio, AI Gateway). Template: `.env.example`.
 
-Key secret: **`COPILOT_GITHUB_TOKEN`** in `.dev.vars` — required for LLM calls. Needs a GitHub PAT with `models:read` scope (the default `gh auth token` does NOT have Models API access).
+Key Cursor Cloud secret: **`COPILOT_GITHUB_TOKEN`** — GitHub PAT with `models:read` scope for LLM calls. The default `gh auth token` does NOT have Models API access.
 
 ### Important notes
 - After `npm install`, always run `npm run db:migrate:local && npm run db:seed:local` to initialize the local D1 SQLite database before starting the worker.
