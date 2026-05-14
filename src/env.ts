@@ -20,7 +20,7 @@ export interface Env {
   AI_GATEWAY_ID?: string;
   /** Token de Cloudflare para la cabecera `cf-aig-authorization` si el gateway exige autenticación; conviene definirlo como secreto. */
   AI_GATEWAY_API_TOKEN?: string;
-  /** Slug del custom provider (sin prefijo `custom-`). Si está definido, el cliente usa la ruta específica `…/custom-{slug}/{AI_GATEWAY_PROVIDER_PATH}` y el campo `model` es el id del catálogo (p. ej. `openai/gpt-5-mini`). El `base_url` del proveedor en Cloudflare debe ser `https://models.github.ai`. */
+  /** Slug del custom provider (sin prefijo `custom-`). Si está definido, el cliente usa la ruta específica `…/custom-{slug}/{AI_GATEWAY_PROVIDER_PATH}` y el campo `model` es el id del catálogo (p. ej. `openai/gpt-5.4-mini`). El `base_url` del proveedor en Cloudflare debe ser `https://models.github.ai`. */
   AI_GATEWAY_PROVIDER_SLUG?: string;
   /** Segmento de ruta tras `…/custom-{slug}/` hacia el upstream (sin slashes iniciales/finales). Por defecto `inference` (GitHub Models). */
   AI_GATEWAY_PROVIDER_PATH?: string;

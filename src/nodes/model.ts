@@ -2,10 +2,10 @@ import { AIMessage, SystemMessage } from "@langchain/core/messages";
 import type { GraphState } from "../state.js";
 import type { Env } from "../env.js";
 import { getToolsForIndustry } from "../tools/crm.js";
-import { createChatOpenAI } from "../llm-client.js";
+import { createChatOpenAI, DEFAULT_COPILOT_MODEL, normalizeModelIdForGithubModelsInference } from "../llm-client.js";
 
-/** Coincide con `COPILOT_MODEL` por defecto en `wrangler.toml` y el catálogo GitHub Models (`npm run list:github-models`). */
-const DEFAULT_MODEL = "openai/gpt-5-mini";
+/** Coincide con `COPILOT_MODEL` por defecto en `wrangler.toml` y `DEFAULT_COPILOT_MODEL` en `llm-client.ts`. */
+const DEFAULT_MODEL = DEFAULT_COPILOT_MODEL;
 
 async function createLLM(env: Env, model?: string) {
   return createChatOpenAI(env, model);
@@ -24,7 +24,8 @@ export function createModelNode(env: Env) {
         `Prefer tools over guessing. Keep answers concise.`
     );
 
-    const usedModel = env.COPILOT_MODEL?.trim() || DEFAULT_MODEL;
+    const rawModel = env.COPILOT_MODEL?.trim() || DEFAULT_MODEL;
+    const usedModel = normalizeModelIdForGithubModelsInference(env.OPENAI_API_BASE?.trim() || "", rawModel);
     const llm = await createLLM(env, usedModel);
     const bound = llm.bindTools(tools);
     const result = await bound.invoke([systemMsg, ...state.messages]);
