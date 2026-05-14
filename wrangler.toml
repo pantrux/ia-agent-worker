@@ -14,7 +14,7 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
 [vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
-COPILOT_MODEL = "openai/gpt-5.4-mini"
+COPILOT_MODEL = "openai/gpt-5-mini"
 OPENAI_API_BASE = "https://models.github.ai/inference"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-demo"
@@ -41,7 +41,7 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
 [env.preview.vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
-COPILOT_MODEL = "openai/gpt-5.4-mini"
+COPILOT_MODEL = "openai/gpt-5-mini"
 OPENAI_API_BASE = "https://models.github.ai/inference"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-preview"

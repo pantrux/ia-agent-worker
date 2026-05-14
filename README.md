@@ -240,7 +240,7 @@ Navegador
 |----------|------|-------------|----------------|
 | `COPILOT_GITHUB_TOKEN` | Secreto | Token GitHub (PAT o `gh auth token`). Reusado como Bearer hacia GitHub Models. | `gho_…` / `ghu_…` |
 | `ALLOWED_ORIGINS` | Var | Orígenes CORS (separados por coma). Usa `*` para abrir todos. | `*,http://localhost:3000` |
-| `COPILOT_MODEL` | Var | Modelo LLM (primario). Fallback en código: `openai/gpt-4o-mini` si falla soporte/acceso. | `openai/gpt-5.4-mini` |
+| `COPILOT_MODEL` | Var | Modelo LLM (id del catálogo GitHub Models). | `openai/gpt-5-mini` |
 | `OPENAI_API_BASE` | Var | Base URL del LLM. | `https://models.github.ai/inference` |
 | `LANGSMITH_API_KEY` | Secreto | API key de LangSmith para enviar runs/traces. | `lsv2_…` |
 | `LANGSMITH_TRACING` | Var | Activa tracing de LangSmith. | `true` |

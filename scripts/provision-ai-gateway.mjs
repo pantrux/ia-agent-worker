@@ -244,7 +244,7 @@ Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]):
   AI_GATEWAY_ID         = ${gatewayId}
   AI_GATEWAY_PROVIDER_SLUG = ${providerSlug}
 
-Con slug, el Worker usa la ruta provider-specific; el modelo en el cuerpo es el de GitHub (p. ej. openai/gpt-4o-mini), sin prefijo custom-.
+Con slug, el Worker usa la ruta provider-specific; el modelo en el cuerpo es el de GitHub (p. ej. openai/gpt-5-mini), sin prefijo custom-.
 
 Luego: npm run deploy   (o tu pipeline)
 

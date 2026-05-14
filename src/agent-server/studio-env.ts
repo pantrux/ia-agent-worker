@@ -28,7 +28,7 @@ export async function loadStudioEnv(): Promise<Env> {
     DB: wrapSqlJsAsCrmDatabase(db),
     COPILOT_GITHUB_TOKEN: token,
     ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "http://localhost:3000",
-    COPILOT_MODEL: process.env.COPILOT_MODEL ?? "openai/gpt-5.4-mini",
+    COPILOT_MODEL: process.env.COPILOT_MODEL ?? "openai/gpt-5-mini",
     OPENAI_API_BASE: process.env.OPENAI_API_BASE ?? "https://models.github.ai/inference",
     LANGSMITH_API_KEY: process.env.LANGSMITH_API_KEY,
     LANGSMITH_TRACING: process.env.LANGSMITH_TRACING,

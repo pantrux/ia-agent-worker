@@ -48,7 +48,7 @@ Navegador
 Cloudflare Worker (ia-agent-worker)
   ├─ LangGraph.js (router → model ⇄ tools → validation)
   ├─ D1Saver + CRM tools → Cloudflare D1
-  ├─ ChatOpenAI → GitHub Models (https://models.github.ai/inference, p. ej. openai/gpt-4o-mini)
+  ├─ ChatOpenAI → GitHub Models (https://models.github.ai/inference, p. ej. openai/gpt-5-mini)
   └─ LangSmith (si LANGSMITH_API_KEY)
 ```
 
@@ -159,7 +159,7 @@ database_id   = "..."
 
 [vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
-COPILOT_MODEL   = "openai/gpt-4o-mini"
+COPILOT_MODEL   = "openai/gpt-5-mini"
 OPENAI_API_BASE = "https://models.github.ai/inference"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-demo"
@@ -237,7 +237,7 @@ El Worker llama al LLM con `ChatOpenAI` (`@langchain/openai`):
 
 ```
 OPENAI_API_BASE = https://models.github.ai/inference
-COPILOT_MODEL   = openai/gpt-4o-mini
+COPILOT_MODEL   = openai/gpt-5-mini
 COPILOT_GITHUB_TOKEN = gho_... | ghu_... | ghp_...
 ```
 
