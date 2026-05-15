@@ -3,8 +3,8 @@ import type { Env } from "./env.js";
 import { getCopilotToken } from "./copilot-token.js";
 import { resolveAiGatewayLlmConfig } from "./ai-gateway.js";
 
-/** Por defecto: Copilot Enterprise (ids sin publisher). Con `models.github.ai` se normaliza a `openai/…` si aplica. */
-export const DEFAULT_COPILOT_MODEL = "gpt-5.4-mini";
+/** Por defecto: Copilot Enterprise vía chat/completions (`gpt-5.4-mini` y otros gpt-5* salvo `gpt-5.4` requieren /v1/responses). */
+export const DEFAULT_COPILOT_MODEL = "gpt-5.4";
 
 /**
  * Si la base es inferencia GitHub Models, el cuerpo `model` debe ser `{publisher}/{nombre}`.
@@ -24,6 +24,28 @@ export function normalizeModelIdForGithubModelsInference(baseUrl: string, modelI
     return `openai/${m}`;
   }
   return m;
+}
+
+/**
+ * `ChatOpenAI` solo llama a `/v1/chat/completions`. En Copilot Enterprise muchos ids (`gpt-5.4-mini`, `o3`, etc.)
+ * están expuestos solo vía **`/v1/responses`**. Hasta integrar esa API, sustituimos por un id conocido compatible
+ * con chat/completions (validado: `gpt-5.4`).
+ *
+ * @param apiBaseUrl URL de configuración o la devuelta por el intercambio (basta con que contenga `githubcopilot.com`).
+ */
+export function remapCopilotModelIdForChatCompletions(apiBaseUrl: string, modelId: string): string {
+  const base = apiBaseUrl.toLowerCase();
+  if (!base.includes("githubcopilot.com")) return modelId;
+  const m = modelId.trim().toLowerCase();
+  if (!m) return modelId;
+  const replacement = /^o\d/i.test(m) || (/^gpt-5/i.test(m) && m !== "gpt-5.4") ? "gpt-5.4" : null;
+  if (!replacement || replacement === m) return modelId;
+  console.warn(
+    `[llm] Copilot: el modelo "${modelId}" no está disponible vía /chat/completions (enrutado típico: /v1/responses). ` +
+      `ChatOpenAI usa chat/completions; se sustituye por "${replacement}" hasta integrar Responses. ` +
+      `Para evitar este aviso, define COPILOT_MODEL=${replacement} (o otro id de catálogo admitido en chat).`
+  );
+  return replacement;
 }
 
 const GITHUB_MODELS_USER_INFERENCE = "https://models.github.ai/inference";
@@ -73,7 +95,8 @@ export async function createChatOpenAI(env: Env, model?: string): Promise<ChatOp
     baseUrl: rewriteGithubModelsBaseForOrg(upstreamRaw.baseUrl, env.GITHUB_MODELS_ORG),
   };
   const baseModel = model ?? env.COPILOT_MODEL ?? DEFAULT_COPILOT_MODEL;
-  const resolvedModel = normalizeModelIdForGithubModelsInference(upstream.baseUrl, baseModel);
+  const normalized = normalizeModelIdForGithubModelsInference(upstream.baseUrl, baseModel);
+  const resolvedModel = remapCopilotModelIdForChatCompletions(upstream.baseUrl, normalized);
   const cfg = resolveAiGatewayLlmConfig(env, upstream, resolvedModel);
 
   const defaultHeaders: Record<string, string> = { ...(cfg.defaultHeaders ?? {}) };
