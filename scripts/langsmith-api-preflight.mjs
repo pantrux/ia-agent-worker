@@ -50,16 +50,37 @@ async function main() {
   }
 
   const dsRes = await fetch(`${base}/api/v1/datasets?limit=1`, { headers });
-  const body = await dsRes.text();
+  let body = await dsRes.text();
   console.log(`GET /api/v1/datasets?limit=1 → ${dsRes.status}`);
   if (!dsRes.ok) {
-    console.error(body.slice(0, 800));
+    console.error("Cuerpo de respuesta:", body.slice(0, 1200));
+  }
+
+  if (dsRes.status === 403 && tenant) {
+    console.log("\nReintento sin cabecera X-Tenant-Id (diagnóstico)…");
+    const headersNoTenant = {
+      Accept: "application/json",
+      "X-Api-Key": apiKey,
+    };
+    const ds2 = await fetch(`${base}/api/v1/datasets?limit=1`, { headers: headersNoTenant });
+    const body2 = await ds2.text();
+    console.log(`GET /api/v1/datasets?limit=1 (sin tenant) → ${ds2.status}`);
+    if (ds2.ok) {
+      console.error(
+        "\n→ Con X-Tenant-Id falla (403) pero sin tenant funciona: revisa LANGSMITH_WORKSPACE_ID (debe ser el UUID del workspace en Settings, no de un proyecto)."
+      );
+    } else {
+      console.error("Cuerpo (sin tenant):", body2.slice(0, 800));
+    }
+  }
+
+  if (!dsRes.ok) {
     console.error(`
-Si ves 403 Forbidden:
-  1. Región: cuenta en EU/APAC/AWS → LANGSMITH_ENDPOINT debe ser el host de esa región (docs/LANGSMITH-API-CONTRACT.md).
-  2. X-Tenant-Id: service keys multi-workspace → LANGSMITH_WORKSPACE_ID = UUID del workspace en Settings (no del proyecto).
-  3. Permisos: en LangSmith, rol de la service key con acceso a datasets en ese workspace.
-Ver: https://api.smith.langchain.com/openapi.json (securitySchemes: X-Api-Key, X-Tenant-Id).`);
+Si sigue 403 Forbidden:
+  1. Región: LANGSMITH_ENDPOINT alineado con el despliegue del workspace (docs/LANGSMITH-API-CONTRACT.md).
+  2. X-Tenant-Id: UUID correcto del workspace (Settings → General).
+  3. Permisos de la service key: rol con acceso a datasets en ese workspace.
+OpenAPI: https://api.smith.langchain.com/openapi.json`);
     process.exit(1);
   }
 

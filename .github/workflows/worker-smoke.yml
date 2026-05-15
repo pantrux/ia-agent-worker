@@ -42,6 +42,18 @@ jobs:
           fi
           npm run smoke:worker
 
+      - name: LangSmith — preflight API (diagnóstico)
+        env:
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_WORKSPACE_ID: ${{ vars.LANGSMITH_WORKSPACE_ID }}
+          LANGSMITH_ENDPOINT: ${{ vars.LANGSMITH_ENDPOINT }}
+        run: |
+          if [ -z "${LANGSMITH_API_KEY}" ]; then
+            echo "::notice::LANGSMITH_API_KEY no configurada; se omite preflight."
+            exit 0
+          fi
+          npm run langsmith:api-preflight
+
       - name: LangSmith — sincronizar dataset y eval (opcional)
         env:
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
