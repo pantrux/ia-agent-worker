@@ -6,8 +6,8 @@ Prueba CLI el flujo Copilot alineado con TradingAgents-crypto + ajustes para Git
 - Valida credencial: GET https://api.github.com/user (REST + X-GitHub-Api-Version).
   El NAS llama GET /user/copilot (trading_graph.py); esa ruta suele dar 404 en la API publica.
 - Intercambio: GET /copilot_internal/v2/token con cabeceras NAS + Accept vnd.github+json + X-GitHub-Api-Version.
-- Chat: POST {base}/v1/chat/completions con cabeceras de cliente Copilot; prueba bases del JSON de intercambio,
-  luego https://api.individual.githubcopilot.com y https://api.githubcopilot.com.
+- Chat: POST {base}/chat/completions (misma ruta que OpenAI SDK en el contenedor NAS; no /v1) con cabeceras de cliente Copilot;
+  prueba bases del JSON de intercambio, luego https://api.individual.githubcopilot.com y https://api.githubcopilot.com.
 
 Requisitos: Python 3.9+ (stdlib).
 """
@@ -146,7 +146,7 @@ def _copilot_chat(
     timeout: int,
 ) -> tuple[int, Any]:
     base = base.rstrip("/")
-    url = f"{base}/v1/chat/completions"
+    url = f"{base}/chat/completions"
     headers = _chat_headers(bearer)
     payload: dict[str, Any] = {
         "model": model,
@@ -210,7 +210,7 @@ def main() -> int:
     last_status = 0
     last_body: Any = None
     for b in bases:
-        print(f"POST {b}/v1/chat/completions ...", file=sys.stderr)
+        print(f"POST {b}/chat/completions ...", file=sys.stderr)
         status, body = _copilot_chat(bearer, b, args.model.strip(), args.message.strip(), args.timeout)
         last_status, last_body = status, body
         if 200 <= status < 300:

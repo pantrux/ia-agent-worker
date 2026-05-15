@@ -12,9 +12,10 @@
           Usa -LegacyNasUserCopilot para repetir exactamente esa llamada (solo depuracion).
     - [2] Intercambio: mismas cabeceras que trading_graph.py MAS Accept vnd.github+json y X-GitHub-Api-Version
         (GitHub enruta mal sin version y puede responder 404 generico).
-    - [3] Chat: cabeceras de cliente Copilot (Editor-Version, Copilot-Integration-Id, etc.) y host:
-        primero base_url devuelta por el intercambio si existe; si no, prueba api.individual.githubcopilot.com
-        y luego api.githubcopilot.com (LangChain/OpenClaw suelen usar el host individual).
+    - [3] Chat: verificado dentro del contenedor NAS con logging OpenAI/httpx:
+        POST https://api.githubcopilot.com/chat/completions (sin /v1; el SDK Python anexa /chat/completions a la base).
+        Cabeceras de cliente Copilot (Editor-Version, Copilot-Integration-Id, etc.); host desde JSON de [2] si existe,
+        luego api.individual.githubcopilot.com y api.githubcopilot.com.
 
 .PARAMETER TokenFile
   JSON con access_token (defecto: data/github_token.json bajo la raiz del repo).
@@ -114,7 +115,7 @@ function Invoke-ChatOnce {
         [hashtable] $Headers,
         [hashtable] $BodyObj
     )
-    $url = ($HostBase.TrimEnd("/") + "/v1/chat/completions")
+    $url = ($HostBase.TrimEnd("/") + "/chat/completions")
     $json = $BodyObj | ConvertTo-Json -Depth 10 -Compress
     return Invoke-RestMethod -Uri $url -Headers $Headers -Method Post -Body $json -ContentType "application/json; charset=utf-8" -TimeoutSec 120
 }
@@ -154,7 +155,7 @@ Write-Host "[2] GET https://api.github.com/copilot_internal/v2/token" -Foregroun
 Write-Host "    (cabeceras NAS + Accept vnd.github + X-GitHub-Api-Version)" -ForegroundColor DarkGray
 Write-Host ""
 
-Write-Host "[3] POST {host}/v1/chat/completions (modelo $Model)" -ForegroundColor Yellow
+Write-Host "[3] POST {host}/chat/completions (modelo $Model); misma ruta que OpenAI SDK en el contenedor" -ForegroundColor Yellow
 Write-Host "    Hosts: base del JSON de [2] si existe -> https://api.individual.githubcopilot.com -> https://api.githubcopilot.com" -ForegroundColor DarkGray
 Write-Host "    + cabeceras cliente Copilot (Editor-Version, Copilot-Integration-Id, ...)" -ForegroundColor DarkGray
 Write-Host ""
@@ -244,7 +245,7 @@ $body = @{
 
 $lastErr = $null
 foreach ($base in $chatBases) {
-    $chatUrl = ($base.TrimEnd("/") + "/v1/chat/completions")
+    $chatUrl = ($base.TrimEnd("/") + "/chat/completions")
     Write-Host "Intentando: POST $chatUrl" -ForegroundColor DarkCyan
     try {
         $r3 = Invoke-ChatOnce -HostBase $base -Headers $hChat -BodyObj $body
