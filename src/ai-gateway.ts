@@ -39,9 +39,10 @@ function stripCustomProviderModelPrefix(model: string, slugClean: string): strin
  *   - **GitHub Models:** `base_url` del proveedor = `https://models.github.ai` (solo host). El Worker usa
  *     `…/custom-{slug}/inference` (o `AI_GATEWAY_PROVIDER_PATH`); el SDK añade `/chat/completions` →
  *     `…/inference/chat/completions` upstream (ver `provision-ai-gateway.mjs`).
- *   - **GitHub Copilot Enterprise:** `base_url` = host del API Copilot (p. ej. `https://api.enterprise.githubcopilot.com`).
- *     Pon **`AI_GATEWAY_PROVIDER_PATH = "v1"`** para que el SDK genere `…/custom-{slug}/v1/chat/completions` y el origen reciba `/v1/chat/completions`.
- *   La ruta unificada **`/compat`** con `models.github.ai` suele dar **404** (no existe `/v1/chat/completions` en ese host).
+ *   - **GitHub Copilot Enterprise:** mismo `base_url` host Copilot en Cloudflare, pero el Worker usa la API unificada
+ *     **`/compat`** y el campo `model` como **`custom-{slug}/{modelo}`** (recomendación Cloudflare para OpenAI-compat).
+ *     Evita la ruta `…/custom-{slug}/v1/…`, que en algunos despliegues del gateway devolvía **400 / código 2005**
+ *     («Failed to get response from provider») sin cuerpo útil del upstream.
  * - Sin slug: **`/compat`** con el `model` tal cual.
  *
  * `AI_GATEWAY_API_TOKEN` opcional → `cf-aig-authorization`.
@@ -76,6 +77,18 @@ export function resolveAiGatewayLlmConfig(
         apiKey: upstream.apiKey,
         baseUrl,
         model,
+        ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
+      };
+    }
+    const upstreamIsCopilot = upstream.baseUrl.toLowerCase().includes("githubcopilot.com");
+    if (upstreamIsCopilot) {
+      const baseUrl = aiGatewayCompatBaseUrl(accountId, gatewayId);
+      const upstreamModel = stripCustomProviderModelPrefix(model, slugClean);
+      const compatModel = `custom-${slugClean}/${upstreamModel}`;
+      return {
+        apiKey: upstream.apiKey,
+        baseUrl,
+        model: compatModel,
         ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
       };
     }

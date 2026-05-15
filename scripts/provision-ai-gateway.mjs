@@ -333,13 +333,14 @@ Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]) para
   AI_GATEWAY_ACCOUNT_ID = ${accountId}
   AI_GATEWAY_ID         = ${gatewayId}
   AI_GATEWAY_PROVIDER_SLUG = ${copilotSlug}
-  AI_GATEWAY_PROVIDER_PATH = v1
+
+  (El Worker usa la URL \`/compat\` y el modelo \`custom-${copilotSlug}/…\`; no hace falta \`AI_GATEWAY_PROVIDER_PATH\` para Copilot.)
 
 Para **GitHub Models** en su lugar: AI_GATEWAY_PROVIDER_SLUG=${providerSlug} y AI_GATEWAY_PROVIDER_PATH=inference (o omite; default inference en el código del Worker).
 
 Quita o pon AI_GATEWAY_DISABLED=false para que el Worker use el gateway (ver resolveAiGatewayLlmConfig).
 
-Con slug Copilot, el Worker usa \`…/custom-${copilotSlug}/v1\` + OpenAI SDK \`/chat/completions\` → upstream \`/v1/chat/completions\` en el host del proveedor (${copilotBaseUrl.replace(/\/+$/, "")}).
+Upstream Copilot desde el gateway: host del proveedor = ${copilotBaseUrl.replace(/\/+$/, "")} (ruta \`/v1/chat/completions\` la resuelve el unified \`/compat\`).
 
 Luego: npm run deploy   (o tu pipeline)
 

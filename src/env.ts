@@ -30,12 +30,12 @@ export interface Env {
   /**
    * Slug del custom provider en AI Gateway (sin prefijo `custom-`).
    * Con GitHub Models: `base_url` del proveedor = `https://models.github.ai` y suele usarse `AI_GATEWAY_PROVIDER_PATH=inference`.
-   * Con Copilot Enterprise: `base_url` = host Copilot (p. ej. `https://api.enterprise.githubcopilot.com`) y **`AI_GATEWAY_PROVIDER_PATH=v1`**.
+   * Con Copilot Enterprise: `base_url` = host Copilot; el Worker usa **`/compat`** y el modelo `custom-{slug}/…` (no la ruta `…/custom-{slug}/v1`).
    */
   AI_GATEWAY_PROVIDER_SLUG?: string;
   /**
-   * Segmento de ruta tras `…/custom-{slug}/` antes de que el SDK añada `/chat/completions`.
-   * Por defecto `inference` (GitHub Models). Para Copilot OpenAI-compat usar **`v1`**.
+   * Solo **GitHub Models** vía ruta `…/custom-{slug}/{path}/chat/completions`. Por defecto `inference`.
+   * Con Copilot + gateway el Worker ignora este valor (usa `/compat`).
    */
   AI_GATEWAY_PROVIDER_PATH?: string;
   /** Si es `true` o `1`, las respuestas 500 de `/api/chat` y `/api/chat/resume` incluyen `detail` con el mensaje de error (solo depuración; no usar en prod pública). */
