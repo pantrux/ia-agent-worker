@@ -19,6 +19,8 @@
     "rotate:bff-secret": "node ./scripts/rotate-bff-secret.mjs",
     "rotate:copilot-github-token": "node ./scripts/rotate-copilot-github-token.mjs",
     "sync:cursor-global-rules": "node ./scripts/sync-cursor-global-pr-rule.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create ia-agent-db",
     "db:migrate": "wrangler d1 execute ia-agent-db --file=schema.sql",
@@ -40,6 +42,7 @@
     "@types/node": "^22.10.0",
     "dotenv": "^16.4.7",
     "typescript": "^5.7",
+    "vitest": "^3.1.4",
     "wrangler": "^4"
   }
 }
