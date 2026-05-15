@@ -11,7 +11,6 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Client } from "langsmith";
 import { evaluate } from "langsmith/evaluation";
-import { traceable } from "langsmith/traceable";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -40,9 +39,19 @@ async function readDatasetName() {
   return j.datasetName;
 }
 
+function normalizeTargetOutputs(raw) {
+  if (raw == null || typeof raw !== "object") return {};
+  if ("httpOk" in raw) return raw;
+  if (typeof raw.outputs === "object" && raw.outputs != null && "httpOk" in raw.outputs) {
+    return raw.outputs;
+  }
+  return raw;
+}
+
 function buildTarget(baseUrl) {
-  return traceable(
-    async (inputs) => {
+  // Un solo traceable: `evaluate()` / `_forward` ya envuelve el target con `traceable`.
+  // Un doble `traceable` aquí dejaba `run.outputs` mal alineado con el evaluador → eval_pass 0.
+  return async (inputs) => {
       const message = inputs?.message;
       if (typeof message !== "string" || !message.trim()) {
         return { httpOk: false, reply: "", error: "inputs.message requerido" };
@@ -89,23 +98,22 @@ function buildTarget(baseUrl) {
       } finally {
         clearTimeout(t);
       }
-    },
-    { name: "ia_agent_worker_chat_eval" }
-  );
+  };
 }
 
 function evaluators() {
   return [
     async ({ outputs, referenceOutputs }) => {
-      const reply = String(outputs?.reply ?? "").trim();
+      const o = normalizeTargetOutputs(outputs);
+      const reply = String(o?.reply ?? "").trim();
       const must =
         referenceOutputs?.replyMustInclude != null
           ? String(referenceOutputs.replyMustInclude).trim()
           : "";
-      const httpOk = outputs?.httpOk === true;
-      const threadId = outputs?.thread_id;
+      const httpOk = o?.httpOk === true;
+      const threadId = o?.thread_id;
       const threadOk = typeof threadId === "string" && threadId.length > 0;
-      const pendingApproval = outputs?.chatStatus === "pending_approval";
+      const pendingApproval = o?.chatStatus === "pending_approval";
       const replyOk = reply.length > 0;
       const contentOk = pendingApproval || replyOk;
       const match =

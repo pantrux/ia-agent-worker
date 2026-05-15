@@ -47,6 +47,8 @@ Por cada ejemplo:
 
 `eval_pass = 1` solo si se cumple todo lo anterior. La media debe superar `EVAL_MIN_MEAN_SCORE` (por defecto `0.875`).
 
+**Nota técnica:** el target pasado a `evaluate()` ya va envuelto en `traceable` por LangSmith; no añadas otro `traceable` alrededor de `POST /api/chat` en el script de eval, o los `outputs` vistos por el evaluador pueden no coincidir con la respuesta real y la métrica quedaría en 0.
+
 ## CI
 
 El workflow [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml) tiene **dos jobs**:
