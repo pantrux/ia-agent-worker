@@ -77,6 +77,7 @@ function resolveCopilotGatewayProviderBaseUrl() {
 }
 
 function assertCopilotProviderBaseNotDebug(origin) {
+  if ((process.env.AI_GATEWAY_SKIP_COPILOT_PROVIDER || "").trim() === "1") return;
   const lower = origin.toLowerCase();
   if (!lower.includes("workers.dev")) return;
   console.error(
@@ -92,7 +93,6 @@ function assertCopilotProviderBaseNotDebug(origin) {
 }
 
 const copilotBaseUrl = resolveCopilotGatewayProviderBaseUrl();
-assertCopilotProviderBaseNotDebug(copilotBaseUrl);
 const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
 if (!token) {
@@ -319,6 +319,7 @@ try {
     "OpenAI-compatible upstream for ia-agent-worker (GitHub Models REST inference)."
   );
   if ((process.env.AI_GATEWAY_SKIP_COPILOT_PROVIDER || "").trim() !== "1") {
+    assertCopilotProviderBaseNotDebug(copilotBaseUrl);
     await ensureCustomProvider(
       copilotSlug,
       copilotBaseUrl,
