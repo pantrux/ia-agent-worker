@@ -1,23 +1,41 @@
 <#
 .SYNOPSIS
-  Prueba que modelos responden en GitHub Copilot (solo POST chat/completions, mismo flujo que validate-nas-copilot-token.ps1 [3]).
+  Prueba que modelos responden contra la API de GitHub Copilot (chat completions y/o OpenAI Responses).
 
 .DESCRIPTION
-  Usa access_token de data/github_token.json como Bearer y las cabeceras de cliente Copilot (vscode/copilot-chat).
-  POST https://api.githubcopilot.com/chat/completions (sin /v1), igual que el SDK OpenAI en el contenedor NAS.
+  Referencia Openclaw (github.com/openclaw/openclaw):
+    - extensions/github-copilot/model-metadata.ts: los ids GPT (p. ej. gpt-5.4) usan transporte "openai-responses"
+      (cliente OpenAI responses.create), no chat/completions.
+    - extensions/github-copilot/openclaw.plugin.json: baseUrl por defecto del catalogo
+      https://api.individual.githubcopilot.com (no api.githubcopilot.com).
+    - src/plugin-sdk/provider-auth.ts: token corto via GET api.github.com/copilot_internal/v2/token (Bearer github);
+      baseUrl por defecto DEFAULT_COPILOT_API_BASE_URL = api.individual.githubcopilot.com.
 
-  Por defecto (-Preset default) solo prueba modelos habituales en api.githubcopilot.com (gpt-4o, gpt-4o-mini, gpt-3.5-turbo).
-  Usa -Preset wide para el catalogo largo (muchos model_not_supported segun plan).
-  Personaliza con -Models, -ModelsFile o -ModelsCsv.
+  Este script usa por defecto el mismo Bearer que el NAS (access_token del JSON), como validate-nas-copilot-token.ps1 [3].
+
+  -Api chat: POST {HostBase}/chat/completions (sin /v1), flujo contenedor NAS.
+  -Api responses: POST {ResponsesHostBase}/v1/responses (OpenAI Responses API), alineado con Openclaw para modelos GPT nuevos.
+  -Api both: ambos por cada modelo.
 
 .PARAMETER Preset
   default = pocos modelos tipicos; wide = barrido amplio de ids (ruidoso en 400).
+
+.PARAMETER Api
+  chat | responses | both
+
+.PARAMETER HeaderStyle
+  nas = cabeceras como validate-nas-copilot-token (vscode/1.90, Copilot/1.155).
+  openclaw = cabeceras como Openclaw actual (vscode/1.107, GitHubCopilotChat/0.35, Openai-Organization github-copilot).
 
 .PARAMETER TokenFile
   JSON con access_token (defecto: data/github_token.json bajo la raiz del repo).
 
 .PARAMETER HostBase
-  Base URL del API Copilot (defecto: https://api.githubcopilot.com).
+  Base URL para chat/completions (defecto: https://api.githubcopilot.com).
+
+.PARAMETER ResponsesHostBase
+  Base URL principal para POST /v1/responses (defecto: https://api.individual.githubcopilot.com, como Openclaw).
+  Si falla (p. ej. 421 Misdirected Request con token OAuth), el script reintenta en https://api.githubcopilot.com.
 
 .PARAMETER Message
   Mensaje de usuario corto para cada prueba.
@@ -43,6 +61,9 @@
   .\scripts\probe-copilot-chat-models.ps1
 
 .EXAMPLE
+  .\scripts\probe-copilot-chat-models.ps1 -Api responses -ModelsCsv "gpt-5.4,gpt-5.5" -HeaderStyle openclaw
+
+.EXAMPLE
   .\scripts\probe-copilot-chat-models.ps1 -Preset wide
 
 .EXAMPLE
@@ -62,6 +83,11 @@
 param(
     [string] $TokenFile = "",
     [string] $HostBase = "https://api.githubcopilot.com",
+    [string] $ResponsesHostBase = "https://api.individual.githubcopilot.com",
+    [ValidateSet("chat", "responses", "both")]
+    [string] $Api = "chat",
+    [ValidateSet("nas", "openclaw")]
+    [string] $HeaderStyle = "nas",
     [string] $Message = "Responde exactamente la palabra PING y nada mas.",
     [string[]] $Models = @(),
     [string] $ModelsFile = "",
@@ -80,15 +106,48 @@ function Get-RepoRoot {
     return (Split-Path -Parent $scriptsDir)
 }
 
-function Get-ChatClientHeaders {
-    param([string] $Bearer)
-    return @{
+function Get-CopilotRequestHeaders {
+    param(
+        [string] $Bearer,
+        [ValidateSet("nas", "openclaw")]
+        [string] $Style
+    )
+    $h = @{
         Authorization            = "Bearer $Bearer"
-        "Editor-Version"         = "vscode/1.90.0"
-        "Editor-Plugin-Version"  = "copilot-chat/0.17.2024051401"
-        "User-Agent"             = "GitHubCopilot/1.155.0"
         "Copilot-Integration-Id" = "vscode-chat"
     }
+    if ($Style -eq "openclaw") {
+        $h["Editor-Version"] = "vscode/1.107.0"
+        $h["Editor-Plugin-Version"] = "copilot-chat/0.35.0"
+        $h["User-Agent"] = "GitHubCopilotChat/0.35.0"
+        $h["Openai-Organization"] = "github-copilot"
+        $h["x-initiator"] = "user"
+        return $h
+    }
+    $h["Editor-Version"] = "vscode/1.90.0"
+    $h["Editor-Plugin-Version"] = "copilot-chat/0.17.2024051401"
+    $h["User-Agent"] = "GitHubCopilot/1.155.0"
+    return $h
+}
+
+function Get-ResponsesOutputSnippet {
+    param([object] $ResponseObj)
+    try {
+        foreach ($item in @($ResponseObj.output)) {
+            if (-not $item) { continue }
+            $content = $item.content
+            if (-not $content) { continue }
+            foreach ($c in @($content)) {
+                if ($null -eq $c) { continue }
+                if ($null -ne $c.text -and [string]$c.text -ne "") {
+                    $t = [string]$c.text
+                    if ($t.Length -gt 0) { return $t }
+                }
+            }
+        }
+    }
+    catch { }
+    return ""
 }
 
 function Get-HttpStatusFromError {
@@ -221,12 +280,23 @@ else {
     foreach ($m in $catalog) { $modelList.Add($m) }
 }
 
-$url = ($HostBase.TrimEnd("/") + "/chat/completions")
-$hChat = Get-ChatClientHeaders -Bearer $gh
+$chatUrl = ($HostBase.TrimEnd("/") + "/chat/completions")
+$responsesHostList = New-Object System.Collections.Generic.List[string]
+$rh0 = $ResponsesHostBase.TrimEnd("/")
+$responsesHostList.Add($rh0)
+$rhAgg = "https://api.githubcopilot.com"
+if (-not $responsesHostList.Contains($rhAgg)) {
+    $responsesHostList.Add($rhAgg)
+}
+$headers = Get-CopilotRequestHeaders -Bearer $gh -Style $HeaderStyle
 
-Write-Host "=== Probe Copilot chat/completions (solo metodo 3) ===" -ForegroundColor Cyan
+Write-Host "=== Probe GitHub Copilot (Openclaw: GPT -> /v1/responses; NAS: -> /chat/completions) ===" -ForegroundColor Cyan
 Write-Host "TokenFile: $TokenFile"
-Write-Host "POST $url"
+Write-Host "Api: $Api  |  HeaderStyle: $HeaderStyle"
+if ($Api -in @("chat", "both")) { Write-Host "Chat URL: POST $chatUrl" }
+if ($Api -in @("responses", "both")) {
+    Write-Host ("Responses URLs (orden): " + (($responsesHostList | ForEach-Object { "$_/v1/responses" }) -join " ; "))
+}
 Write-Host "Modelos a probar: $($modelList.Count)"
 if (-not $ModelsCsv.Trim() -and -not $ModelsFile.Trim() -and (-not $Models -or $Models.Count -eq 0)) {
     Write-Host "Origen de lista: preset $Preset" -ForegroundColor DarkGray
@@ -239,56 +309,112 @@ if ($DryRun) {
     exit 0
 }
 
-$ok = New-Object System.Collections.Generic.List[string]
-$fail = New-Object System.Collections.Generic.List[string]
+$okChat = New-Object System.Collections.Generic.List[string]
+$failChat = New-Object System.Collections.Generic.List[string]
+$okResp = New-Object System.Collections.Generic.List[string]
+$failResp = New-Object System.Collections.Generic.List[string]
 
 foreach ($model in $modelList) {
-    $body = @{
-        model    = $model
-        messages = @(@{ role = "user"; content = $Message })
-        stream   = $false
-    }
-    $json = $body | ConvertTo-Json -Depth 10 -Compress
-    try {
-        $r = Invoke-RestMethod -Uri $url -Headers $hChat -Method Post -Body $json -ContentType "application/json; charset=utf-8" -TimeoutSec 120
-        $resolved = $null
-        if ($null -ne $r.model) { $resolved = [string]$r.model }
-        $snippet = ""
+    if ($Api -in @("chat", "both")) {
+        $bodyChat = @{
+            model    = $model
+            messages = @(@{ role = "user"; content = $Message })
+            stream   = $false
+        }
+        $jsonChat = $bodyChat | ConvertTo-Json -Depth 10 -Compress
         try {
-            $c0 = $r.choices[0].message.content
-            if ($null -ne $c0) { $snippet = ([string]$c0).Replace("`n", " ").Substring(0, [Math]::Min(80, ([string]$c0).Length)) }
+            $r = Invoke-RestMethod -Uri $chatUrl -Headers $headers -Method Post -Body $jsonChat -ContentType "application/json; charset=utf-8" -TimeoutSec 120
+            $resolved = $null
+            if ($null -ne $r.model) { $resolved = [string]$r.model }
+            $snippet = ""
+            try {
+                $c0 = $r.choices[0].message.content
+                if ($null -ne $c0) {
+                    $s = [string]$c0
+                    $snippet = $s.Replace("`n", " ").Substring(0, [Math]::Min(80, $s.Length))
+                }
+            }
+            catch { }
+            Write-Host "[chat OK]   $model" -ForegroundColor Green -NoNewline
+            if ($resolved) { Write-Host "  -> model: $resolved" -ForegroundColor DarkGreen } else { Write-Host "" }
+            if ($snippet) { Write-Host "            $snippet" -ForegroundColor DarkGray }
+            $okChat.Add($model)
         }
-        catch { }
-        Write-Host "[OK]   $model" -ForegroundColor Green -NoNewline
-        if ($resolved) { Write-Host "  -> model en respuesta: $resolved" -ForegroundColor DarkGreen }
-        else { Write-Host "" }
-        if ($snippet) { Write-Host "       contenido (recorte): $snippet" -ForegroundColor DarkGray }
-        $ok.Add($model)
+        catch {
+            $code = Get-HttpStatusFromError -ErrorRecord $_
+            $detail = ""
+            if ($_.ErrorDetails.Message) {
+                $detail = $_.ErrorDetails.Message
+                if ($detail.Length -gt 200) { $detail = $detail.Substring(0, 200) + "..." }
+            }
+            else { $detail = $_.Exception.Message }
+            $codeStr = if ($null -ne $code) { " HTTP $code" } else { "" }
+            Write-Host "[chat FAIL]$codeStr  $model" -ForegroundColor Yellow
+            Write-Host "            $detail" -ForegroundColor DarkGray
+            $failChat.Add($model)
+        }
+        if ($DelayMs -gt 0) { Start-Sleep -Milliseconds $DelayMs }
     }
-    catch {
-        $code = Get-HttpStatusFromError -ErrorRecord $_
-        $detail = ""
-        if ($_.ErrorDetails.Message) {
-            $detail = $_.ErrorDetails.Message
-            if ($detail.Length -gt 200) { $detail = $detail.Substring(0, 200) + "..." }
+
+    if ($Api -in @("responses", "both")) {
+        $bodyResp = @{
+            model  = $model
+            input  = $Message
+            stream = $false
         }
-        else {
-            $detail = $_.Exception.Message
+        $jsonResp = $bodyResp | ConvertTo-Json -Depth 6 -Compress
+        $respOk = $false
+        $lastRespDetail = ""
+        $lastRespCode = $null
+        foreach ($rb in $responsesHostList) {
+            $responsesUrl = ($rb.TrimEnd("/") + "/v1/responses")
+            try {
+                $r2 = Invoke-RestMethod -Uri $responsesUrl -Headers $headers -Method Post -Body $jsonResp -ContentType "application/json; charset=utf-8" -TimeoutSec 120
+                $rid = $null
+                if ($null -ne $r2.model) { $rid = [string]$r2.model }
+                $sn = Get-ResponsesOutputSnippet -ResponseObj $r2
+                if ($sn.Length -gt 80) { $sn = $sn.Substring(0, 80) }
+                $sn = $sn.Replace("`n", " ")
+                Write-Host "[responses OK]   $model  @ $rb" -ForegroundColor Green -NoNewline
+                if ($rid) { Write-Host "  -> model: $rid" -ForegroundColor DarkGreen } else { Write-Host "" }
+                if ($sn) { Write-Host "                 $sn" -ForegroundColor DarkGray }
+                $okResp.Add($model)
+                $respOk = $true
+                break
+            }
+            catch {
+                $lastRespCode = Get-HttpStatusFromError -ErrorRecord $_
+                if ($_.ErrorDetails.Message) {
+                    $lastRespDetail = $_.ErrorDetails.Message
+                    if ($lastRespDetail.Length -gt 200) { $lastRespDetail = $lastRespDetail.Substring(0, 200) + "..." }
+                }
+                else { $lastRespDetail = $_.Exception.Message }
+                Write-Host "[responses try] HTTP $lastRespCode en $rb" -ForegroundColor DarkYellow
+            }
         }
-        $codeStr = if ($null -ne $code) { " HTTP $code" } else { "" }
-        Write-Host "[FAIL]$codeStr  $model" -ForegroundColor Yellow
-        Write-Host "       $detail" -ForegroundColor DarkGray
-        $fail.Add($model)
+        if (-not $respOk) {
+            $cs = if ($null -ne $lastRespCode) { " HTTP $lastRespCode" } else { "" }
+            Write-Host "[responses FAIL]$cs  $model" -ForegroundColor Yellow
+            Write-Host "                 $lastRespDetail" -ForegroundColor DarkGray
+            $failResp.Add($model)
+        }
+        if ($DelayMs -gt 0) { Start-Sleep -Milliseconds $DelayMs }
     }
-    if ($DelayMs -gt 0) { Start-Sleep -Milliseconds $DelayMs }
 }
 
 Write-Host ""
 Write-Host "--- Resumen ---" -ForegroundColor Cyan
-Write-Host "OK ($($ok.Count)): $($ok -join ', ')"
-Write-Host "Fallo ($($fail.Count)): $($fail -join ', ')"
+if ($Api -in @("chat", "both")) {
+    Write-Host "chat/completions OK ($($okChat.Count)): $($okChat -join ', ')"
+    Write-Host "chat/completions Fallo ($($failChat.Count)): $($failChat -join ', ')"
+}
+if ($Api -in @("responses", "both")) {
+    Write-Host "/v1/responses OK ($($okResp.Count)): $($okResp -join ', ')"
+    Write-Host "/v1/responses Fallo ($($failResp.Count)): $($failResp -join ', ')"
+}
 
-if ($ok.Count -eq 0) {
+$totalOk = $okChat.Count + $okResp.Count
+if ($totalOk -eq 0) {
     exit 1
 }
 exit 0
