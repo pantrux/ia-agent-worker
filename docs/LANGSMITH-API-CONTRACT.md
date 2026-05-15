@@ -52,8 +52,9 @@ El script:
 
 1. Llama a **`GET /api/v1/info`** (sin clave) para confirmar conectividad con el host elegido.
 2. Llama a **`GET /api/v1/datasets?limit=1`** con **`X-Api-Key`** y, si existe, **`X-Tenant-Id`**.
+3. Si falla, imprime **cabeceras de diagnóstico** (p. ej. `x-request-id`, `cf-ray`), **desglosa el cuerpo JSON** cuando sea un objeto, y hace **sondeo** de **`GET /api/v1/workspaces`** y **`GET /api/v1/orgs/current`** con las mismas cabeceras para distinguir “clave sin permisos global” frente a “solo datasets bloqueados”, y para **validar que `LANGSMITH_WORKSPACE_ID` aparece** en la lista de workspaces visibles para esa clave.
 
-Si el paso 2 devuelve **403**, el problema no está en el Worker ni en el script de sync: revisa **región**, **UUID de workspace** y **permisos / rol de la service key** sobre datasets en ese workspace (consulta la administración de LangSmith, no solo “la clave existe”).
+Si el paso 2 devuelve **403**, el problema no está en el Worker ni en el script de sync: revisa **región**, **UUID de workspace** y **permisos / rol de la service key** sobre datasets en ese workspace (consulta la administración de LangSmith, no solo “la clave existe”). Si el cuerpo es solo `{"detail":"Forbidden"}`, adjunta al soporte las cabeceras `x-request-id` / `cf-ray` que imprime el preflight.
 
 ## Referencias
 
