@@ -3,8 +3,8 @@ import type { Env } from "./env.js";
 import { getCopilotToken } from "./copilot-token.js";
 import { resolveAiGatewayLlmConfig } from "./ai-gateway.js";
 
-/** Por defecto: Copilot Enterprise vía chat/completions (`gpt-5.4-mini` y otros gpt-5* salvo `gpt-5.4` requieren /v1/responses). */
-export const DEFAULT_COPILOT_MODEL = "gpt-5.4";
+/** Por defecto: Copilot Enterprise vía chat/completions (`gpt-4o` y fallback). */
+export const DEFAULT_COPILOT_MODEL = "gpt-4o";
 
 /**
  * Si la base es inferencia GitHub Models, el cuerpo `model` debe ser `{publisher}/{nombre}`.
@@ -38,7 +38,7 @@ export function remapCopilotModelIdForChatCompletions(apiBaseUrl: string, modelI
   if (!base.includes("githubcopilot.com")) return modelId;
   const m = modelId.trim().toLowerCase();
   if (!m) return modelId;
-  const replacement = /^o\d/i.test(m) || (/^gpt-5/i.test(m) && m !== "gpt-5.4") ? "gpt-5.4" : null;
+  const replacement = /^o\d/i.test(m) || /^gpt-5/i.test(m) ? "gpt-4o" : null;
   if (!replacement || replacement === m) return modelId;
   console.warn(
     `[llm] Copilot: el modelo "${modelId}" no está disponible vía /chat/completions (enrutado típico: /v1/responses). ` +
