@@ -16,6 +16,8 @@
         POST https://api.githubcopilot.com/chat/completions (sin /v1; el SDK Python anexa /chat/completions a la base).
         Cabeceras de cliente Copilot (Editor-Version, Copilot-Integration-Id, etc.); host desde JSON de [2] si existe,
         luego api.githubcopilot.com y api.individual.githubcopilot.com (421 en individual es frecuente si el flujo va al host agrupado).
+    - Identidad del Bearer de [3]: si es el mismo string que access_token del JSON, la cuenta es la de GET /user con ese token.
+      Si [2] devolvio otro token, se intenta GET api.github.com/user con Authorization: Bearer (puede fallar segun tipo de token).
 
 .PARAMETER TokenFile
   JSON con access_token (defecto: data/github_token.json bajo la raiz del repo).
@@ -40,6 +42,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Relleno en [1a] si se llama GET /user (mismo token que suele usarse como Bearer en [3]).
+$script:RestUserFrom1a = $null
 
 function Get-RepoRoot {
     param([string] $ScriptPath)
@@ -170,6 +175,7 @@ if (-not $SkipUser) {
     try {
         $hu = Get-GitHubRestHeaders -GhToken $gh -ApiVersion $GitHubApiVersion
         $u = Invoke-RestMethod -Uri "https://api.github.com/user" -Headers $hu -Method Get -TimeoutSec 120
+        $script:RestUserFrom1a = $u
         Write-Host "OK login: $($u.login)  id: $($u.id)"
     }
     catch {
@@ -221,6 +227,41 @@ if (-not $SkipExchange) {
     }
     Write-Host ""
 }
+
+Write-Host ">>> [Identidad] A quien corresponde el Bearer de chat [3] ..." -ForegroundColor Green
+if ($bearer -ceq $gh) {
+    Write-Host "El Bearer de [3] es el mismo access_token del JSON (fallback NAS o intercambio sin campo token)." -ForegroundColor DarkGray
+    if ($null -ne $script:RestUserFrom1a) {
+        Write-Host "Cuenta GitHub: $($script:RestUserFrom1a.login)  id: $($script:RestUserFrom1a.id)"
+    }
+    else {
+        try {
+            $huId = Get-GitHubRestHeaders -GhToken $gh -ApiVersion $GitHubApiVersion
+            $u2 = Invoke-RestMethod -Uri "https://api.github.com/user" -Headers $huId -Method Get -TimeoutSec 120
+            Write-Host "Cuenta GitHub (GET /user con token del JSON): $($u2.login)  id: $($u2.id)"
+        }
+        catch {
+            Write-Warning "No se pudo obtener GET /user con el token del archivo: $($_.Exception.Message)"
+        }
+    }
+}
+else {
+    Write-Host "El Bearer de [3] es distinto al access_token del JSON (token devuelto por copilot_internal)." -ForegroundColor DarkGray
+    try {
+        $hBearerUser = @{
+            Authorization          = "Bearer $bearer"
+            Accept                 = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = $GitHubApiVersion
+        }
+        $ub = Invoke-RestMethod -Uri "https://api.github.com/user" -Headers $hBearerUser -Method Get -TimeoutSec 120
+        Write-Host "Cuenta GitHub (GET /user con Bearer de intercambio): $($ub.login)  id: $($ub.id)"
+    }
+    catch {
+        Write-Warning "GET /user con Bearer de intercambio fallo (no siempre esta permitido): $($_.Exception.Message)"
+        if ($_.ErrorDetails.Message) { Write-Host $_.ErrorDetails.Message }
+    }
+}
+Write-Host ""
 
 $chatBases = New-Object System.Collections.Generic.List[string]
 foreach ($b in (Parse-ExchangeChatBases -Json $exchangeJson)) {
