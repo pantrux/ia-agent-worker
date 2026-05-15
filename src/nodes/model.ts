@@ -11,6 +11,11 @@ async function createLLM(env: Env, model?: string) {
   return createChatOpenAI(env, model);
 }
 
+function errorHint(err: unknown): string {
+  if (err instanceof Error) return err.message.slice(0, 500);
+  return String(err).slice(0, 500);
+}
+
 export function createModelNode(env: Env) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
     const industry = state.industry;
@@ -25,15 +30,44 @@ export function createModelNode(env: Env) {
     );
 
     const rawModel = env.COPILOT_MODEL?.trim() || DEFAULT_MODEL;
-    const usedModel = normalizeModelIdForGithubModelsInference(env.OPENAI_API_BASE?.trim() || "", rawModel);
-    const llm = await createLLM(env, usedModel);
-    const bound = llm.bindTools(tools);
-    const result = await bound.invoke([systemMsg, ...state.messages]);
-    const response = result as AIMessage;
+    const baseForNormalize = env.OPENAI_API_BASE?.trim() || "";
+    const usedModel = normalizeModelIdForGithubModelsInference(baseForNormalize, rawModel);
+    const fallbackRaw = env.COPILOT_MODEL_FALLBACK?.trim();
+    let fallbackModel = "";
+    if (fallbackRaw && fallbackRaw !== rawModel) {
+      const n = normalizeModelIdForGithubModelsInference(baseForNormalize, fallbackRaw);
+      if (n !== usedModel) fallbackModel = n;
+    }
 
+    let effectiveModel = usedModel;
+    let llm = await createLLM(env, effectiveModel);
+    let bound = llm.bindTools(tools);
+    let result: AIMessage;
+    let primaryErr: unknown;
+    try {
+      result = (await bound.invoke([systemMsg, ...state.messages])) as AIMessage;
+    } catch (e) {
+      primaryErr = e;
+      if (!fallbackModel || fallbackModel === effectiveModel) {
+        throw e;
+      }
+      console.warn(`[model] Fallo del modelo principal "${usedModel}", reintento con "${fallbackModel}":`, e);
+      effectiveModel = fallbackModel;
+      llm = await createLLM(env, effectiveModel);
+      bound = llm.bindTools(tools);
+      result = (await bound.invoke([systemMsg, ...state.messages])) as AIMessage;
+    }
+
+    const usedFallback = effectiveModel !== usedModel;
     return {
-      messages: [response],
-      toolState: { ...state.toolState, model_used: usedModel },
+      messages: [result],
+      toolState: {
+        ...state.toolState,
+        model_used: effectiveModel,
+        ...(usedFallback && primaryErr !== undefined
+          ? { model_fallback_from: usedModel, model_primary_error_hint: errorHint(primaryErr) }
+          : {}),
+      },
     };
   };
 }

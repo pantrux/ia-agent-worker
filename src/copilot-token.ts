@@ -13,6 +13,20 @@ let cache: TokenCache = { token: "", expiresAt: 0, baseUrl: "" };
 
 const DEFAULT_BASE = "https://api.individual.githubcopilot.com";
 const EXCHANGE_URL = "https://api.github.com/copilot_internal/v2/token";
+/** Alineado con Openclaw (`X-Github-Api-Version` en el intercambio `copilot_internal/v2/token`). */
+const COPILOT_EXCHANGE_GITHUB_API_VERSION = "2025-04-01";
+
+function exchangeHeaders(githubToken: string, useBearer: boolean): Record<string, string> {
+  return {
+    Authorization: useBearer ? `Bearer ${githubToken}` : `token ${githubToken}`,
+    Accept: "application/json",
+    "Copilot-Integration-Id": "vscode-chat",
+    "Editor-Version": "vscode/1.107.0",
+    "Editor-Plugin-Version": "copilot-chat/0.35.0",
+    "User-Agent": "GitHubCopilotChat/0.35.0",
+    "X-Github-Api-Version": COPILOT_EXCHANGE_GITHUB_API_VERSION,
+  };
+}
 
 /**
  * Get credentials for LLM API calls.
@@ -33,25 +47,27 @@ export async function getCopilotToken(ghToken: string, baseUrl?: string): Promis
   }
 
   try {
-    const resp = await fetch(EXCHANGE_URL, {
-      headers: {
-        Authorization: `token ${ghToken}`,
-        Accept: "application/json",
-        "Editor-Version": "vscode/1.90.0",
-        "Editor-Plugin-Version": "copilot-chat/0.17.2024051401",
-        "User-Agent": "GitHubCopilot/1.155.0",
-      },
-    });
-
-    if (resp.ok) {
+    let lastExchangeStatus: { scheme: string; status: number } | undefined;
+    for (const useBearer of [true, false]) {
+      const scheme = useBearer ? "Bearer" : "token";
+      const resp = await fetch(EXCHANGE_URL, { headers: exchangeHeaders(ghToken, useBearer) });
+      if (!resp.ok) {
+        lastExchangeStatus = { scheme, status: resp.status };
+        continue;
+      }
       const data = (await resp.json()) as Record<string, unknown>;
       const token = String(data.token ?? "").trim();
       if (token) {
         const expiresAt = Number(data.expires_at) || now + 25 * 60;
-        const derivedBase = deriveBaseUrl(token, data);
+        const derivedBase = deriveBaseUrl(token, data, resolvedBase);
         cache = { token, expiresAt, baseUrl: derivedBase };
         return { apiKey: token, baseUrl: derivedBase };
       }
+    }
+    if (lastExchangeStatus) {
+      console.warn(
+        `[copilot-token] Intercambio sin éxito: esquema ${lastExchangeStatus.scheme} → HTTP ${lastExchangeStatus.status}`
+      );
     }
   } catch {
     // Exchange failed — fall through to raw token
@@ -60,7 +76,7 @@ export async function getCopilotToken(ghToken: string, baseUrl?: string): Promis
   return { apiKey: ghToken, baseUrl: resolvedBase };
 }
 
-function deriveBaseUrl(token: string, payload: Record<string, unknown>): string {
+function deriveBaseUrl(_sessionToken: string, payload: Record<string, unknown>, configuredBase: string): string {
   for (const key of ["base_url", "baseUrl", "api_url", "endpoint"]) {
     const v = payload[key];
     if (typeof v === "string" && v.trim()) return v.trim().replace(/\/$/, "");
@@ -71,6 +87,10 @@ function deriveBaseUrl(token: string, payload: Record<string, unknown>): string 
       const v = (ep as Record<string, unknown>)[key];
       if (typeof v === "string" && v.trim()) return v.trim().replace(/\/$/, "");
     }
+  }
+  const trimmed = configuredBase.trim().replace(/\/$/, "");
+  if (trimmed.includes("githubcopilot.com")) {
+    return trimmed;
   }
   return DEFAULT_BASE;
 }
