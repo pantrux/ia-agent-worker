@@ -5,8 +5,6 @@ export interface Env {
   COPILOT_GITHUB_TOKEN: string;
   ALLOWED_ORIGINS: string;
   COPILOT_MODEL: string;
-  /** Modelo secundario si falla la invocación con `COPILOT_MODEL` (p. ej. `gpt-5.4`). Opcional. */
-  COPILOT_MODEL_FALLBACK?: string;
   OPENAI_API_BASE: string;
   /** p. ej. production | preview — metadata LangSmith / filtrado en dashboard */
   DEPLOYMENT_ENV?: string;
