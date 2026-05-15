@@ -25,7 +25,7 @@ async function main() {
   console.log("LangSmith API preflight (contrato /api/v1 del OpenAPI)");
   console.log(`  LANGSMITH_ENDPOINT → ${base}`);
   console.log(`  LANGSMITH_WORKSPACE_ID → ${tenant ? "(definido)" : "(omitido)"}`);
-  console.log(`  LANGSMITH_API_KEY → ${apiKey ? `${apiKey.slice(0, 10)}…` : "(falta)"}`);
+  console.log(`  LANGSMITH_API_KEY → ${apiKey ? "(definido, no se imprime)" : "(falta)"}`);
 
   const infoRes = await fetch(`${base}/api/v1/info`, {
     headers: { Accept: "application/json" },
