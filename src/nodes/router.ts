@@ -42,6 +42,33 @@ function getLastUserText(messages: GraphState["messages"]): string {
   return "";
 }
 
+function extractTextContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object" && "text" in part && typeof part.text === "string") return part.text;
+        return "";
+      })
+      .join("")
+      .trim();
+  }
+  return String(content ?? "").trim();
+}
+
+function parseStructuredRouteResponse(raw: string): z.infer<typeof RouteSchema> | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  const jsonText = fenced?.[1]?.trim() || trimmed;
+  try {
+    return RouteSchema.parse(JSON.parse(jsonText));
+  } catch {
+    return null;
+  }
+}
+
 async function createLLM(env: Env) {
   return createChatOpenAI(env);
 }
@@ -55,14 +82,18 @@ export function createRouterNode(env: Env) {
 
     try {
       const llm = await createLLM(env);
-      const structured = llm.withStructuredOutput(RouteSchema);
       const prompt = [
         new HumanMessage(
-          `Classify the user's message for routing.\nUser message:\n${text}\nPick industry: retail, finance, health, or unknown if unclear.`
+          `Classify the user's message for routing.\n` +
+            `Return only a JSON object with this exact shape: {"industry":"unknown","intent":"short_label"}.\n` +
+            `Valid industries: retail, finance, health, unknown.\n` +
+            `Do not use markdown fences.\n` +
+            `User message:\n${text}`
         ),
       ];
-      const result = await structured.invoke(prompt);
-      if (result && typeof result === "object" && "industry" in result) {
+      const response = await llm.invoke(prompt);
+      const result = parseStructuredRouteResponse(extractTextContent(response.content));
+      if (result) {
         return {
           industry: result.industry as Industry,
           intent: result.intent,
