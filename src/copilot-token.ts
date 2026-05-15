@@ -47,17 +47,27 @@ export async function getCopilotToken(ghToken: string, baseUrl?: string): Promis
   }
 
   try {
+    let lastExchangeStatus: { scheme: string; status: number } | undefined;
     for (const useBearer of [true, false]) {
+      const scheme = useBearer ? "Bearer" : "token";
       const resp = await fetch(EXCHANGE_URL, { headers: exchangeHeaders(ghToken, useBearer) });
-      if (!resp.ok) continue;
+      if (!resp.ok) {
+        lastExchangeStatus = { scheme, status: resp.status };
+        continue;
+      }
       const data = (await resp.json()) as Record<string, unknown>;
       const token = String(data.token ?? "").trim();
       if (token) {
         const expiresAt = Number(data.expires_at) || now + 25 * 60;
-        const derivedBase = deriveBaseUrl(token, data);
+        const derivedBase = deriveBaseUrl(token, data, resolvedBase);
         cache = { token, expiresAt, baseUrl: derivedBase };
         return { apiKey: token, baseUrl: derivedBase };
       }
+    }
+    if (lastExchangeStatus) {
+      console.warn(
+        `[copilot-token] Intercambio sin éxito: esquema ${lastExchangeStatus.scheme} → HTTP ${lastExchangeStatus.status}`
+      );
     }
   } catch {
     // Exchange failed — fall through to raw token
@@ -66,7 +76,7 @@ export async function getCopilotToken(ghToken: string, baseUrl?: string): Promis
   return { apiKey: ghToken, baseUrl: resolvedBase };
 }
 
-function deriveBaseUrl(token: string, payload: Record<string, unknown>): string {
+function deriveBaseUrl(_sessionToken: string, payload: Record<string, unknown>, configuredBase: string): string {
   for (const key of ["base_url", "baseUrl", "api_url", "endpoint"]) {
     const v = payload[key];
     if (typeof v === "string" && v.trim()) return v.trim().replace(/\/$/, "");
@@ -77,6 +87,10 @@ function deriveBaseUrl(token: string, payload: Record<string, unknown>): string 
       const v = (ep as Record<string, unknown>)[key];
       if (typeof v === "string" && v.trim()) return v.trim().replace(/\/$/, "");
     }
+  }
+  const trimmed = configuredBase.trim().replace(/\/$/, "");
+  if (trimmed.includes("githubcopilot.com")) {
+    return trimmed;
   }
   return DEFAULT_BASE;
 }

@@ -11,6 +11,11 @@ async function createLLM(env: Env, model?: string) {
   return createChatOpenAI(env, model);
 }
 
+function errorHint(err: unknown): string {
+  if (err instanceof Error) return err.message.slice(0, 500);
+  return String(err).slice(0, 500);
+}
+
 export function createModelNode(env: Env) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
     const industry = state.industry;
@@ -38,21 +43,31 @@ export function createModelNode(env: Env) {
     let llm = await createLLM(env, effectiveModel);
     let bound = llm.bindTools(tools);
     let result: AIMessage;
+    let primaryErr: unknown;
     try {
       result = (await bound.invoke([systemMsg, ...state.messages])) as AIMessage;
-    } catch (primaryErr) {
+    } catch (e) {
+      primaryErr = e;
       if (!fallbackModel || fallbackModel === effectiveModel) {
-        throw primaryErr;
+        throw e;
       }
+      console.warn(`[model] Fallo del modelo principal "${usedModel}", reintento con "${fallbackModel}":`, e);
       effectiveModel = fallbackModel;
       llm = await createLLM(env, effectiveModel);
       bound = llm.bindTools(tools);
       result = (await bound.invoke([systemMsg, ...state.messages])) as AIMessage;
     }
 
+    const usedFallback = effectiveModel !== usedModel;
     return {
       messages: [result],
-      toolState: { ...state.toolState, model_used: effectiveModel },
+      toolState: {
+        ...state.toolState,
+        model_used: effectiveModel,
+        ...(usedFallback && primaryErr !== undefined
+          ? { model_fallback_from: usedModel, model_primary_error_hint: errorHint(primaryErr) }
+          : {}),
+      },
     };
   };
 }
