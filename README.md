@@ -204,6 +204,10 @@ WORKER_SMOKE_URL=https://ia-agent-worker.<cuenta>.workers.dev npm run smoke:work
 SMOKE_INCLUDE_CHAT=1 WORKER_SMOKE_URL=https://... npm run smoke:worker
 ```
 
+### LangSmith y Cloudflare: métricas operativas (B2)
+
+Paneles recomendados: **Workers Observability** (logs `ia_agent_access`) + vistas en LangSmith por `LANGSMITH_PROJECT` y tags `env:*`. Detalle: [`docs/B2-worker-metrics-langsmith.md`](docs/B2-worker-metrics-langsmith.md).
+
 ### LangSmith: dataset + eval (B3)
 
 La estrategia LLMOps define **LangSmith** como sitio donde vive el dataset operativo y los **experimentos** de calidad; el fichero [`evals/dataset-v0.json`](evals/dataset-v0.json) es un snapshot versionado en repo. Guía: [`docs/B3-langsmith-llmops.md`](docs/B3-langsmith-llmops.md).

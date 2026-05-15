@@ -42,6 +42,10 @@ Además del **tracing** en tiempo real, LangSmith concentra el **dataset de refe
 
 Documentación operativa: [B3-langsmith-llmops.md](./B3-langsmith-llmops.md).
 
+### Métricas HTTP y dashboards (B2 / LLMOps)
+
+El tracing en LangSmith cubre el **grafo**; el volumen, errores y latencia **por petición HTTP** del Worker se consolidan con **Workers Observability** y el log estructurado `ia_agent_access`, además de vistas guardadas en LangSmith por proyecto (`LANGSMITH_PROJECT`) y tags `env:*`. Guía operativa: [B2-worker-metrics-langsmith.md](./B2-worker-metrics-langsmith.md).
+
 ## Diseño
 
 ### 1) Dependencias (npm)
