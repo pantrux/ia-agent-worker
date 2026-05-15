@@ -4,6 +4,8 @@ Este documento cierra el entregable **B2** del roadmap LLMOps: **observabilidad 
 
 **Issue de seguimiento:** [PAN-7](https://linear.app/pantrux/issue/PAN-7/b2-metricas-worker-dashboards-langsmith).
 
+**Seguimiento implementación (B2b):** [PAN-9](https://linear.app/pantrux/issue/PAN-9/b2b-export-o-agregacion-automatica-de-metricas-worker-p95-historico) — entregable **B2b** declarado en [ROADMAP-IMPLEMENTATION.md](./ROADMAP-IMPLEMENTATION.md) y [ROADMAP-CF-LANGSMITH.md](./ROADMAP-CF-LANGSMITH.md) (Fase B). Etiquetas Linear del issue: **Feature** + **Área → Observabilidad**.
+
 ## 1. Fuentes de verdad (decisión de arquitectura)
 
 | Necesidad | Fuente recomendada en este proyecto | Cuándo considerar otra cosa |
