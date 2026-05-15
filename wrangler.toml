@@ -16,12 +16,10 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
 # Copilot Enterprise: intercambio vía `copilot_internal/v2/token` y llamadas al host devuelto (p. ej. api.enterprise.githubcopilot.com).
 # Modelo: `ChatOpenAI` usa /chat/completions; ids tipo `gpt-5.4-mini` suelen exigir /v1/responses (ver `remapCopilotModelIdForChatCompletions` en `src/llm-client.ts`).
-# Etapa 1 (sin AI Gateway): deja sin definir `AI_GATEWAY_ACCOUNT_ID` / `AI_GATEWAY_ID` o pon `AI_GATEWAY_DISABLED=true` en `.dev.vars`.
+# Cloudflare AI Gateway: `npm run provision:ai-gateway` crea gateway + proveedores `github-models` y `github-copilot-enterprise`. Worker usa slug Copilot + path `v1`.
 COPILOT_MODEL = "gpt-5.4"
 COPILOT_MODEL_FALLBACK = "gpt-4o-mini"
 OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
-# Etapa 1: sin vars de AI Gateway activas las llamadas van directo al upstream. Etapa 2: descomenta AI_GATEWAY_* y pon `AI_GATEWAY_DISABLED = "false"` (o elimina esta línea).
-AI_GATEWAY_DISABLED = "true"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-demo"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
@@ -30,11 +28,11 @@ LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 #   npx wrangler secret put BFF_API_TOKEN --env preview
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
-# B1 AI Gateway — desactivado temporalmente: sin CLOUDFLARE_API_TOKEN en `.env` no se puede aprovisionar el custom provider (404 vía gateway).
-# Tras `npm run provision:ai-gateway` con token en `.env`, descomenta las tres líneas siguientes:
-# AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
-# AI_GATEWAY_ID = "ia-agent-worker-llm"
-# AI_GATEWAY_PROVIDER_SLUG = "github-models"
+# B1 AI Gateway (Copilot Enterprise). Tras `npm run provision:ai-gateway`, despliega. Para upstream directo: `AI_GATEWAY_DISABLED=true` en `.dev.vars`.
+AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
+AI_GATEWAY_ID = "ia-agent-worker-llm"
+AI_GATEWAY_PROVIDER_SLUG = "github-copilot-enterprise"
+AI_GATEWAY_PROVIDER_PATH = "v1"
 # EXPOSE_CHAT_ERROR: solo depuración local (.dev.vars) — no activar en [vars] de producción (filtra detail/stack en 500).
 
 # Worker separado para staging/preview (mismo D1 que prod por defecto — valorar D1 dedicado).
@@ -51,12 +49,12 @@ ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
 COPILOT_MODEL = "gpt-5.4"
 COPILOT_MODEL_FALLBACK = "gpt-4o-mini"
 OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
-AI_GATEWAY_DISABLED = "true"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-preview"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 # Mismo secreto opcional BFF en preview: `wrangler secret put BFF_API_TOKEN --env preview`
 DEPLOYMENT_ENV = "preview"
-# AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
-# AI_GATEWAY_ID = "ia-agent-worker-llm"
-# AI_GATEWAY_PROVIDER_SLUG = "github-models"
+AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
+AI_GATEWAY_ID = "ia-agent-worker-llm"
+AI_GATEWAY_PROVIDER_SLUG = "github-copilot-enterprise"
+AI_GATEWAY_PROVIDER_PATH = "v1"

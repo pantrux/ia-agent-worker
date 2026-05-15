@@ -101,13 +101,15 @@ export async function createChatOpenAI(env: Env, model?: string): Promise<ChatOp
 
   const defaultHeaders: Record<string, string> = { ...(cfg.defaultHeaders ?? {}) };
   const baseLower = cfg.baseUrl.toLowerCase();
+  /** Cabeceras Copilot deben ir también si el tráfico pasa por AI Gateway (la base del cliente ya no es *.githubcopilot.com). */
+  const upstreamIsCopilot = upstream.baseUrl.toLowerCase().includes("githubcopilot.com");
   if (baseLower.includes("models.github.ai")) {
     const gh = githubModelsInferenceDefaultHeaders(env);
     for (const [k, v] of Object.entries(gh)) {
       if (defaultHeaders[k] === undefined) defaultHeaders[k] = v;
     }
   }
-  if (baseLower.includes("githubcopilot.com")) {
+  if (upstreamIsCopilot) {
     const cp = githubCopilotInferenceDefaultHeaders();
     for (const [k, v] of Object.entries(cp)) {
       if (defaultHeaders[k] === undefined) defaultHeaders[k] = v;
