@@ -240,8 +240,8 @@ Navegador
 |----------|------|-------------|----------------|
 | `COPILOT_GITHUB_TOKEN` | Secreto | Token GitHub (PAT o `gh auth token`). Reusado como Bearer hacia GitHub Models. | `gho_…` / `ghu_…` |
 | `ALLOWED_ORIGINS` | Var | Orígenes CORS (separados por coma). Usa `*` para abrir todos. | `*,http://localhost:3000` |
-| `COPILOT_MODEL` | Var | Modelo LLM (id del catálogo GitHub Models, formato `publisher/modelo`). Puedes usar ids estilo [Openclaw](https://github.com/openclaw/openclaw) sin publisher: si `OPENAI_API_BASE` apunta a `models.github.ai`, el Worker prefija `openai/` cuando aplica. | `openai/gpt-4o-mini` |
-| `OPENAI_API_BASE` | Var | Base URL del LLM. | `https://models.github.ai/inference` |
+| `COPILOT_MODEL` | Var | Modelo LLM. Con Copilot Enterprise usa ids estilo [Openclaw](https://github.com/openclaw/openclaw) sin publisher; con GitHub Models y `models.github.ai`, el Worker prefija `openai/` cuando aplica. | `gpt-5.4` |
+| `OPENAI_API_BASE` | Var | Base URL del LLM. | `https://api.enterprise.githubcopilot.com` |
 | `LANGSMITH_API_KEY` | Secreto | API key de LangSmith para enviar runs/traces. | `lsv2_…` |
 | `LANGSMITH_TRACING` | Var | Activa tracing de LangSmith. | `true` |
 | `LANGSMITH_PROJECT` | Var | Proyecto destino para las trazas. | `ia-agent-worker-demo` |
@@ -258,6 +258,8 @@ Navegador
 | `GITHUB_MODELS_API_VERSION` | Var opcional | Valor de la cabecera `X-GitHub-Api-Version` hacia GitHub Models. | `2026-03-10` |
 
 > Si quieres apuntar al endpoint real de GitHub Copilot (`https://api.individual.githubcopilot.com`), `src/copilot-token.ts` intentará intercambiar el GitHub token por un session token Copilot. Si no, usa el GitHub token tal cual.
+
+> **Copilot Enterprise en este repo:** el modelo por defecto es `gpt-5.4` y no hay fallback automático a `gpt-4o`; el `model` enviado al gateway debe coincidir con `COPILOT_MODEL`.
 
 > **Openclaw vs GitHub Models en este repo:** [openclaw/openclaw](https://github.com/openclaw/openclaw) documenta ids cortos de Copilot (p. ej. `gpt-5.4-mini` en `extensions/github-copilot/models-defaults.ts`) contra la API interna. Aquí, con **`OPENAI_API_BASE`** apuntando a **`models.github.ai`**, el cuerpo debe usar el id del **catálogo REST** (`publisher/modelo`, p. ej. `openai/gpt-4o-mini`). Si defines `COPILOT_MODEL` sin `/` y la base incluye `models.github.ai`, el Worker añade el prefijo **`openai/`** automáticamente para nombres tipo `gpt-*` / `o*`.
 
