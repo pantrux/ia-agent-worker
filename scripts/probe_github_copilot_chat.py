@@ -155,7 +155,7 @@ def main() -> int:
         st, copilot_user = _http_json(
             "GET",
             "https://api.github.com/user/copilot",
-            {"Authorization": f"token {gh}", "Accept": "application/vnd.github+json"},
+            {"Authorization": f"token {gh}"},
             None,
             args.timeout,
         )
