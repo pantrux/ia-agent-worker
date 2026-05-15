@@ -35,7 +35,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | T0.4 | Abstracción CRM (`CrmDatabase` + sql.js local / D1 Worker) | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | Ejecutado | — |
 | T0.5 | Metadata LangSmith `deployment` (var `DEPLOYMENT_ENV`) en código Worker | [PR #3](https://github.com/pantrux/ia-agent-worker/pull/3) | Ejecutado | Vars por entorno: ver Fase A / `wrangler.toml` `[env.preview]`. |
 | T0.6 | CI smoke remoto (`worker-smoke.yml` + `scripts/smoke-worker.mjs`) | — | Ejecutado | Integrado en `main` (sin PR único de feature); variable `WORKER_SMOKE_URL` en GitHub. |
-| T0.7 | Modelo GitHub Models (default actual `openai/gpt-4o-mini`; evolución previa `gpt-5.*`), rotación `COPILOT_GITHUB_TOKEN`, catálogo y doc BFF/Pages | [PR #14](https://github.com/pantrux/ia-agent-worker/pull/14) (merge 2026-05-14) | Ejecutado | Scripts `rotate:copilot-github-token` y `list:github-models`; token AI Gateway `CF_AI_GATEWAY_API_TOKEN` en scripts/ejemplos; vars AI Gateway activas en `wrangler.toml`; README y `PROJECT-OVERVIEW` (proxy Pages, dominio propio). |
+| T0.7 | LLM: GitHub Models y/o Copilot Enterprise; rotación `COPILOT_GITHUB_TOKEN`, catálogo y doc BFF/Pages | [PR #14](https://github.com/pantrux/ia-agent-worker/pull/14) (merge 2026-05-14), [PR #17](https://github.com/pantrux/ia-agent-worker/pull/17) (merge 2026-05-15) | Ejecutado | PR #14: scripts `rotate:copilot-github-token`, `list:github-models`; AI Gateway. PR #17: defaults Copilot Enterprise (`gpt-5.4-mini`, fallback `gpt-5.4`), intercambio token alineado Openclaw, `COPILOT_MODEL_FALLBACK`; etapa 1 `AI_GATEWAY_DISABLED` en `wrangler.toml`. |
 
 ---
 
