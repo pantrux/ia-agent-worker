@@ -7,3 +7,6 @@ dist/
 .langgraph_api
 .bff-rotation-once.txt
 .copilot-token-rotation-once.txt
+
+# OAuth GitHub / Copilot (copia local desde NAS; no versionar)
+data/github_token.json
