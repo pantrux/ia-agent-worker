@@ -131,9 +131,10 @@ async function main() {
 
   const baseUrl = resolveBaseUrl();
   const datasetName = await readDatasetName();
-  const minMean = Number.parseFloat(process.env.EVAL_MIN_MEAN_SCORE ?? "0.875");
+  const rawMin = process.env.EVAL_MIN_MEAN_SCORE?.trim();
+  const minMean = Number.parseFloat(rawMin === "" || rawMin == null ? "0.875" : rawMin);
   if (Number.isNaN(minMean) || minMean < 0 || minMean > 1) {
-    fail("EVAL_MIN_MEAN_SCORE debe ser un número entre 0 y 1.");
+    fail("EVAL_MIN_MEAN_SCORE debe ser un número entre 0 y 1 (o omitirse / dejarse vacío para usar 0.875).");
   }
 
   const client = new Client();
