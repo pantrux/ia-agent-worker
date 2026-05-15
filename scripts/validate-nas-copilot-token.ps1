@@ -15,7 +15,7 @@
     - [3] Chat: verificado dentro del contenedor NAS con logging OpenAI/httpx:
         POST https://api.githubcopilot.com/chat/completions (sin /v1; el SDK Python anexa /chat/completions a la base).
         Cabeceras de cliente Copilot (Editor-Version, Copilot-Integration-Id, etc.); host desde JSON de [2] si existe,
-        luego api.individual.githubcopilot.com y api.githubcopilot.com.
+        luego api.githubcopilot.com y api.individual.githubcopilot.com (421 en individual es frecuente si el flujo va al host agrupado).
 
 .PARAMETER TokenFile
   JSON con access_token (defecto: data/github_token.json bajo la raiz del repo).
@@ -156,7 +156,7 @@ Write-Host "    (cabeceras NAS + Accept vnd.github + X-GitHub-Api-Version)" -For
 Write-Host ""
 
 Write-Host "[3] POST {host}/chat/completions (modelo $Model); misma ruta que OpenAI SDK en el contenedor" -ForegroundColor Yellow
-Write-Host "    Hosts: base del JSON de [2] si existe -> https://api.individual.githubcopilot.com -> https://api.githubcopilot.com" -ForegroundColor DarkGray
+Write-Host "    Hosts: base del JSON de [2] si existe -> https://api.githubcopilot.com -> https://api.individual.githubcopilot.com" -ForegroundColor DarkGray
 Write-Host "    + cabeceras cliente Copilot (Editor-Version, Copilot-Integration-Id, ...)" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -227,8 +227,8 @@ foreach ($b in (Parse-ExchangeChatBases -Json $exchangeJson)) {
     if (-not $chatBases.Contains($b)) { $chatBases.Add($b) }
 }
 foreach ($fallback in @(
-        "https://api.individual.githubcopilot.com",
-        "https://api.githubcopilot.com"
+        "https://api.githubcopilot.com",
+        "https://api.individual.githubcopilot.com"
     )) {
     if (-not $chatBases.Contains($fallback)) { $chatBases.Add($fallback) }
 }

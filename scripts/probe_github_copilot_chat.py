@@ -7,7 +7,7 @@ Prueba CLI el flujo Copilot alineado con TradingAgents-crypto + ajustes para Git
   El NAS llama GET /user/copilot (trading_graph.py); esa ruta suele dar 404 en la API publica.
 - Intercambio: GET /copilot_internal/v2/token con cabeceras NAS + Accept vnd.github+json + X-GitHub-Api-Version.
 - Chat: POST {base}/chat/completions (misma ruta que OpenAI SDK en el contenedor NAS; no /v1) con cabeceras de cliente Copilot;
-  prueba bases del JSON de intercambio, luego https://api.individual.githubcopilot.com y https://api.githubcopilot.com.
+  prueba bases del JSON de intercambio, luego https://api.githubcopilot.com y https://api.individual.githubcopilot.com.
 
 Requisitos: Python 3.9+ (stdlib).
 """
@@ -201,7 +201,7 @@ def main() -> int:
     print(f"Bearer: {source}", file=sys.stderr)
 
     bases = _bases_from_exchange(ex_body)
-    for fb in ("https://api.individual.githubcopilot.com", "https://api.githubcopilot.com"):
+    for fb in ("https://api.githubcopilot.com", "https://api.individual.githubcopilot.com"):
         if fb not in bases:
             bases.append(fb)
     if args.copilot_api_base.strip():
