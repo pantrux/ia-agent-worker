@@ -46,11 +46,12 @@ Define la API key de LangSmith (workspace) antes de sincronizar, por ejemplo:
   if (!spec?.datasetName || !Array.isArray(spec.examples)) {
     fail("dataset-v0.json inválido: faltan datasetName o examples[].");
   }
+  const datasetName = process.env.LANGSMITH_EVAL_DATASET_NAME?.trim() || spec.datasetName;
 
   const client = new Client();
   let dataset;
-  if (await client.hasDataset({ datasetName: spec.datasetName })) {
-    dataset = await client.readDataset({ datasetName: spec.datasetName });
+  if (await client.hasDataset({ datasetName })) {
+    dataset = await client.readDataset({ datasetName });
     if (spec.description) {
       dataset = await client.updateDataset({
         datasetId: dataset.id,
@@ -58,7 +59,7 @@ Define la API key de LangSmith (workspace) antes de sincronizar, por ejemplo:
       });
     }
   } else {
-    dataset = await client.createDataset(spec.datasetName, {
+    dataset = await client.createDataset(datasetName, {
       description: spec.description ?? "ia-agent-worker eval v0",
     });
   }
@@ -82,7 +83,7 @@ Define la API key de LangSmith (workspace) antes de sincronizar, por ejemplo:
   await client.createExamples(uploads);
 
   const url = await client.getDatasetUrl({ datasetId: dataset.id });
-  console.log(`Dataset "${spec.datasetName}" sincronizado (${uploads.length} ejemplos).`);
+  console.log(`Dataset "${datasetName}" sincronizado (${uploads.length} ejemplos).`);
   console.log(url);
 }
 
