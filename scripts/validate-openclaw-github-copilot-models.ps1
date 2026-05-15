@@ -29,6 +29,7 @@
 
 .PARAMETER TokenFile
   JSON con "token" o "access_token" ghu_* (evita parsear toda la config Openclaw).
+  Ruta relativa: se resuelve contra el directorio actual y, si no existe, contra la raiz del repo (donde esta data/).
 
 .PARAMETER ModelsCsv
   Lista de ids sin prefijo github-copilot/ (coma). Vacio = lista estatica alineada con models-defaults.ts + picker.
@@ -148,16 +149,54 @@ function Find-GithubCopilotTokenInObject {
     return $null
 }
 
+function Resolve-TokenFilePath {
+    param(
+        [string] $RawPath,
+        [string] $RepoRoot
+    )
+    $p = $RawPath.Trim()
+    if (-not $p) { return $null }
+    if ([System.IO.Path]::IsPathRooted($p)) {
+        if (Test-Path -LiteralPath $p) { return $p }
+        return $null
+    }
+    $here = (Get-Location).Path
+    $cand1 = [System.IO.Path]::GetFullPath((Join-Path $here $p))
+    if (Test-Path -LiteralPath $cand1) { return $cand1 }
+    if ($RepoRoot) {
+        $rel = $p -replace '^\.\\', ''
+        $cand2 = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $rel))
+        if (Test-Path -LiteralPath $cand2) { return $cand2 }
+    }
+    return $null
+}
+
 function Read-GithubUserToken {
     param(
         [string] $ProfileId,
         [string] $TokenFile,
         [string] $OpenclawConfigPath,
-        [string] $OpenclawAuthPath
+        [string] $OpenclawAuthPath,
+        [string] $RepoRoot = ""
     )
     if ($TokenFile.Trim()) {
-        if (-not (Test-Path -LiteralPath $TokenFile)) { Write-Error "No existe TokenFile: $TokenFile" }
-        $j = Get-Content -LiteralPath $TokenFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        $resolved = Resolve-TokenFilePath -RawPath $TokenFile -RepoRoot $RepoRoot
+        if (-not $resolved) {
+            $lines = @(
+                "No existe TokenFile tras resolver rutas.",
+                "  Indicado: $TokenFile",
+                "  CWD:      $([System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $TokenFile.TrimStart('.\'))))"
+            )
+            if ($RepoRoot) {
+                $rel = $TokenFile.Trim() -replace '^\.\\', ''
+                $lines += "  Repo:     $([System.IO.Path]::GetFullPath((Join-Path $RepoRoot $rel)))"
+            }
+            $lines += ""
+            $lines += 'Crea el archivo UTF-8 con: { "token": "ghu_..." } (no lo subas a git; data/mi-ghu-copilot.json esta en .gitignore).'
+            $lines += "O usa ruta absoluta con -TokenFile."
+            Write-Error ($lines -join [Environment]::NewLine)
+        }
+        $j = Get-Content -LiteralPath $resolved -Raw -Encoding UTF8 | ConvertFrom-Json
         $t = [string]$j.token
         if (-not $t) { $t = [string]$j.access_token }
         if (-not $t) { Write-Error "TokenFile debe contener propiedad token o access_token." }
@@ -279,7 +318,7 @@ Write-Host ""
 
 if ($DryRun) {
     try {
-        $ghTry = Read-GithubUserToken -ProfileId $ProfileId -TokenFile $TokenFile -OpenclawConfigPath $OpenclawConfigPath -OpenclawAuthPath $OpenclawAuthPath
+        $ghTry = Read-GithubUserToken -ProfileId $ProfileId -TokenFile $TokenFile -OpenclawConfigPath $OpenclawConfigPath -OpenclawAuthPath $OpenclawAuthPath -RepoRoot $repoRoot
         Write-Host "Token GitHub (redactado): $(Redact-Token $ghTry)" -ForegroundColor DarkGray
     }
     catch {
@@ -289,7 +328,7 @@ if ($DryRun) {
     exit 0
 }
 
-$ghu = Read-GithubUserToken -ProfileId $ProfileId -TokenFile $TokenFile -OpenclawConfigPath $OpenclawConfigPath -OpenclawAuthPath $OpenclawAuthPath
+$ghu = Read-GithubUserToken -ProfileId $ProfileId -TokenFile $TokenFile -OpenclawConfigPath $OpenclawConfigPath -OpenclawAuthPath $OpenclawAuthPath -RepoRoot $repoRoot
 
 Write-Host "Token GitHub (redactado): $(Redact-Token $ghu)"
 Write-Host ""

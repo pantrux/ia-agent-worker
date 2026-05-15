@@ -10,3 +10,5 @@ dist/
 
 # OAuth GitHub / Copilot (copia local desde NAS; no versionar)
 data/github_token.json
+# Token ghu_* Openclaw (local; no versionar)
+data/mi-ghu-copilot.json
