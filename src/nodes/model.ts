@@ -25,15 +25,34 @@ export function createModelNode(env: Env) {
     );
 
     const rawModel = env.COPILOT_MODEL?.trim() || DEFAULT_MODEL;
-    const usedModel = normalizeModelIdForGithubModelsInference(env.OPENAI_API_BASE?.trim() || "", rawModel);
-    const llm = await createLLM(env, usedModel);
-    const bound = llm.bindTools(tools);
-    const result = await bound.invoke([systemMsg, ...state.messages]);
-    const response = result as AIMessage;
+    const baseForNormalize = env.OPENAI_API_BASE?.trim() || "";
+    const usedModel = normalizeModelIdForGithubModelsInference(baseForNormalize, rawModel);
+    const fallbackRaw = env.COPILOT_MODEL_FALLBACK?.trim();
+    let fallbackModel = "";
+    if (fallbackRaw && fallbackRaw !== rawModel) {
+      const n = normalizeModelIdForGithubModelsInference(baseForNormalize, fallbackRaw);
+      if (n !== usedModel) fallbackModel = n;
+    }
+
+    let effectiveModel = usedModel;
+    let llm = await createLLM(env, effectiveModel);
+    let bound = llm.bindTools(tools);
+    let result: AIMessage;
+    try {
+      result = (await bound.invoke([systemMsg, ...state.messages])) as AIMessage;
+    } catch (primaryErr) {
+      if (!fallbackModel || fallbackModel === effectiveModel) {
+        throw primaryErr;
+      }
+      effectiveModel = fallbackModel;
+      llm = await createLLM(env, effectiveModel);
+      bound = llm.bindTools(tools);
+      result = (await bound.invoke([systemMsg, ...state.messages])) as AIMessage;
+    }
 
     return {
-      messages: [response],
-      toolState: { ...state.toolState, model_used: usedModel },
+      messages: [result],
+      toolState: { ...state.toolState, model_used: effectiveModel },
     };
   };
 }

@@ -13,6 +13,20 @@ let cache: TokenCache = { token: "", expiresAt: 0, baseUrl: "" };
 
 const DEFAULT_BASE = "https://api.individual.githubcopilot.com";
 const EXCHANGE_URL = "https://api.github.com/copilot_internal/v2/token";
+/** Alineado con Openclaw (`X-Github-Api-Version` en el intercambio `copilot_internal/v2/token`). */
+const COPILOT_EXCHANGE_GITHUB_API_VERSION = "2025-04-01";
+
+function exchangeHeaders(githubToken: string, useBearer: boolean): Record<string, string> {
+  return {
+    Authorization: useBearer ? `Bearer ${githubToken}` : `token ${githubToken}`,
+    Accept: "application/json",
+    "Copilot-Integration-Id": "vscode-chat",
+    "Editor-Version": "vscode/1.107.0",
+    "Editor-Plugin-Version": "copilot-chat/0.35.0",
+    "User-Agent": "GitHubCopilotChat/0.35.0",
+    "X-Github-Api-Version": COPILOT_EXCHANGE_GITHUB_API_VERSION,
+  };
+}
 
 /**
  * Get credentials for LLM API calls.
@@ -33,17 +47,9 @@ export async function getCopilotToken(ghToken: string, baseUrl?: string): Promis
   }
 
   try {
-    const resp = await fetch(EXCHANGE_URL, {
-      headers: {
-        Authorization: `token ${ghToken}`,
-        Accept: "application/json",
-        "Editor-Version": "vscode/1.90.0",
-        "Editor-Plugin-Version": "copilot-chat/0.17.2024051401",
-        "User-Agent": "GitHubCopilot/1.155.0",
-      },
-    });
-
-    if (resp.ok) {
+    for (const useBearer of [true, false]) {
+      const resp = await fetch(EXCHANGE_URL, { headers: exchangeHeaders(ghToken, useBearer) });
+      if (!resp.ok) continue;
       const data = (await resp.json()) as Record<string, unknown>;
       const token = String(data.token ?? "").trim();
       if (token) {

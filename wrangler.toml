@@ -14,8 +14,13 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
 [vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
-COPILOT_MODEL = "openai/gpt-4o-mini"
-OPENAI_API_BASE = "https://models.github.ai/inference"
+# Copilot Enterprise: intercambio vía `copilot_internal/v2/token` y llamadas al host devuelto (p. ej. api.enterprise.githubcopilot.com).
+# Etapa 1 (sin AI Gateway): deja sin definir `AI_GATEWAY_ACCOUNT_ID` / `AI_GATEWAY_ID` o pon `AI_GATEWAY_DISABLED=true` en `.dev.vars`.
+COPILOT_MODEL = "gpt-5.4-mini"
+COPILOT_MODEL_FALLBACK = "gpt-5.4"
+OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
+# Etapa 1: sin vars de AI Gateway activas las llamadas van directo al upstream. Etapa 2: descomenta AI_GATEWAY_* y pon `AI_GATEWAY_DISABLED = "false"` (o elimina esta línea).
+AI_GATEWAY_DISABLED = "true"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-demo"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
@@ -42,8 +47,10 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
 [env.preview.vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
-COPILOT_MODEL = "openai/gpt-4o-mini"
-OPENAI_API_BASE = "https://models.github.ai/inference"
+COPILOT_MODEL = "gpt-5.4-mini"
+COPILOT_MODEL_FALLBACK = "gpt-5.4"
+OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
+AI_GATEWAY_DISABLED = "true"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-preview"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
