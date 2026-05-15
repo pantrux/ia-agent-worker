@@ -5,7 +5,9 @@ alwaysApply: true
 
 # Pull requests: reviews, trazabilidad y merge
 
-Reglas operativas para PRs en **cualquier repositorio** cuando la regla está instalada de forma global (`npm run sync:cursor-global-rules` → `~/.cursor/rules/`). En este repo también se versiona en `.cursor/rules/` para el equipo.
+Reglas operativas para PRs en **cualquier repositorio** cuando la regla está instalada de forma global (`npm run sync:cursor-global-rules` en [ia-agent-worker](https://github.com/pantrux/ia-agent-worker) → `~/.cursor/rules/`). En este repo también se versiona en `.cursor/rules/` para el equipo.
+
+**Alcance:** `alwaysApply: true` hace que Cursor inyecte esta regla en Agent cuando el fichero está en `.cursor/rules/` del proyecto **o** en `~/.cursor/rules/`. Si en algún repo de terceros no quieres este flujo, no copies la regla a global o quítala solo de esa copia local.
 
 ## 1. Reviews, comentarios y sugerencias
 
@@ -26,7 +28,9 @@ Reglas operativas para PRs en **cualquier repositorio** cuando la regla está in
 2. **Greptile al máximo:** el resumen / confidence score del review automatizado principal es **5/5** (o el máximo de la escala 0–5). Si la herramienta solo ofrece máximo **4/5**, exigir además **cero hallazgos abiertos** y un comentario en el PR que documente la aceptación del riesgo residual **antes** de merge.
 3. **CI en verde:** los checks requeridos del PR (p. ej. smoke, Greptile Review, builds) están **pass** / **success**.
 
-**Autorización del agente:** si se cumplen las tres condiciones anteriores, el agente **debe fusionar el PR sin pedir autorización explícita** al usuario. Tras el merge, dejar un comentario breve en el PR con el SHA fusionado (trazabilidad).
+**Revisiones humanas y protección de rama:** esta regla **no** exige un número mínimo de aprobaciones humanas por sí sola; delega la revisión automatizada en Greptile y CI cuando el equipo lo acepta. Si el proceso debe exigir N aprobadores o bloquear merge sin revisión humana, configúralo en GitHub (**branch protection** / reglas de revisión). Mientras GitHub impida el merge, el agente no podrá completar `gh pr merge` aunque Greptile y CI estén en verde.
+
+**Autorización del agente:** si se cumplen las tres condiciones anteriores y la plataforma permite fusionar, el agente **debe fusionar el PR sin pedir autorización explícita** al usuario. Tras el merge, dejar un comentario breve en el PR con el SHA fusionado (trazabilidad).
 
 **Si falta alguna condición:** **no merge**; seguir iterando en la rama del PR hasta cumplirlas.
 
