@@ -14,8 +14,8 @@
  *           con este base_url (ver docs «provider-specific»). No uses …/inference aquí o duplicará el segmento.
  *
  * Segundo proveedor (Copilot Enterprise): por defecto también crea/actualiza
- *   slug `github-copilot-enterprise` → base_url `AI_GATEWAY_COPILOT_BASE_URL` o `OPENAI_API_BASE` o
- *   `https://api.enterprise.githubcopilot.com`. Desactivar con `AI_GATEWAY_SKIP_COPILOT_PROVIDER=1`.
+ *   slug `github-copilot-enterprise` → base_url `AI_GATEWAY_COPILOT_BASE_URL`, o `OPENAI_API_BASE` si no apunta
+ *   a GitHub Models, o `https://api.enterprise.githubcopilot.com`. Desactivar con `AI_GATEWAY_SKIP_COPILOT_PROVIDER=1`.
  *
  * Carga opcional: raíz del repo — `.env` y `.env.ai-gateway.local` (no versionar; ver `.env.example` y `.env.ai-gateway.example`).
  */
@@ -41,11 +41,32 @@ const customBaseUrl = (process.env.AI_GATEWAY_CUSTOM_BASE_URL || "https://models
 const copilotSlug =
   (process.env.AI_GATEWAY_COPILOT_SLUG || "github-copilot-enterprise").trim().replace(/^custom-/, "").trim() ||
   "github-copilot-enterprise";
-const copilotBaseUrl = (
-  process.env.AI_GATEWAY_COPILOT_BASE_URL ||
-  process.env.OPENAI_API_BASE ||
-  "https://api.enterprise.githubcopilot.com"
-).trim();
+
+const DEFAULT_COPILOT_ENTERPRISE_HOST = "https://api.enterprise.githubcopilot.com";
+
+/** Host `base_url` del custom provider Copilot en AI Gateway (sin barra final). */
+function resolveCopilotGatewayProviderBaseUrl() {
+  const explicit = (process.env.AI_GATEWAY_COPILOT_BASE_URL || "").trim();
+  if (explicit) return explicit.replace(/\/+$/, "");
+
+  const openaiBase = (process.env.OPENAI_API_BASE || "").trim();
+  if (openaiBase) {
+    const lower = openaiBase.toLowerCase();
+    if (lower.includes("models.github.ai")) {
+      console.warn(
+        `[aviso] OPENAI_API_BASE (${openaiBase}) apunta a GitHub Models; no se usará como base_url del proveedor Copilot en AI Gateway. ` +
+          `Define AI_GATEWAY_COPILOT_BASE_URL si tu host Copilot no es el predeterminado. ` +
+          `Se usa ${DEFAULT_COPILOT_ENTERPRISE_HOST} para el custom provider «${copilotSlug}».`
+      );
+      return DEFAULT_COPILOT_ENTERPRISE_HOST.replace(/\/+$/, "");
+    }
+    return openaiBase.replace(/\/+$/, "");
+  }
+
+  return DEFAULT_COPILOT_ENTERPRISE_HOST.replace(/\/+$/, "");
+}
+
+const copilotBaseUrl = resolveCopilotGatewayProviderBaseUrl();
 const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
 if (!token) {

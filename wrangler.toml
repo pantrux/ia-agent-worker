@@ -28,7 +28,8 @@ LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 #   npx wrangler secret put BFF_API_TOKEN --env preview
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
-# B1 AI Gateway (Copilot Enterprise). Tras `npm run provision:ai-gateway`, despliega. Para upstream directo: `AI_GATEWAY_DISABLED=true` en `.dev.vars`.
+# B1 AI Gateway (Copilot Enterprise). Orden recomendado en un entorno nuevo: `npm run provision:ai-gateway` → `npm run check:ai-gateway` → deploy.
+# Si despliegas antes de aprovisionar el gateway/proveedor, /api/chat fallará hasta completar ese orden (aislar: `AI_GATEWAY_DISABLED=true` en `.dev.vars`).
 AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
 AI_GATEWAY_ID = "ia-agent-worker-llm"
 AI_GATEWAY_PROVIDER_SLUG = "github-copilot-enterprise"
@@ -54,6 +55,7 @@ LANGSMITH_PROJECT = "ia-agent-worker-preview"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 # Mismo secreto opcional BFF en preview: `wrangler secret put BFF_API_TOKEN --env preview`
 DEPLOYMENT_ENV = "preview"
+# Mismo orden que producción: provision → check:ai-gateway → deploy (ver comentario en [vars]).
 AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
 AI_GATEWAY_ID = "ia-agent-worker-llm"
 AI_GATEWAY_PROVIDER_SLUG = "github-copilot-enterprise"
