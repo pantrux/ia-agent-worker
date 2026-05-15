@@ -3,7 +3,11 @@ import { Command } from "@langchain/langgraph";
 import type { Env } from "./env.js";
 import { buildGraph } from "./graph.js";
 import { logWorkerAccess } from "./access-log.js";
-import { verifyBffApiAuth, type BffAuthFailureReason } from "./bff-auth.js";
+import {
+  verifyBffApiAuth,
+  parseTrustedAaasUserIdHeader,
+  type BffAuthFailureReason,
+} from "./bff-auth.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
@@ -21,7 +25,7 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
 
   const h: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-AAAS-User-Id",
     "Access-Control-Max-Age": "86400",
   };
   if (allowOrigin) {
@@ -157,6 +161,8 @@ function configureLangSmithEnv(env: Env): void {
 async function handleChat(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();
   const requestTs = new Date(t0).toISOString();
+  const aaasUserId = parseTrustedAaasUserIdHeader(request, env);
+
   const finish = (res: Response, threadId?: string, err?: string) => {
     logWorkerAccess(request, env, {
       operation: "chat",
@@ -164,6 +170,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
       durationMs: Date.now() - t0,
       requestTs,
       thread_id: threadId,
+      aaas_user_id: aaasUserId ?? null,
       error: err,
     });
     return res;
@@ -197,6 +204,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
         operation: "chat",
         runtime: "cloudflare-worker",
         ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
+        ...(aaasUserId ? { aaas_user_id: aaasUserId } : {}),
       },
       tags: ["api:chat", "langsmith", ...deploymentTags],
     };
@@ -252,6 +260,8 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 async function handleResume(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();
   const requestTs = new Date(t0).toISOString();
+  const aaasUserId = parseTrustedAaasUserIdHeader(request, env);
+
   const finish = (res: Response, threadId?: string, err?: string) => {
     logWorkerAccess(request, env, {
       operation: "resume",
@@ -259,6 +269,7 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
       durationMs: Date.now() - t0,
       requestTs,
       thread_id: threadId,
+      aaas_user_id: aaasUserId ?? null,
       error: err,
     });
     return res;
@@ -290,6 +301,7 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
         operation: "resume",
         runtime: "cloudflare-worker",
         ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
+        ...(aaasUserId ? { aaas_user_id: aaasUserId } : {}),
       },
       tags: ["api:resume", "langsmith", ...deploymentTags],
     };

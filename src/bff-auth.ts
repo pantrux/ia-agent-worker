@@ -34,3 +34,22 @@ export function verifyBffApiAuth(request: Request, env: Env): BffAuthResult {
   if (!timingSafeEqualUtf8(presented, expected)) return { ok: false, reason: "invalid_token" };
   return { ok: true };
 }
+
+const AAAS_USER_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** `true` si el Worker exige autenticación BFF (solo entonces se confía en `X-AAAS-User-Id`). */
+export function isBffBearerConfigured(env: Env): boolean {
+  return Boolean(getConfiguredBffToken(env));
+}
+
+/**
+ * Lee `X-AAAS-User-Id` solo cuando `BFF_API_TOKEN` está configurado (el caller autenticó al BFF).
+ * Si el token BFF no está definido (dev laxo), se ignora la cabecera.
+ */
+export function parseTrustedAaasUserIdHeader(request: Request, env: Env): string | undefined {
+  if (!isBffBearerConfigured(env)) return undefined;
+  const raw = request.headers.get("X-AAAS-User-Id")?.trim() ?? "";
+  if (!raw || !AAAS_USER_UUID_RE.test(raw)) return undefined;
+  return raw;
+}
