@@ -45,6 +45,7 @@ jobs:
       - name: LangSmith — sincronizar dataset y eval (opcional)
         env:
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_WORKSPACE_ID: ${{ vars.LANGSMITH_WORKSPACE_ID }}
           LANGSMITH_TRACING: "true"
           LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT }}
           LANGSMITH_EVAL_DATASET_NAME: ${{ vars.LANGSMITH_EVAL_DATASET_NAME }}
