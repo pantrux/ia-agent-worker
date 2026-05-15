@@ -35,8 +35,9 @@ export function verifyBffApiAuth(request: Request, env: Env): BffAuthResult {
   return { ok: true };
 }
 
+/** UUID v4 (RFC 4122). */
 const AAAS_USER_UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** `true` si el Worker exige autenticación BFF (solo entonces se confía en `X-AAAS-User-Id`). */
 export function isBffBearerConfigured(env: Env): boolean {

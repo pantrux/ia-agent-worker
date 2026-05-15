@@ -35,4 +35,9 @@ describe("parseTrustedAaasUserIdHeader", () => {
     const req = new Request("http://x", { headers: { "X-AAAS-User-Id": "not-uuid" } });
     expect(parseTrustedAaasUserIdHeader(req, partialEnv({ BFF_API_TOKEN: "x" }))).toBeUndefined();
   });
+
+  it("con BFF_API_TOKEN y sin cabecera X-AAAS-User-Id devuelve undefined", () => {
+    const req = new Request("http://x");
+    expect(parseTrustedAaasUserIdHeader(req, partialEnv({ BFF_API_TOKEN: "secret" }))).toBeUndefined();
+  });
 });
