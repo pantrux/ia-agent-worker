@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "datasetName": "ia-agent-worker-eval-v0",
+  "description": "Casos sintéticos v0 (instrucciones cerradas) para eval remota LangSmith contra POST /api/chat.",
+  "examples": [
+    {
+      "inputs": { "message": "Responde únicamente con el token exacto: LS_V0_01" },
+      "outputs": { "replyMustInclude": "LS_V0_01" },
+      "metadata": { "case": "token-01" }
+    },
+    {
+      "inputs": { "message": "Sin explicación adicional, devuelve solo: LS_V0_02" },
+      "outputs": { "replyMustInclude": "LS_V0_02" },
+      "metadata": { "case": "token-02" }
+    },
+    {
+      "inputs": { "message": "Tu respuesta debe ser exactamente la cadena LS_V0_03 y nada más." },
+      "outputs": { "replyMustInclude": "LS_V0_03" },
+      "metadata": { "case": "token-03" }
+    },
+    {
+      "inputs": { "message": "Contesta solo con LS_V0_04 (cuatro palabras no, solo el token)." },
+      "outputs": { "replyMustInclude": "LS_V0_04" },
+      "metadata": { "case": "token-04" }
+    },
+    {
+      "inputs": { "message": "Escribe literalmente LS_V0_05 como toda la respuesta." },
+      "outputs": { "replyMustInclude": "LS_V0_05" },
+      "metadata": { "case": "token-05" }
+    },
+    {
+      "inputs": { "message": "Responde con el identificador LS_V0_06 sin texto previo ni posterior." },
+      "outputs": { "replyMustInclude": "LS_V0_06" },
+      "metadata": { "case": "token-06" }
+    },
+    {
+      "inputs": { "message": "Salida obligatoria: LS_V0_07" },
+      "outputs": { "replyMustInclude": "LS_V0_07" },
+      "metadata": { "case": "token-07" }
+    },
+    {
+      "inputs": { "message": "Última consigna: imprime solo LS_V0_08" },
+      "outputs": { "replyMustInclude": "LS_V0_08" },
+      "metadata": { "case": "token-08" }
+    }
+  ]
+}

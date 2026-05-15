@@ -267,6 +267,8 @@ Comportamiento:
 2. En `POST /api/chat` y `POST /api/chat/resume` se envía metadata: `thread_id`, `operation`, `runtime`.
 3. Para evitar pérdida de callbacks en serverless, `LANGCHAIN_CALLBACKS_BACKGROUND=false`.
 
+**Datasets y evaluación (B3):** además de las trazas en vivo, el flujo LLMOps usa LangSmith como almacén del **dataset de calidad** y de los **experimentos** frente al Worker remoto; el repo incluye `evals/dataset-v0.json` y scripts `npm run langsmith:*`. Ver [B3-langsmith-llmops.md](./B3-langsmith-llmops.md).
+
 ---
 
 ## 9. CI/CD resumen

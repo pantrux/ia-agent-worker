@@ -204,6 +204,20 @@ WORKER_SMOKE_URL=https://ia-agent-worker.<cuenta>.workers.dev npm run smoke:work
 SMOKE_INCLUDE_CHAT=1 WORKER_SMOKE_URL=https://... npm run smoke:worker
 ```
 
+### LangSmith: dataset + eval (B3)
+
+La estrategia LLMOps define **LangSmith** como sitio donde vive el dataset operativo y los **experimentos** de calidad; el fichero [`evals/dataset-v0.json`](evals/dataset-v0.json) es un snapshot versionado en repo. Guía: [`docs/B3-langsmith-llmops.md`](docs/B3-langsmith-llmops.md).
+
+```bash
+export LANGSMITH_API_KEY=lsv2_…
+export LANGSMITH_TRACING=true
+export WORKER_SMOKE_URL=https://ia-agent-worker.<cuenta>.workers.dev
+npm run langsmith:dataset:sync
+npm run langsmith:eval
+```
+
+En GitHub Actions, si configuras el secreto **`LANGSMITH_API_KEY`**, el mismo workflow de smoke (tras `/ping`) sincroniza el dataset y ejecuta la eval; sin ese secreto el paso se omite con un aviso. Variables opcionales: `LANGSMITH_EVAL_DATASET_NAME`, `EVAL_MIN_MEAN_SCORE`, `LANGSMITH_EXPERIMENT_PREFIX`.
+
 ## Integración con la landing
 
 La landing [`pantrux/aaas-landing`](https://github.com/pantrux/aaas-landing) **llama directamente al Worker**: la URL queda hardcodeada en `lib/site.ts`. Se eliminaron las Pages Functions de proxy.

@@ -10,6 +10,8 @@ Trazas Worker ↔ LangSmith: [langsmith-integration-plan.md](./langsmith-integra
 
 **Seguimiento de implementación (PR y estados):** [ROADMAP-IMPLEMENTATION.md](./ROADMAP-IMPLEMENTATION.md) — tablero de auditoría por fase; actualizarlo en cada PR o cierre de hito. Este archivo (`ROADMAP-CF-LANGSMITH.md`) se mantiene como **visión y criterios**; el detalle de avance vive en el tablero.
 
+**Estrategia LLMOps (datasets y evals):** la **fuente de verdad operativa** para datasets de calidad y experimentos es **LangSmith** (runs, comparativas, umbrales en la UI). El repo mantiene un **snapshot versionado** en `evals/dataset-v0.json` y scripts `npm run langsmith:*` para sincronizar y evaluar; la CI puede actuar como puerta si está configurado `LANGSMITH_API_KEY`. Detalle: [B3-langsmith-llmops.md](./B3-langsmith-llmops.md).
+
 ---
 
 ## 1. Registro de decisiones (ADR resumido)
@@ -78,9 +80,9 @@ La visión de **ADR-05** (gateway delante del LLM, observabilidad y políticas e
 |------------|------------|-----------|
 | B1 | Opcional: **AI Gateway** delante de llamadas al modelo ([Workers AI + Gateway](https://developers.cloudflare.com/ai-gateway/usage/providers/workersai/)) | Correlación de runs con `gateway` request id si se usa |
 | B2 | Métricas Worker (errores, latencia p95) en dashboard | Dashboards por `LANGSMITH_PROJECT` |
-| B3 | — | **Dataset** mínimo (20–50 turns) + 1 evaluación en CI (smoke) |
+| B3 | Target HTTP del Worker (`WORKER_SMOKE_URL`, token BFF si aplica) usado como **función objetivo** del experimento LangSmith | **Dataset y evaluación en LangSmith** (fuente de verdad); JSON en repo solo como snapshot versionado; experimentos, runs y métricas en la UI LangSmith |
 
-**Criterio de salida:** pipeline CI que falle si la evaluación cae bajo umbral acordado (aunque sea heurístico al inicio).
+**Criterio de salida:** dataset v0 operativo en LangSmith + experimento reproducible; **opcionalmente** pipeline CI que, si hay `LANGSMITH_API_KEY`, sincronice el snapshot y falle si la media de `eval_pass` cae bajo el umbral acordado (ver `docs/B3-langsmith-llmops.md`).
 
 ### Fase C — Multicanal / desac acoplamiento (3–6 semanas, paralelizable)
 
@@ -134,8 +136,8 @@ Orden sugerido; asignar dueño en tu tablero.
 2. **Inventario WAF**: rutas Worker en §2.0; añadir dominio del front cuando exista; aplicar rate limit en zona a `/api/chat` y `/api/chat/resume`.
 3. **Proyectos LangSmith**: crear `…-prod` y `…-preview`; rotación de API keys documentada.
 4. **AI Gateway PoC** (si ADR-05 → sí): un gateway de staging; el Worker usa **`/compat`** y, con **custom provider** (p. ej. GitHub Models), el modelo **`custom-{slug}/{openai/…}`** — validar en dashboard de CF y trazas LangSmith (sin `MODEL_NOT_FOUND`).
-5. **Dataset LangSmith v0**: exportar 20 conversaciones reales o sintéticas; definir 1 métrica simple (ej. “respuesta no vacía” + longitud máxima).
-6. **CI smoke**: workflow [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml) + variable `WORKER_SMOKE_URL`; opcional `SMOKE_INCLUDE_CHAT` (ver README).
+5. **Dataset LangSmith v0**: mantener `evals/dataset-v0.json` en repo y sincronizar a LangSmith (`npm run langsmith:dataset:sync`); métrica `eval_pass` documentada en `docs/B3-langsmith-llmops.md`.
+6. **CI smoke + eval opcional**: workflow [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml) + variable `WORKER_SMOKE_URL`; opcional `SMOKE_INCLUDE_CHAT` (ver README). Si existe el secreto `LANGSMITH_API_KEY`, mismo workflow sincroniza el dataset y ejecuta `npm run langsmith:eval`.
 
 ---
 

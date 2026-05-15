@@ -17,7 +17,7 @@ concurrency:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -41,3 +41,21 @@ jobs:
             exit 1
           fi
           npm run smoke:worker
+
+      - name: LangSmith — sincronizar dataset y eval (opcional)
+        env:
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_TRACING: "true"
+          LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT }}
+          LANGSMITH_EVAL_DATASET_NAME: ${{ vars.LANGSMITH_EVAL_DATASET_NAME }}
+          EVAL_MIN_MEAN_SCORE: ${{ vars.EVAL_MIN_MEAN_SCORE }}
+          LANGSMITH_EXPERIMENT_PREFIX: ${{ github.sha }}
+          WORKER_SMOKE_URL: ${{ vars.WORKER_SMOKE_URL }}
+          WORKER_SMOKE_BFF_TOKEN: ${{ secrets.WORKER_SMOKE_BFF_TOKEN }}
+        run: |
+          if [ -z "${LANGSMITH_API_KEY}" ]; then
+            echo "::notice::LANGSMITH_API_KEY no configurada; se omite sincronización y eval en LangSmith."
+            exit 0
+          fi
+          npm run langsmith:dataset:sync
+          npm run langsmith:eval
