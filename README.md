@@ -253,13 +253,13 @@ Navegador
 | `AI_GATEWAY_ID` | Var opcional | Identificador del gateway en la URL. | — |
 | `AI_GATEWAY_API_TOKEN` | Secreto opcional | Token para cabecera `cf-aig-authorization` si el gateway lo requiere. | `wrangler secret put AI_GATEWAY_API_TOKEN` |
 | `AI_GATEWAY_PROVIDER_SLUG` | Var opcional | Slug del custom provider (sin `custom-`). **GitHub Models:** `github-models`, `base_url` = `https://models.github.ai`, path típico `inference`. **Copilot Enterprise:** `github-copilot-enterprise`, `base_url` = host Copilot; el Worker usa la ruta del gateway con path vacío. Sin slug: solo **`/compat`**. | `github-copilot-enterprise` (este repo, Copilot) |
-| `AI_GATEWAY_PROVIDER_PATH` | Var opcional | **GitHub Models:** `inference` (`…/custom-{slug}/inference/…`). **Copilot:** debe estar vacío o no definirse, para que la ruta sea `…/custom-{slug}/chat/completions` sin `/v1` adicional. | Vacío para Copilot |
+| `AI_GATEWAY_PROVIDER_PATH` | Var opcional | **GitHub Models:** `inference` (`…/custom-{slug}/inference/…`). **Copilot:** debe estar vacío o no definirse; el Worker elige `…/custom-{slug}/v1/responses` para GPT-5/O y conserva `…/custom-{slug}/chat/completions` para modelos chat legacy. | Vacío para Copilot |
 | `GITHUB_MODELS_ORG` | Var opcional | Login de la org GitHub. Si `OPENAI_API_BASE` es `https://models.github.ai/inference`, las peticiones van a **`…/orgs/{org}/inference`** (cuando solo la org tiene modelos habilitados). | — |
 | `GITHUB_MODELS_API_VERSION` | Var opcional | Valor de la cabecera `X-GitHub-Api-Version` hacia GitHub Models. | `2026-03-10` |
 
 > Si quieres apuntar al endpoint real de GitHub Copilot (`https://api.individual.githubcopilot.com`), `src/copilot-token.ts` intentará intercambiar el GitHub token por un session token Copilot. Si no, usa el GitHub token tal cual.
 
-> **Copilot Enterprise en este repo:** el modelo por defecto es `gpt-5.4` y no hay fallback automático a `gpt-4o`; el `model` enviado al gateway debe coincidir con `COPILOT_MODEL`.
+> **Copilot Enterprise en este repo:** el modelo por defecto es `gpt-5.4` y no hay fallback automático a `gpt-4o`; el `model` enviado al gateway debe coincidir con `COPILOT_MODEL`. Cuando el tráfico va por AI Gateway y el modelo es GPT-5/O, el Worker usa `/v1/responses` porque la ruta `chat/completions` del custom provider devuelve 404 aunque la llamada directa a Copilot funcione.
 
 > **Openclaw vs GitHub Models en este repo:** [openclaw/openclaw](https://github.com/openclaw/openclaw) documenta ids cortos de Copilot (p. ej. `gpt-5.4-mini` en `extensions/github-copilot/models-defaults.ts`) contra la API interna. Aquí, con **`OPENAI_API_BASE`** apuntando a **`models.github.ai`**, el cuerpo debe usar el id del **catálogo REST** (`publisher/modelo`, p. ej. `openai/gpt-4o-mini`). Si defines `COPILOT_MODEL` sin `/` y la base incluye `models.github.ai`, el Worker añade el prefijo **`openai/`** automáticamente para nombres tipo `gpt-*` / `o*`.
 
@@ -284,7 +284,7 @@ Navegador
 1. **Prueba sin AI Gateway:** define **`AI_GATEWAY_DISABLED=true`** (o `1`) y despliega; el Worker hablará solo con `OPENAI_API_BASE`. Si así funciona, el 404 venía del **gateway** o de la ruta del custom provider, no del catálogo en GitHub.
 2. Falta el **custom provider** o el **gateway**: ejecuta `npm run provision:ai-gateway` (local) o el workflow **Provision AI Gateway**, luego **`npm run check:ai-gateway`** hasta salida 0.
 3. **GitHub Models + AI Gateway:** el proveedor personalizado debe tener **`base_url` = `https://models.github.ai`** (sin `/inference`). Con la URL antigua, el reenvío puede apuntar a una ruta inexistente (`…/inference/v1/…`) y GitHub responde **404**; LangChain lo muestra como `MODEL_NOT_FOUND`. Vuelve a ejecutar `provision:ai-gateway` y **despliega** el Worker con la versión actual del código (`…/custom-{slug}/inference` en la base del cliente).
-4. **Copilot Enterprise + AI Gateway:** el proveedor `github-copilot-enterprise` debe tener **`base_url`** = solo el host del API (p. ej. `https://api.enterprise.githubcopilot.com`). El Worker llama a la ruta específica del proveedor **sin sufijo adicional** (`.../custom-{slug}/chat/completions`); las cabeceras IDE Copilot se envían si el token upstream es `*.githubcopilot.com`.
+4. **Copilot Enterprise + AI Gateway:** el proveedor `github-copilot-enterprise` debe tener **`base_url`** = solo el host del API (p. ej. `https://api.enterprise.githubcopilot.com`). Para modelos GPT-5/O (`gpt-5.4`, etc.) el Worker llama a la ruta específica del proveedor vía **`.../custom-{slug}/v1/responses`**; `.../custom-{slug}/chat/completions` puede devolver 404 desde Cloudflare aunque la llamada directa a Copilot responda 200. Las cabeceras IDE Copilot se envían si el token upstream es `*.githubcopilot.com`.
 
 #### Si el cliente o LangSmith muestra **400** con `[{"code":2005,"message":"Failed to get response from provider"}]`
 

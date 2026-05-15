@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { GraphState, Industry } from "../state.js";
 import type { Env } from "../env.js";
 import { createChatOpenAI } from "../llm-client.js";
+import { invokeResponsesIfRequired } from "../responses-client.js";
 
 const RouteSchema = z.object({
   industry: z.enum(["retail", "finance", "health", "unknown"]).describe("Primary industry for this turn."),
@@ -91,7 +92,7 @@ export function createRouterNode(env: Env) {
             `User message:\n${text}`
         ),
       ];
-      const response = await llm.invoke(prompt);
+      const response = (await invokeResponsesIfRequired(env, prompt)) ?? (await llm.invoke(prompt));
       const result = parseStructuredRouteResponse(extractTextContent(response.content));
       if (result) {
         return {
