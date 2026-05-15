@@ -80,6 +80,7 @@ La visión de **ADR-05** (gateway delante del LLM, observabilidad y políticas e
 |------------|------------|-----------|
 | B1 | Opcional: **AI Gateway** delante de llamadas al modelo ([Workers AI + Gateway](https://developers.cloudflare.com/ai-gateway/usage/providers/workersai/)) | Correlación de runs con `gateway` request id si se usa |
 | B2 | Métricas Worker (errores, latencia p95) en dashboard | Dashboards por `LANGSMITH_PROJECT` |
+| B2b | **Pipeline de export o agregación** (p. ej. **Logpush**) sobre logs `ia_agent_access` para **p95 / histórico** sin depender solo de la UI de Observability; seguimiento [PAN-9](https://linear.app/pantrux/issue/PAN-9/b2b-export-o-agregacion-automatica-de-metricas-worker-p95-historico) | Opcional: correlación manual con runs (misma ventana temporal) si el export incluye `thread_id` / `CF-Ray` |
 | B3 | Target HTTP del Worker (`WORKER_SMOKE_URL`, token BFF si aplica) usado como **función objetivo** del experimento LangSmith | **Dataset y evaluación en LangSmith** (fuente de verdad); JSON en repo solo como snapshot versionado; experimentos, runs y métricas en la UI LangSmith |
 
 **Criterio de salida:** dataset v0 operativo en LangSmith + experimento reproducible; **opcionalmente** pipeline CI que, si hay `LANGSMITH_API_KEY`, sincronice el snapshot y falle si la media de `eval_pass` cae bajo el umbral acordado (ver `docs/B3-langsmith-llmops.md`).
