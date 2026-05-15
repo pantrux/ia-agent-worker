@@ -54,7 +54,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 
 | ID | Entregable | PR / referencia | Estado | Notas |
 |----|------------|-----------------|--------|-------|
-| B1 | AI Gateway (PoC staging → prod) | [PR #7](https://github.com/pantrux/ia-agent-worker/pull/7) (merge 2026-05-13) | Ejecutado | PoC: enrutado opcional hacia `…/v1/{account}/{gateway}/compat`. |
+| B1 | AI Gateway (PoC staging → prod) | [PR #7](https://github.com/pantrux/ia-agent-worker/pull/7) (merge 2026-05-13); [PR #20](https://github.com/pantrux/ia-agent-worker/pull/20) (merge 2026-05-15) | Ejecutado | PR #7: enrutado opcional `…/compat`. PR #20: Copilot Enterprise vía gateway (`github-copilot-enterprise`, path `v1`), provision dual (Models + Copilot), cabeceras IDE según upstream, `base_url` proveedor sin path duplicado. |
 | B1b | AI Gateway + **custom provider** (GitHub Models) sin romper el SDK OpenAI | [PR #8](https://github.com/pantrux/ia-agent-worker/pull/8) (merge 2026-05-13); [PR #9](https://github.com/pantrux/ia-agent-worker/pull/9) (merge 2026-05-13) | Ejecutado | **Evolución:** PR #8 probó URL **provider-specific** `…/custom-{slug}`; LangSmith seguía con `MODEL_NOT_FOUND` / rutas upstream inválidas con el cliente OpenAI. **PR #9 (definitivo):** se mantiene **`/compat`** y el modelo pasa a `custom-{slugClean}/{modelo}` cuando hay `AI_GATEWAY_PROVIDER_SLUG` (patrón Cloudflare + OpenAI SDK). README + `ai-gateway.ts` + `provision-ai-gateway.mjs` alineados. |
 | B2 | Métricas Worker + dashboards LangSmith | — | Pendiente | |
 | B3 | Dataset mínimo + eval en CI (más allá del smoke `/ping`) | — | Pendiente | El smoke actual no sustituye eval de calidad. |
