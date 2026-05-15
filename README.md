@@ -188,7 +188,7 @@ Sin Docker. Sin plan Workers Paid. Sin Containers.
 
 ## CI: smoke remoto (GitHub Actions)
 
-El workflow [`.github/workflows/worker-smoke.yml`](.github/workflows/worker-smoke.yml) ejecuta `npm run smoke:worker` contra la URL pública del Worker.
+El workflow [`.github/workflows/worker-smoke.yml`](.github/workflows/worker-smoke.yml) ejecuta primero el job **`smoke`** (`npm run smoke:worker` contra la URL pública del Worker). Si existe el secreto **`LANGSMITH_API_KEY`**, un segundo job **`langsmith`** ejecuta preflight, sync de dataset y eval (B3); puedes exigir en branch protection solo el job `smoke` para no bloquear merges por fallos de la API LangSmith.
 
 1. En el repo de GitHub: **Settings → Secrets and variables → Actions → Variables**.
 2. Crea **`WORKER_SMOKE_URL`** con la base **sin** barra final, por ejemplo `https://ia-agent-worker.<cuenta>.workers.dev` (puede ser el mismo hostname que uses para “preview” si despliegas allí versiones de prueba).
@@ -203,6 +203,22 @@ WORKER_SMOKE_URL=https://ia-agent-worker.<cuenta>.workers.dev npm run smoke:work
 # Con chat (opcional):
 SMOKE_INCLUDE_CHAT=1 WORKER_SMOKE_URL=https://... npm run smoke:worker
 ```
+
+### LangSmith: dataset + eval (B3)
+
+La estrategia LLMOps define **LangSmith** como sitio donde vive el dataset operativo y los **experimentos** de calidad; el fichero [`evals/dataset-v0.json`](evals/dataset-v0.json) es un snapshot versionado en repo. Guía: [`docs/B3-langsmith-llmops.md`](docs/B3-langsmith-llmops.md).
+
+```bash
+export LANGSMITH_API_KEY=lsv2_…
+export LANGSMITH_TRACING=true
+export WORKER_SMOKE_URL=https://ia-agent-worker.<cuenta>.workers.dev
+# Opcional pero recomendable antes del primer sync (ver docs/LANGSMITH-API-CONTRACT.md):
+# npm run langsmith:api-preflight
+npm run langsmith:dataset:sync
+npm run langsmith:eval
+```
+
+En GitHub Actions, si configuras el secreto **`LANGSMITH_API_KEY`**, el mismo workflow de smoke (tras `/ping`) sincroniza el dataset y ejecuta la eval; sin ese secreto el paso se omite con un aviso. Variables opcionales: `LANGSMITH_WORKSPACE_ID` (UUID del **workspace**), `LANGSMITH_ENDPOINT` (p. ej. API EU: `https://eu.api.smith.langchain.com` si tu cuenta está en esa región), `LANGSMITH_EVAL_DATASET_NAME`, `EVAL_MIN_MEAN_SCORE`, `LANGSMITH_EXPERIMENT_PREFIX` y **`LANGSMITH_EVAL_ENFORCE`** (`true` => score bajo falla CI; vacío/`false` => solo diagnóstico con resumen agregado en logs).
 
 ## Integración con la landing
 

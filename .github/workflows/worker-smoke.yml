@@ -15,11 +15,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Check principal: debe poder usarse en branch protection sin depender de LangSmith.
   smoke:
     runs-on: ubuntu-latest
+    # Solo checkout, detección de secreto, `npm ci` y smoke HTTP; 5 min bastan para fallar rápido si el paso remoto cuelga.
     timeout-minutes: 5
+    outputs:
+      langsmith_ready: ${{ steps.langsmith_secret_check.outputs.present }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Detectar LANGSMITH_API_KEY (solo salida booleana; no exponer el secreto)
+        id: langsmith_secret_check
+        env:
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+        run: |
+          if [ -n "${LANGSMITH_API_KEY}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-node@v4
         with:
@@ -41,3 +56,46 @@ jobs:
             exit 1
           fi
           npm run smoke:worker
+
+  # Job separado: fallos de API LangSmith (403, etc.) no bloquean el smoke del Worker.
+  # En branch protection, exige solo el job `smoke` si LangSmith aún se está configurando.
+  langsmith:
+    needs: smoke
+    if: needs.smoke.outputs.langsmith_ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: LangSmith — preflight API (diagnóstico)
+        env:
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_WORKSPACE_ID: ${{ vars.LANGSMITH_WORKSPACE_ID }}
+          LANGSMITH_ENDPOINT: ${{ vars.LANGSMITH_ENDPOINT }}
+        run: npm run langsmith:api-preflight
+
+      - name: LangSmith — sincronizar dataset y eval
+        env:
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_WORKSPACE_ID: ${{ vars.LANGSMITH_WORKSPACE_ID }}
+          LANGSMITH_ENDPOINT: ${{ vars.LANGSMITH_ENDPOINT }}
+          LANGSMITH_TRACING: "true"
+          LANGSMITH_PROJECT: ${{ vars.LANGSMITH_PROJECT }}
+          LANGSMITH_EVAL_DATASET_NAME: ${{ vars.LANGSMITH_EVAL_DATASET_NAME }}
+          EVAL_MIN_MEAN_SCORE: ${{ vars.EVAL_MIN_MEAN_SCORE }}
+          LANGSMITH_EVAL_ENFORCE: ${{ vars.LANGSMITH_EVAL_ENFORCE }}
+          LANGSMITH_EXPERIMENT_PREFIX: ${{ github.sha }}
+          WORKER_SMOKE_URL: ${{ vars.WORKER_SMOKE_URL }}
+          WORKER_SMOKE_BFF_TOKEN: ${{ secrets.WORKER_SMOKE_BFF_TOKEN }}
+        run: |
+          npm run langsmith:dataset:sync
+          npm run langsmith:eval

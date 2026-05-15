@@ -29,6 +29,19 @@ sequenceDiagram
 
 La orquestación corre **en el Worker**; LangSmith recibe trazas desde el mismo isolate.
 
+### Datasets y evaluación (B3 / LLMOps)
+
+Además del **tracing** en tiempo real, LangSmith concentra el **dataset de referencia** y los **experimentos** contra el despliegue real del Worker:
+
+| Artefacto | Dónde vive | Notas |
+|-----------|------------|--------|
+| Snapshot versionado (casos de prueba) | Repo: `evals/dataset-v0.json` | Revisión en PR; casos orientados a **pipeline funcional** (`/api/chat`), no a texto fijo del LLM salvo `replyMustInclude` opcional. |
+| Dataset operativo y ejemplos | LangSmith (nombre configurable) | Se actualiza con `npm run langsmith:dataset:sync`. |
+| Resultados de eval (scores, runs) | LangSmith (vista de experimento) | `npm run langsmith:eval` usa `evaluate()` del SDK; el target es HTTP `POST /api/chat` al Worker remoto. |
+| Puerta CI opcional | GitHub Actions | Tras smoke: si existe `LANGSMITH_API_KEY`, sync + eval; umbral `EVAL_MIN_MEAN_SCORE`. |
+
+Documentación operativa: [B3-langsmith-llmops.md](./B3-langsmith-llmops.md).
+
 ## Diseño
 
 ### 1) Dependencias (npm)
@@ -66,7 +79,8 @@ La forma exacta del config depende de la versión de **LangGraph.js**; seguir la
 
 ### 5) CI/CD
 
-Opcional: propagar `LANGSMITH_API_KEY` en el workflow de deploy (como otros secretos), o documentar `secret put` manual.
+- **Tracing en deploy:** propagar `LANGSMITH_API_KEY` en el workflow de deploy (como otros secretos), o documentar `secret put` manual.
+- **Eval B3:** secreto `LANGSMITH_API_KEY` en Actions + `WORKER_SMOKE_URL` (misma variable que el smoke); ver `docs/B3-langsmith-llmops.md` y el job `langsmith` en `worker-smoke.yml`.
 
 ### 6) Verificación
 
@@ -83,4 +97,7 @@ Los contenidos de chat y herramientas se envían a LangSmith según el proyecto 
 2. Definir vars/secrets en Wrangler + nota en README.
 3. En la invocación del grafo: `metadata` / `tags` (`thread_id`, `operation`, …).
 4. Validar en la UI de LangSmith tras deploy a preview/staging.
-5. (Opcional) Paso CI para `LANGSMITH_API_KEY`.
+5. Dataset v0: editar `evals/dataset-v0.json` y ejecutar `npm run langsmith:dataset:sync` con `LANGSMITH_API_KEY`.
+6. Antes de depurar 403: `npm run langsmith:api-preflight` y [LANGSMITH-API-CONTRACT.md](./LANGSMITH-API-CONTRACT.md).
+7. Eval remota: `npm run langsmith:eval` (requiere `LANGSMITH_TRACING=true`, Worker accesible y dataset ya sincronizado).
+8. (Opcional) Secreto `LANGSMITH_API_KEY` en GitHub para el paso de eval en CI.

@@ -1,0 +1,291 @@
+/**
+ * Evalúa el dataset LangSmith contra el Worker remoto (POST /api/chat).
+ * Métrica `eval_pass`: ejecución funcional del agente (HTTP 2xx, thread_id, respuesta o HITL),
+ * no “inteligencia” ni texto fijo salvo que el ejemplo defina `outputs.replyMustInclude`.
+ *
+ * Requiere LANGSMITH_API_KEY, LANGSMITH_TRACING=true, WORKER_SMOKE_URL.
+ */
+import "dotenv/config";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { Client } from "langsmith";
+import { evaluate } from "langsmith/evaluation";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(__dirname, "..");
+const DATASET_FILE = path.join(ROOT, "evals", "dataset-v0.json");
+
+function fail(msg) {
+  console.error(msg);
+  process.exit(1);
+}
+
+function resolveBaseUrl() {
+  const raw = process.env.WORKER_SMOKE_URL?.trim();
+  if (!raw) {
+    fail(`WORKER_SMOKE_URL no está definida.
+
+Misma variable que el smoke HTTP: URL base del Worker sin path final.
+`);
+  }
+  return raw.replace(/\/+$/, "");
+}
+
+async function readDatasetName() {
+  const raw = process.env.LANGSMITH_EVAL_DATASET_NAME?.trim();
+  if (raw) return raw;
+  const j = JSON.parse(await readFile(DATASET_FILE, "utf8"));
+  return j.datasetName;
+}
+
+function isTruthyEnv(name) {
+  const raw = process.env[name]?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
+function normalizeTargetOutputs(raw) {
+  if (raw == null || typeof raw !== "object") return {};
+  if ("httpOk" in raw) return raw;
+  if (typeof raw.outputs === "object" && raw.outputs != null && "httpOk" in raw.outputs) {
+    return raw.outputs;
+  }
+  return raw;
+}
+
+/** El evaluador recibe `outputs` del run raíz; a veces la métrica útil está en `run.outputs` o en un hijo del RunTree. */
+function extractChatPayloadFromRun(run) {
+  if (!run || typeof run !== "object") return {};
+  const fromOutputs = normalizeTargetOutputs(run.outputs);
+  if ("httpOk" in fromOutputs) return fromOutputs;
+  for (const c of run.child_runs ?? []) {
+    const nested = extractChatPayloadFromRun(c);
+    if ("httpOk" in nested) return nested;
+  }
+  return {};
+}
+
+function buildTarget(baseUrl) {
+  // Un solo traceable: `evaluate()` / `_forward` ya envuelve el target con `traceable`.
+  // Un doble `traceable` aquí dejaba `run.outputs` mal alineado con el evaluador → eval_pass 0.
+  return async (inputs) => {
+      const message = inputs?.message;
+      if (typeof message !== "string" || !message.trim()) {
+        return { httpOk: false, reply: "", error: "inputs.message requerido" };
+      }
+      const body = { message: message.trim() };
+      if (typeof inputs.thread_id === "string" && inputs.thread_id.trim()) {
+        body.thread_id = inputs.thread_id.trim();
+      }
+      const headers = { "Content-Type": "application/json" };
+      const bff = process.env.WORKER_SMOKE_BFF_TOKEN?.trim();
+      if (bff) headers.Authorization = `Bearer ${bff}`;
+
+      const url = `${baseUrl}/api/chat`;
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 120_000);
+      try {
+        const r = await fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+          signal: ac.signal,
+        });
+        const text = await r.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          return { httpOk: r.ok, reply: "", error: "body_no_json", status: r.status };
+        }
+        const reply = typeof data?.reply === "string" ? data.reply : "";
+        return {
+          httpOk: r.ok,
+          status: r.status,
+          reply,
+          thread_id: data?.thread_id,
+          chatStatus: data?.status,
+        };
+      } catch (e) {
+        return {
+          httpOk: false,
+          reply: "",
+          error: String(e?.cause?.message ?? e?.message ?? e),
+        };
+      } finally {
+        clearTimeout(t);
+      }
+  };
+}
+
+function evaluators() {
+  return [
+    async (params) => {
+      const { outputs, referenceOutputs, run } = params;
+      let o = normalizeTargetOutputs(outputs);
+      if (!("httpOk" in o)) {
+        o = extractChatPayloadFromRun(run);
+      }
+      const reply = String(o?.reply ?? "").trim();
+      const must =
+        referenceOutputs?.replyMustInclude != null
+          ? String(referenceOutputs.replyMustInclude).trim()
+          : "";
+      const httpOk = o?.httpOk === true;
+      const threadId = o?.thread_id;
+      const threadOk = typeof threadId === "string" && threadId.length > 0;
+      const pendingApproval = o?.chatStatus === "pending_approval";
+      const replyOk = reply.length > 0;
+      const contentOk = pendingApproval || replyOk;
+      const match =
+        !must ||
+        pendingApproval ||
+        reply.toLowerCase().includes(must.toLowerCase());
+      const score = httpOk && threadOk && contentOk && match ? 1 : 0;
+      return {
+        results: [
+          {
+            key: "eval_pass",
+            score,
+            comment: JSON.stringify({
+              httpOk,
+              threadOk,
+              pendingApproval,
+              replyOk,
+              match,
+              preview: reply.slice(0, 160),
+            }),
+          },
+        ],
+      };
+    },
+  ];
+}
+
+function buildDiagnosticSummary(expResults) {
+  const summary = {
+    total: 0,
+    httpOkFalse: 0,
+    threadOkFalse: 0,
+    pendingApprovalTrue: 0,
+    replyOkFalse: 0,
+    matchFalse: 0,
+    previewSamples: [],
+  };
+
+  for (const row of expResults.results) {
+    const results = row.evaluationResults?.results ?? [];
+    for (const r of results) {
+      if (r.key !== "eval_pass" || typeof r.comment !== "string") continue;
+      summary.total += 1;
+      try {
+        const parsed = JSON.parse(r.comment);
+        if (parsed.httpOk === false) summary.httpOkFalse += 1;
+        if (parsed.threadOk === false) summary.threadOkFalse += 1;
+        if (parsed.pendingApproval === true) summary.pendingApprovalTrue += 1;
+        if (parsed.replyOk === false) summary.replyOkFalse += 1;
+        if (parsed.match === false) summary.matchFalse += 1;
+        const preview = typeof parsed.preview === "string" ? parsed.preview.trim() : "";
+        if (preview && summary.previewSamples.length < 3) {
+          summary.previewSamples.push(preview.slice(0, 160));
+        }
+      } catch {
+        // Mantener el job robusto aunque el comentario no sea JSON.
+      }
+    }
+  }
+
+  return summary;
+}
+
+async function main() {
+  if (!process.env.LANGSMITH_API_KEY?.trim()) {
+    fail("LANGSMITH_API_KEY es obligatoria para evaluar en LangSmith.");
+  }
+  process.env.LANGSMITH_TRACING = process.env.LANGSMITH_TRACING ?? "true";
+  if (process.env.LANGSMITH_TRACING !== "true") {
+    fail("LANGSMITH_TRACING debe ser true para el runner evaluate() del SDK.");
+  }
+
+  const baseUrl = resolveBaseUrl();
+  const datasetName = await readDatasetName();
+  const rawMin = process.env.EVAL_MIN_MEAN_SCORE?.trim();
+  const minMean = Number.parseFloat(rawMin === "" || rawMin == null ? "0.875" : rawMin);
+  const enforceThreshold = isTruthyEnv("LANGSMITH_EVAL_ENFORCE");
+  if (Number.isNaN(minMean) || minMean < 0 || minMean > 1) {
+    fail("EVAL_MIN_MEAN_SCORE debe ser un número entre 0 y 1 (o omitirse / dejarse vacío para usar 0.875).");
+  }
+
+  const client = new Client();
+  const target = buildTarget(baseUrl);
+
+  const prefix =
+    process.env.LANGSMITH_EXPERIMENT_PREFIX?.trim() ||
+    (process.env.GITHUB_SHA ? `ci-${process.env.GITHUB_SHA.slice(0, 7)}` : "local-eval");
+
+  console.log(`Experimento LangSmith: dataset="${datasetName}" target=${baseUrl} prefix=${prefix}`);
+
+  const expResults = await evaluate(target, {
+    data: datasetName,
+    evaluators: evaluators(),
+    client,
+    maxConcurrency: 2,
+    experimentPrefix: prefix,
+    description: "Eval funcional ia-agent-worker: pipeline /api/chat (no exige texto fijo salvo replyMustInclude)",
+    metadata: {
+      worker_base_url: baseUrl,
+      repo: "ia-agent-worker",
+    },
+  });
+
+  const scores = [];
+  // Tras `await evaluate()`, `ExperimentResults.results` ya es un array materializado (ver SDK langsmith).
+  for (const row of expResults.results) {
+    const results = row.evaluationResults?.results ?? [];
+    for (const r of results) {
+      if (r.key === "eval_pass" && typeof r.score === "number") scores.push(r.score);
+    }
+  }
+
+  if (!scores.length) {
+    fail("No se obtuvieron puntuaciones eval_pass; revisa el experimento en LangSmith.");
+  }
+
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const diagnostic = buildDiagnosticSummary(expResults);
+  console.log(`Media eval_pass=${mean.toFixed(4)} (n=${scores.length}), umbral=${minMean}`);
+  console.log(
+    `Resumen eval_pass → total=${diagnostic.total}, httpOk_false=${diagnostic.httpOkFalse}, threadOk_false=${diagnostic.threadOkFalse}, pendingApproval_true=${diagnostic.pendingApprovalTrue}, replyOk_false=${diagnostic.replyOkFalse}, match_false=${diagnostic.matchFalse}`
+  );
+  if (diagnostic.previewSamples.length) {
+    console.log("Muestras de reply (preview):");
+    for (const sample of diagnostic.previewSamples) {
+      console.log(`- ${sample}`);
+    }
+  }
+
+  if (mean < minMean) {
+    const msg =
+      `Evaluación por debajo del umbral (${mean} < ${minMean}). ` +
+      `Define LANGSMITH_EVAL_ENFORCE=true para convertir este diagnóstico en gate duro.`;
+    if (enforceThreshold) {
+      fail(msg);
+    } else {
+      console.warn(msg);
+      console.warn("LangSmith queda como diagnóstico en PR: el job no falla por score bajo.");
+      return;
+    }
+  }
+
+  console.log("Evaluación superada.");
+}
+
+const isMain =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isMain) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
