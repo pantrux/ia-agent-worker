@@ -13,6 +13,10 @@
  *           usa la ruta del gateway `…/custom-{slug}/inference/chat/completions` y Cloudflare concatena
  *           con este base_url (ver docs «provider-specific»). No uses …/inference aquí o duplicará el segmento.
  *
+ * Segundo proveedor (Copilot Enterprise): por defecto también crea/actualiza
+ *   slug `github-copilot-enterprise` → base_url `AI_GATEWAY_COPILOT_BASE_URL`, o `OPENAI_API_BASE` si no apunta
+ *   a GitHub Models, o `https://api.enterprise.githubcopilot.com`. Desactivar con `AI_GATEWAY_SKIP_COPILOT_PROVIDER=1`.
+ *
  * Carga opcional: raíz del repo — `.env` y `.env.ai-gateway.local` (no versionar; ver `.env.example` y `.env.ai-gateway.example`).
  */
 
@@ -34,6 +38,45 @@ const gatewayId = (process.env.AI_GATEWAY_ID || "ia-agent-worker-llm").trim();
 const providerSlug =
   (process.env.AI_GATEWAY_PROVIDER_SLUG || "github-models").trim().replace(/^custom-/, "").trim() || "github-models";
 const customBaseUrl = (process.env.AI_GATEWAY_CUSTOM_BASE_URL || "https://models.github.ai").trim();
+const copilotSlug =
+  (process.env.AI_GATEWAY_COPILOT_SLUG || "github-copilot-enterprise").trim().replace(/^custom-/, "").trim() ||
+  "github-copilot-enterprise";
+
+const DEFAULT_COPILOT_ENTERPRISE_HOST = "https://api.enterprise.githubcopilot.com";
+
+/** Origen (`https://host`) para `base_url` del proveedor en AI Gateway: evita `/v1` duplicado con `AI_GATEWAY_PROVIDER_PATH=v1`. */
+function hostOnlyForAiGatewayProviderBase(urlStr) {
+  const trimmed = urlStr.replace(/\/+$/, "");
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed;
+  }
+}
+
+/** Host `base_url` del custom provider Copilot en AI Gateway (sin barra final). */
+function resolveCopilotGatewayProviderBaseUrl() {
+  const explicit = (process.env.AI_GATEWAY_COPILOT_BASE_URL || "").trim();
+  if (explicit) return hostOnlyForAiGatewayProviderBase(explicit);
+
+  const openaiBase = (process.env.OPENAI_API_BASE || "").trim();
+  if (openaiBase) {
+    const lower = openaiBase.toLowerCase();
+    if (lower.includes("models.github.ai")) {
+      console.warn(
+        `[aviso] OPENAI_API_BASE (${openaiBase}) apunta a GitHub Models; no se usará como base_url del proveedor Copilot en AI Gateway. ` +
+          `Define AI_GATEWAY_COPILOT_BASE_URL si tu host Copilot no es el predeterminado. ` +
+          `Se usa ${DEFAULT_COPILOT_ENTERPRISE_HOST} para el custom provider «${copilotSlug}».`
+      );
+      return hostOnlyForAiGatewayProviderBase(DEFAULT_COPILOT_ENTERPRISE_HOST);
+    }
+    return hostOnlyForAiGatewayProviderBase(openaiBase);
+  }
+
+  return hostOnlyForAiGatewayProviderBase(DEFAULT_COPILOT_ENTERPRISE_HOST);
+}
+
+const copilotBaseUrl = resolveCopilotGatewayProviderBaseUrl();
 const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
 if (!token) {
@@ -198,57 +241,75 @@ async function ensureGateway() {
   console.log(`Gateway «${gatewayId}» creado.`);
 }
 
-async function ensureCustomProvider() {
+/**
+ * @param {string} slug
+ * @param {string} baseUrlInput
+ * @param {string} defaultName
+ * @param {string} defaultDescription
+ */
+async function ensureCustomProvider(slug, baseUrlInput, defaultName, defaultDescription) {
   const list = await cf(`/ai-gateway/custom-providers?per_page=100`);
   const providers = extractProviderList(list);
-  const desired = customBaseUrl.replace(/\/+$/, "");
-  const existing = providers.find((p) => p && p.slug === providerSlug);
+  const desired = baseUrlInput.replace(/\/+$/, "");
+  const existing = providers.find((p) => p && p.slug === slug);
   if (existing) {
     const current = String(existing.base_url ?? "")
       .trim()
       .replace(/\/+$/, "");
     if (current === desired) {
-      console.log(`Custom provider «${providerSlug}» ya existe (base_url OK).`);
+      console.log(`Custom provider «${slug}» ya existe (base_url OK).`);
       return;
     }
     const id = existing.id;
     if (!id) {
-      console.warn(`Custom provider «${providerSlug}» existe pero sin id en API; no se puede PATCH. Revisa el dashboard.`);
+      console.warn(`Custom provider «${slug}» existe pero sin id en API; no se puede PATCH. Revisa el dashboard.`);
       return;
     }
-    console.log(`Actualizando base_url de «${providerSlug}»: ${current || "(vacío)"} → ${desired}`);
+    console.log(`Actualizando base_url de «${slug}»: ${current || "(vacío)"} → ${desired}`);
     await cf(`/ai-gateway/custom-providers/${id}`, {
       method: "PATCH",
       body: JSON.stringify({
-        name: existing.name ?? "GitHub Models (inference)",
-        slug: existing.slug ?? providerSlug,
+        name: existing.name ?? defaultName,
+        slug: existing.slug ?? slug,
         base_url: desired,
-        description:
-          existing.description ?? "OpenAI-compatible upstream for ia-agent-worker (GitHub Models).",
+        description: existing.description ?? defaultDescription,
         enable: existing.enable !== false,
       }),
     });
-    console.log(`Custom provider «${providerSlug}» actualizado.`);
+    console.log(`Custom provider «${slug}» actualizado.`);
     return;
   }
-  console.log(`Creando custom provider «${providerSlug}» → ${customBaseUrl} …`);
+  console.log(`Creando custom provider «${slug}» → ${desired} …`);
   await cf(`/ai-gateway/custom-providers`, {
     method: "POST",
     body: JSON.stringify({
-      name: "GitHub Models (inference)",
-      slug: providerSlug,
+      name: defaultName,
+      slug,
       base_url: desired,
-      description: "OpenAI-compatible upstream for ia-agent-worker (GitHub Models).",
+      description: defaultDescription,
       enable: true,
     }),
   });
-  console.log(`Custom provider «${providerSlug}» creado.`);
+  console.log(`Custom provider «${slug}» creado.`);
 }
 
 try {
   console.log(`Cuenta Cloudflare: ${accountId}`);
   await ensureGateway();
-  await ensureCustomProvider();
+  await ensureCustomProvider(
+    providerSlug,
+    customBaseUrl,
+    "GitHub Models (inference)",
+    "OpenAI-compatible upstream for ia-agent-worker (GitHub Models REST inference)."
+  );
+  if ((process.env.AI_GATEWAY_SKIP_COPILOT_PROVIDER || "").trim() !== "1") {
+    await ensureCustomProvider(
+      copilotSlug,
+      copilotBaseUrl,
+      "GitHub Copilot Enterprise",
+      "OpenAI-compatible Copilot API host for ia-agent-worker (JWT Bearer desde el Worker)."
+    );
+  }
 } catch (e) {
   if (e.status === 403 || e.status === 401) {
     console.error("Token inválido o sin permisos de AI Gateway. Revisa CF_AI_GATEWAY_API_TOKEN o CLOUDFLARE_API_TOKEN.");
@@ -258,22 +319,27 @@ try {
 }
 
 const compatUrl = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/compat`;
-const customBase = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/custom-${providerSlug}`;
+const customBaseModels = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/custom-${providerSlug}`;
+const customBaseCopilot = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/custom-${copilotSlug}`;
 
 console.log(`
 --- Listo ---
 Compat URL (sin AI_GATEWAY_PROVIDER_SLUG): ${compatUrl}
-Custom provider base (con AI_GATEWAY_PROVIDER_SLUG=${providerSlug}): ${customBase}
+Custom provider GitHub Models (slug=${providerSlug}): ${customBaseModels}
+Custom provider Copilot (slug=${copilotSlug}): ${customBaseCopilot}
 
-Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]):
+Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]) para **Copilot Enterprise vía gateway**:
 
   AI_GATEWAY_ACCOUNT_ID = ${accountId}
   AI_GATEWAY_ID         = ${gatewayId}
-  AI_GATEWAY_PROVIDER_SLUG = ${providerSlug}
-  # Opcional (GitHub Models): AI_GATEWAY_PROVIDER_PATH = inference
+  AI_GATEWAY_PROVIDER_SLUG = ${copilotSlug}
+  AI_GATEWAY_PROVIDER_PATH = v1
 
-Con slug, el Worker usa la URL del gateway \`…/custom-{slug}/{path}\` (por defecto \`path=inference\`; OpenAI SDK añade \`/chat/completions\`).
-El custom provider en Cloudflare debe tener base_url = host \`https://models.github.ai\` (sin \`/inference\`; si quedó la URL antigua, este script la corrige con PATCH).
+Para **GitHub Models** en su lugar: AI_GATEWAY_PROVIDER_SLUG=${providerSlug} y AI_GATEWAY_PROVIDER_PATH=inference (o omite; default inference en el código del Worker).
+
+Quita o pon AI_GATEWAY_DISABLED=false para que el Worker use el gateway (ver resolveAiGatewayLlmConfig).
+
+Con slug Copilot, el Worker usa \`…/custom-${copilotSlug}/v1\` + OpenAI SDK \`/chat/completions\` → upstream \`/v1/chat/completions\` en el host del proveedor (${copilotBaseUrl.replace(/\/+$/, "")}).
 
 Luego: npm run deploy   (o tu pipeline)
 

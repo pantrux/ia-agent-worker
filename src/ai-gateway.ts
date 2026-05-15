@@ -35,12 +35,13 @@ function stripCustomProviderModelPrefix(model: string, slugClean: string): strin
  *
  * Si `AI_GATEWAY_ACCOUNT_ID` e `AI_GATEWAY_ID` están definidos, enruta las llamadas por AI Gateway.
  *
- * - Con **`AI_GATEWAY_PROVIDER_SLUG`** (p. ej. GitHub Models): endpoint **específico del proveedor**
- *   `…/custom-{slug}/{AI_GATEWAY_PROVIDER_PATH o inference}` + `model` del catálogo (p. ej. `openai/gpt-4o-mini`). El SDK añade `/chat/completions`
- *   → en el gateway queda `…/custom-{slug}/{path}/chat/completions`, que Cloudflare concatena con
- *   `base_url` del proveedor (debe ser el host `https://models.github.ai`, ver `provision-ai-gateway.mjs`).
- *   La ruta unificada `/compat` reenvía como OpenAI estándar y suele producir **404** contra
- *   `models.github.ai/inference` (no existe `/v1/chat/completions` allí).
+ * - Con **`AI_GATEWAY_PROVIDER_SLUG`** (proveedor «provider-specific» en Cloudflare):
+ *   - **GitHub Models:** `base_url` del proveedor = `https://models.github.ai` (solo host). El Worker usa
+ *     `…/custom-{slug}/inference` (o `AI_GATEWAY_PROVIDER_PATH`); el SDK añade `/chat/completions` →
+ *     `…/inference/chat/completions` upstream (ver `provision-ai-gateway.mjs`).
+ *   - **GitHub Copilot Enterprise:** `base_url` = host del API Copilot (p. ej. `https://api.enterprise.githubcopilot.com`).
+ *     Pon **`AI_GATEWAY_PROVIDER_PATH = "v1"`** para que el SDK genere `…/custom-{slug}/v1/chat/completions` y el origen reciba `/v1/chat/completions`.
+ *   La ruta unificada **`/compat`** con `models.github.ai` suele dar **404** (no existe `/v1/chat/completions` en ese host).
  * - Sin slug: **`/compat`** con el `model` tal cual.
  *
  * `AI_GATEWAY_API_TOKEN` opcional → `cf-aig-authorization`.

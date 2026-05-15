@@ -20,7 +20,10 @@ const API = "https://api.cloudflare.com/client/v4";
 const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 const gatewayId = (process.env.AI_GATEWAY_ID || "ia-agent-worker-llm").trim();
 const providerSlug =
-  (process.env.AI_GATEWAY_PROVIDER_SLUG || "github-models").trim().replace(/^custom-/, "").trim() || "github-models";
+  (process.env.AI_GATEWAY_PROVIDER_SLUG || "github-copilot-enterprise")
+    .trim()
+    .replace(/^custom-/, "")
+    .trim() || "github-copilot-enterprise";
 
 if (!token) {
   console.error(
