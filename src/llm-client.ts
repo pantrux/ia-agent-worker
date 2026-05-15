@@ -48,6 +48,23 @@ export function githubModelsInferenceDefaultHeaders(env: Env): Record<string, st
   };
 }
 
+/**
+ * Cabeceras tipo cliente IDE que la API de inferencia Copilot (Individual / Enterprise) exige
+ * en las peticiones con el JWT de sesión (además de `Authorization: Bearer`).
+ * Alineadas con Openclaw y `scripts/validate-openclaw-github-copilot-models.ps1` (sesión hacia el host Copilot).
+ */
+export function githubCopilotInferenceDefaultHeaders(): Record<string, string> {
+  return {
+    Accept: "application/json",
+    "Copilot-Integration-Id": "vscode-chat",
+    "Editor-Version": "vscode/1.107.0",
+    "Editor-Plugin-Version": "copilot-chat/0.35.0",
+    "User-Agent": "GitHubCopilotChat/0.35.0",
+    "Openai-Organization": "github-copilot",
+    "x-initiator": "user",
+  };
+}
+
 /** ChatOpenAI con credenciales Copilot/GitHub Models y enrutado opcional vía Cloudflare AI Gateway (compat o custom provider). */
 export async function createChatOpenAI(env: Env, model?: string): Promise<ChatOpenAI> {
   const upstreamRaw = await getCopilotToken(env.COPILOT_GITHUB_TOKEN, env.OPENAI_API_BASE);
@@ -60,9 +77,16 @@ export async function createChatOpenAI(env: Env, model?: string): Promise<ChatOp
   const cfg = resolveAiGatewayLlmConfig(env, upstream, resolvedModel);
 
   const defaultHeaders: Record<string, string> = { ...(cfg.defaultHeaders ?? {}) };
-  if (cfg.baseUrl.toLowerCase().includes("models.github.ai")) {
+  const baseLower = cfg.baseUrl.toLowerCase();
+  if (baseLower.includes("models.github.ai")) {
     const gh = githubModelsInferenceDefaultHeaders(env);
     for (const [k, v] of Object.entries(gh)) {
+      if (defaultHeaders[k] === undefined) defaultHeaders[k] = v;
+    }
+  }
+  if (baseLower.includes("githubcopilot.com")) {
+    const cp = githubCopilotInferenceDefaultHeaders();
+    for (const [k, v] of Object.entries(cp)) {
       if (defaultHeaders[k] === undefined) defaultHeaders[k] = v;
     }
   }
