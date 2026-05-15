@@ -8,7 +8,7 @@
 import "dotenv/config";
 
 function apiBase() {
-  const raw = (process.env.LANGSMITH_ENDPOINT ?? "https://api.smith.langchain.com").trim();
+  const raw = (process.env.LANGSMITH_ENDPOINT || "https://api.smith.langchain.com").trim();
   return raw.replace(/\/+$/, "");
 }
 
