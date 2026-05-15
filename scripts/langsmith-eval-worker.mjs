@@ -159,6 +159,7 @@ async function main() {
   });
 
   const scores = [];
+  // Tras `await evaluate()`, `ExperimentResults.results` ya es un array materializado (ver SDK langsmith).
   for (const row of expResults.results) {
     const results = row.evaluationResults?.results ?? [];
     for (const r of results) {

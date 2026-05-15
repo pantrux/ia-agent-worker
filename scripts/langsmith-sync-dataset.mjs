@@ -19,7 +19,8 @@ function fail(msg) {
 
 async function listAllExampleIds(client, datasetId) {
   const ids = [];
-  for await (const ex of client.listExamples({ datasetId, limit: 500 })) {
+  // Sin `limit`: el SDK pagina en el async generator y evita dejar ejemplos huérfanos si hay >500 filas.
+  for await (const ex of client.listExamples({ datasetId })) {
     ids.push(ex.id);
   }
   return ids;
