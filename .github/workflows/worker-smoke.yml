@@ -18,7 +18,8 @@ jobs:
   # Check principal: debe poder usarse en branch protection sin depender de LangSmith.
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Solo checkout, detección de secreto, `npm ci` y smoke HTTP; 5 min bastan para fallar rápido si el paso remoto cuelga.
+    timeout-minutes: 5
     outputs:
       langsmith_ready: ${{ steps.langsmith_secret_check.outputs.present }}
     steps:

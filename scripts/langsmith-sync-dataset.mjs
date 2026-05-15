@@ -66,24 +66,23 @@ Define la API key de LangSmith (workspace) antes de sincronizar, por ejemplo:
 
   const existingIds = await listAllExampleIds(client, dataset.id);
   for (const part of chunk(existingIds, 50)) {
-    if (part.length) await client.deleteExamples(part, { hardDelete: true });
+    if (part.length) await client.deleteExamples(part);
   }
 
-  const uploads = spec.examples.map((ex) => ({
-    inputs: ex.inputs,
-    outputs: ex.outputs ?? {},
-    metadata: {
+  // Forma recomendada por el SDK (`langsmith@0.3.87`): arrays paralelos + `datasetId`.
+  await client.createExamples({
+    inputs: spec.examples.map((ex) => ex.inputs),
+    outputs: spec.examples.map((ex) => ex.outputs ?? {}),
+    metadata: spec.examples.map((ex) => ({
       ...(ex.metadata ?? {}),
       snapshotVersion: spec.version,
       snapshotFile: "evals/dataset-v0.json",
-    },
-    dataset_id: dataset.id,
-  }));
-
-  await client.createExamples(uploads);
+    })),
+    datasetId: dataset.id,
+  });
 
   const url = await client.getDatasetUrl({ datasetId: dataset.id });
-  console.log(`Dataset "${datasetName}" sincronizado (${uploads.length} ejemplos).`);
+  console.log(`Dataset "${datasetName}" sincronizado (${spec.examples.length} ejemplos).`);
   console.log(url);
 }
 
