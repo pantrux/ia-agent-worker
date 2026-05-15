@@ -19,8 +19,21 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      langsmith_ready: ${{ steps.langsmith_secret_check.outputs.present }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Detectar LANGSMITH_API_KEY (solo salida booleana; no exponer el secreto)
+        id: langsmith_secret_check
+        env:
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+        run: |
+          if [ -n "${LANGSMITH_API_KEY}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-node@v4
         with:
@@ -47,7 +60,7 @@ jobs:
   # En branch protection, exige solo el job `smoke` si LangSmith aún se está configurando.
   langsmith:
     needs: smoke
-    if: ${{ secrets.LANGSMITH_API_KEY != '' }}
+    if: needs.smoke.outputs.langsmith_ready == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
