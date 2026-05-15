@@ -15,6 +15,7 @@
     "list:github-models": "node ./scripts/list-github-models-catalog.mjs",
     "rotate:bff-secret": "node ./scripts/rotate-bff-secret.mjs",
     "rotate:copilot-github-token": "node ./scripts/rotate-copilot-github-token.mjs",
+    "sync:cursor-global-rules": "node ./scripts/sync-cursor-global-pr-rule.mjs",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create ia-agent-db",
     "db:migrate": "wrangler d1 execute ia-agent-db --file=schema.sql",
