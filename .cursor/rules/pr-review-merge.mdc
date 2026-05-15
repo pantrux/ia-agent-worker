@@ -39,5 +39,5 @@ Reglas operativas para PRs en **cualquier repositorio** cuando la regla está in
 ## 4. Herramientas
 
 - Preferir **GitHub CLI** (`gh pr view`, `gh pr checks`, `gh api` para threads) cuando el entorno esté autenticado.
-- Tras merge, actualizar `docs/ROADMAP-IMPLEMENTATION.md` si aplica.
+- Si aplica, actualizar `docs/ROADMAP-IMPLEMENTATION.md` **antes del merge** en la misma rama del PR, o en un **PR aparte** desde rama dedicada; **no** subir cambios a `main` sin PR (coherente con `git-workflow.mdc`).
 - **Idioma:** título, descripción, comentarios en GitHub y documentación del PR en **español** (regla detallada en `pr-documentacion-espanol.mdc`).
