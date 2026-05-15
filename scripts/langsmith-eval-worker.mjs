@@ -1,5 +1,8 @@
 /**
  * Evalúa el dataset LangSmith contra el Worker remoto (POST /api/chat).
+ * Métrica `eval_pass`: ejecución funcional del agente (HTTP 2xx, thread_id, respuesta o HITL),
+ * no “inteligencia” ni texto fijo salvo que el ejemplo defina `outputs.replyMustInclude`.
+ *
  * Requiere LANGSMITH_API_KEY, LANGSMITH_TRACING=true, WORKER_SMOKE_URL.
  */
 import "dotenv/config";
@@ -95,13 +98,21 @@ function evaluators() {
   return [
     async ({ outputs, referenceOutputs }) => {
       const reply = String(outputs?.reply ?? "").trim();
-      const must = referenceOutputs?.replyMustInclude != null
-        ? String(referenceOutputs.replyMustInclude).trim()
-        : "";
+      const must =
+        referenceOutputs?.replyMustInclude != null
+          ? String(referenceOutputs.replyMustInclude).trim()
+          : "";
       const httpOk = outputs?.httpOk === true;
-      const usable = httpOk && reply.length > 0;
-      const match = !must || reply.toLowerCase().includes(must.toLowerCase());
-      const score = usable && match ? 1 : 0;
+      const threadId = outputs?.thread_id;
+      const threadOk = typeof threadId === "string" && threadId.length > 0;
+      const pendingApproval = outputs?.chatStatus === "pending_approval";
+      const replyOk = reply.length > 0;
+      const contentOk = pendingApproval || replyOk;
+      const match =
+        !must ||
+        pendingApproval ||
+        reply.toLowerCase().includes(must.toLowerCase());
+      const score = httpOk && threadOk && contentOk && match ? 1 : 0;
       return {
         results: [
           {
@@ -109,7 +120,9 @@ function evaluators() {
             score,
             comment: JSON.stringify({
               httpOk,
-              usable,
+              threadOk,
+              pendingApproval,
+              replyOk,
               match,
               preview: reply.slice(0, 160),
             }),
@@ -152,7 +165,7 @@ async function main() {
     client,
     maxConcurrency: 2,
     experimentPrefix: prefix,
-    description: "Eval remota ia-agent-worker (POST /api/chat)",
+    description: "Eval funcional ia-agent-worker: pipeline /api/chat (no exige texto fijo salvo replyMustInclude)",
     metadata: {
       worker_base_url: baseUrl,
       repo: "ia-agent-worker",

@@ -1,47 +1,34 @@
 {
-  "version": 1,
+  "version": 2,
   "datasetName": "ia-agent-worker-eval-v0",
-  "description": "Casos sintéticos v0 (instrucciones cerradas) para eval remota LangSmith contra POST /api/chat.",
+  "description": "Casos funcionales v2: POST /api/chat debe ejecutar el grafo y responder con contrato HTTP/JSON válido (no se exige texto concreto del LLM). Opcional: outputs.replyMustInclude para pruebas estrictas puntuales.",
   "examples": [
     {
-      "inputs": { "message": "Responde únicamente con el token exacto: LS_V0_01" },
-      "outputs": { "replyMustInclude": "LS_V0_01" },
-      "metadata": { "case": "token-01" }
+      "inputs": { "message": "Hola" },
+      "metadata": { "case": "saludo-es" }
     },
     {
-      "inputs": { "message": "Sin explicación adicional, devuelve solo: LS_V0_02" },
-      "outputs": { "replyMustInclude": "LS_V0_02" },
-      "metadata": { "case": "token-02" }
+      "inputs": { "message": "Buenos días, ¿me puedes ayudar?" },
+      "metadata": { "case": "saludo-es-ayuda" }
     },
     {
-      "inputs": { "message": "Tu respuesta debe ser exactamente la cadena LS_V0_03 y nada más." },
-      "outputs": { "replyMustInclude": "LS_V0_03" },
-      "metadata": { "case": "token-03" }
+      "inputs": { "message": "Hi, I need information about your company." },
+      "metadata": { "case": "saludo-en" }
     },
     {
-      "inputs": { "message": "Contesta solo con LS_V0_04 (cuatro palabras no, solo el token)." },
-      "outputs": { "replyMustInclude": "LS_V0_04" },
-      "metadata": { "case": "token-04" }
+      "inputs": { "message": "¿Qué opciones tengo si quiero hablar con ventas?" },
+      "metadata": { "case": "consulta-routing" }
     },
     {
-      "inputs": { "message": "Escribe literalmente LS_V0_05 como toda la respuesta." },
-      "outputs": { "replyMustInclude": "LS_V0_05" },
-      "metadata": { "case": "token-05" }
+      "inputs": {
+        "message": "Solo compruebo que el hilo continúa: ¿sigues ahí?",
+        "thread_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      },
+      "metadata": { "case": "thread-id-valido" }
     },
     {
-      "inputs": { "message": "Responde con el identificador LS_V0_06 sin texto previo ni posterior." },
-      "outputs": { "replyMustInclude": "LS_V0_06" },
-      "metadata": { "case": "token-06" }
-    },
-    {
-      "inputs": { "message": "Salida obligatoria: LS_V0_07" },
-      "outputs": { "replyMustInclude": "LS_V0_07" },
-      "metadata": { "case": "token-07" }
-    },
-    {
-      "inputs": { "message": "Última consigna: imprime solo LS_V0_08" },
-      "outputs": { "replyMustInclude": "LS_V0_08" },
-      "metadata": { "case": "token-08" }
+      "inputs": { "message": "Gracias, eso es todo por ahora." },
+      "metadata": { "case": "cierre" }
     }
   ]
 }

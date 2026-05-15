@@ -35,7 +35,7 @@ Además del **tracing** en tiempo real, LangSmith concentra el **dataset de refe
 
 | Artefacto | Dónde vive | Notas |
 |-----------|------------|--------|
-| Snapshot versionado (casos de prueba) | Repo: `evals/dataset-v0.json` | Revisión en PR; no sustituye al dataset operativo en LangSmith. |
+| Snapshot versionado (casos de prueba) | Repo: `evals/dataset-v0.json` | Revisión en PR; casos orientados a **pipeline funcional** (`/api/chat`), no a texto fijo del LLM salvo `replyMustInclude` opcional. |
 | Dataset operativo y ejemplos | LangSmith (nombre configurable) | Se actualiza con `npm run langsmith:dataset:sync`. |
 | Resultados de eval (scores, runs) | LangSmith (vista de experimento) | `npm run langsmith:eval` usa `evaluate()` del SDK; el target es HTTP `POST /api/chat` al Worker remoto. |
 | Puerta CI opcional | GitHub Actions | Tras smoke: si existe `LANGSMITH_API_KEY`, sync + eval; umbral `EVAL_MIN_MEAN_SCORE`. |

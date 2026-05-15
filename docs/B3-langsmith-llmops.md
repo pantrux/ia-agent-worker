@@ -13,7 +13,7 @@ Diagnóstico rápido: `npm run langsmith:api-preflight`.
 
 ## Flujo
 
-1. Editas `evals/dataset-v0.json` (inputs `message`, salidas de referencia opcionales `replyMustInclude`).
+1. Editas `evals/dataset-v0.json` (inputs `message`, opcional `thread_id` UUID; salida de referencia opcional `outputs.replyMustInclude` solo si quieres una aserción textual puntual).
 2. `npm run langsmith:dataset:sync` — crea el dataset si no existe, reemplaza ejemplos en LangSmith según el JSON del repo.
 3. `npm run langsmith:eval` — lanza un experimento contra el Worker remoto (`WORKER_SMOKE_URL`): cada caso genera runs en LangSmith y evaluadores registran `eval_pass`.
 4. Revisas el experimento en la UI de LangSmith (comparación entre despliegues, trazas por ejemplo fallido).
@@ -32,15 +32,20 @@ Diagnóstico rápido: `npm run langsmith:api-preflight`.
 | `WORKER_SMOKE_BFF_TOKEN` | Según despliegue | Bearer si el Worker exige `BFF_API_TOKEN`. |
 | `EVAL_MIN_MEAN_SCORE` | No | Media mínima de `eval_pass` (0–1). Por defecto `0.875`. |
 
-## Métrica inicial (`eval_pass`)
+## Métrica `eval_pass` (funcional, no “IQ” del modelo)
 
-Por cada ejemplo del dataset:
+Objetivo: detectar regresiones en **ruta HTTP → autenticación BFF → grafo → respuesta JSON** durante un PR, sin exigir que el LLM repita un texto fijo.
 
-- `httpOk`: la petición `POST /api/chat` respondió HTTP 2xx.
-- `reply` no vacío.
-- Si en el JSON hay `outputs.replyMustInclude`, la respuesta debe contener esa subcadena (sin distinguir mayúsculas).
+Por cada ejemplo:
 
-`eval_pass = 1` solo si se cumplen todas las condiciones anteriores.
+- `httpOk`: `POST /api/chat` respondió HTTP 2xx.
+- `thread_id`: string presente en el JSON (el Worker siempre lo devuelve).
+- **Una de:**
+  - `reply` no vacío (flujo normal), o
+  - `status === "pending_approval"` en el cuerpo (interrupción HITL; el grafo ejecutó hasta el punto de aprobación).
+- Si el ejemplo incluye `outputs.replyMustInclude`, la respuesta debe contener esa subcadena (sin distinguir mayúsculas), salvo HITL (en ese caso no se exige coincidencia en el texto).
+
+`eval_pass = 1` solo si se cumple todo lo anterior. La media debe superar `EVAL_MIN_MEAN_SCORE` (por defecto `0.875`).
 
 ## CI
 
