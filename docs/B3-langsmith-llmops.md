@@ -18,7 +18,8 @@ Este documento sustituye la idea de un **dataset solo en Git** como fuente de ve
 | Variable | Obligatoria | Uso |
 |----------|-------------|-----|
 | `LANGSMITH_API_KEY` | Sí (sync y eval) | API key del workspace LangSmith. |
-| `LANGSMITH_WORKSPACE_ID` | A veces (service key multi-workspace) | UUID del workspace en LangSmith. Si la API responde **403** en `/datasets` pese a una service key válida, define esta variable (local y/o **Variable** en GitHub Actions). El SDK la envía como cabecera de tenant. |
+| `LANGSMITH_WORKSPACE_ID` | A veces (service key multi-workspace) | UUID del workspace en LangSmith. Si la API responde **403** en `/datasets` pese a una service key válida, define esta variable (local y/o **Variable** en GitHub Actions). El SDK la envía como cabecera de tenant. **No confundir** con el ID de un **proyecto** (`LANGSMITH_PROJECT`). |
+| `LANGSMITH_ENDPOINT` | Solo cuentas/región distinta | URL base de la API. Por defecto el SDK usa la región US. Cuentas **EU** suelen requerir `https://eu.api.smith.langchain.com` (variable en GitHub y/o local). Sin esto, la clave puede parecer válida pero `/datasets` devuelve **403**. |
 | `LANGSMITH_TRACING` | Recomendada (`true` en eval) | El runner de `evaluate()` exige trazas en el target. |
 | `LANGSMITH_PROJECT` | Opcional | Proyecto de trazas (mismo criterio que el Worker). |
 | `LANGSMITH_EVAL_DATASET_NAME` | No | Nombre del dataset en LangSmith (por defecto coincide con `datasetName` del JSON). |
@@ -38,7 +39,7 @@ Por cada ejemplo del dataset:
 
 ## CI
 
-En [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml), tras el smoke remoto, si `secrets.LANGSMITH_API_KEY` está definido se ejecutan `langsmith:dataset:sync` y `langsmith:eval`. Si el secreto no existe, el paso termina con aviso y **no** falla el job (para forks o repos sin LLMOps aún). Para **puerta estricta** en `main`, configura el secreto en el repositorio. Opcional: variable **`LANGSMITH_WORKSPACE_ID`** (UUID del workspace) cuando la clave abarca más de un workspace y la API devuelve 403 sin contexto de tenant.
+En [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml), tras el smoke remoto, si `secrets.LANGSMITH_API_KEY` está definido se ejecutan `langsmith:dataset:sync` y `langsmith:eval`. Si el secreto no existe, el paso termina con aviso y **no** falla el job (para forks o repos sin LLMOps aún). Para **puerta estricta** en `main`, configura el secreto en el repositorio. Opcional: **`LANGSMITH_WORKSPACE_ID`** (UUID del **workspace**, no del proyecto). Opcional: **`LANGSMITH_ENDPOINT`** (p. ej. `https://eu.api.smith.langchain.com` para cuentas EU) si ves **403** en `/datasets` con la URL por defecto.
 
 ## Referencias
 
