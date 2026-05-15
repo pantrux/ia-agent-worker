@@ -12,6 +12,7 @@
     "smoke:worker": "node ./scripts/smoke-worker.mjs",
     "langsmith:dataset:sync": "node ./scripts/langsmith-sync-dataset.mjs",
     "langsmith:eval": "node ./scripts/langsmith-eval-worker.mjs",
+    "langsmith:api-preflight": "node ./scripts/langsmith-api-preflight.mjs",
     "provision:ai-gateway": "node ./scripts/provision-ai-gateway.mjs",
     "check:ai-gateway": "node ./scripts/cf-ai-gateway-status.mjs",
     "list:github-models": "node ./scripts/list-github-models-catalog.mjs",

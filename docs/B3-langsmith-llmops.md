@@ -6,6 +6,11 @@ Este documento sustituye la idea de un **dataset solo en Git** como fuente de ve
 - El repositorio mantiene un **snapshot versionado** (`evals/dataset-v0.json`) para revisiones en PR y reproducibilidad; el **dataset operativo** vive en LangSmith y se actualiza con el script de sincronización.
 - **GitHub Actions** actúa como puerta opcional: si existen credenciales, ejecuta sincronización + experimento y **falla** si la media de la métrica `eval_pass` cae por debajo del umbral.
 
+## Referencia de API (sin prueba y error)
+
+Contrato oficial de host, cabeceras `X-Api-Key` / `X-Tenant-Id` y rutas `/api/v1`: [LANGSMITH-API-CONTRACT.md](./LANGSMITH-API-CONTRACT.md).  
+Diagnóstico rápido: `npm run langsmith:api-preflight`.
+
 ## Flujo
 
 1. Editas `evals/dataset-v0.json` (inputs `message`, salidas de referencia opcionales `replyMustInclude`).
@@ -43,6 +48,7 @@ En [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml)
 
 ## Referencias
 
+- Contrato API (OpenAPI / cabeceras / regiones): [LANGSMITH-API-CONTRACT.md](./LANGSMITH-API-CONTRACT.md)
 - Roadmap: [ROADMAP-CF-LANGSMITH.md](./ROADMAP-CF-LANGSMITH.md) (Fase B, B3).
 - Trazas del Worker: [langsmith-integration-plan.md](./langsmith-integration-plan.md).
 - API datasets: [gestión programática de datasets](https://docs.langchain.com/langsmith/manage-datasets-programmatically) (LangChain Docs).

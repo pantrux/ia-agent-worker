@@ -212,6 +212,8 @@ La estrategia LLMOps define **LangSmith** como sitio donde vive el dataset opera
 export LANGSMITH_API_KEY=lsv2_…
 export LANGSMITH_TRACING=true
 export WORKER_SMOKE_URL=https://ia-agent-worker.<cuenta>.workers.dev
+# Opcional pero recomendable antes del primer sync (ver docs/LANGSMITH-API-CONTRACT.md):
+# npm run langsmith:api-preflight
 npm run langsmith:dataset:sync
 npm run langsmith:eval
 ```

@@ -98,5 +98,6 @@ Los contenidos de chat y herramientas se envían a LangSmith según el proyecto 
 3. En la invocación del grafo: `metadata` / `tags` (`thread_id`, `operation`, …).
 4. Validar en la UI de LangSmith tras deploy a preview/staging.
 5. Dataset v0: editar `evals/dataset-v0.json` y ejecutar `npm run langsmith:dataset:sync` con `LANGSMITH_API_KEY`.
-6. Eval remota: `npm run langsmith:eval` (requiere `LANGSMITH_TRACING=true`, Worker accesible y dataset ya sincronizado).
-7. (Opcional) Secreto `LANGSMITH_API_KEY` en GitHub para el paso de eval en CI.
+6. Antes de depurar 403: `npm run langsmith:api-preflight` y [LANGSMITH-API-CONTRACT.md](./LANGSMITH-API-CONTRACT.md).
+7. Eval remota: `npm run langsmith:eval` (requiere `LANGSMITH_TRACING=true`, Worker accesible y dataset ya sincronizado).
+8. (Opcional) Secreto `LANGSMITH_API_KEY` en GitHub para el paso de eval en CI.
