@@ -197,9 +197,10 @@ export async function invokeResponsesIfRequired(
     return null;
   }
 
+  const upstreamIsCopilot = upstream.baseUrl.toLowerCase().includes("githubcopilot.com");
   const headers: Record<string, string> = {
     Authorization: `Bearer ${cfg.apiKey}`,
-    ...githubCopilotInferenceDefaultHeaders(),
+    ...(upstreamIsCopilot ? githubCopilotInferenceDefaultHeaders() : {}),
     ...(cfg.defaultHeaders ?? {}),
     "content-type": "application/json",
   };
@@ -221,5 +222,11 @@ export async function invokeResponsesIfRequired(
   if (!response.ok) {
     throw new Error(`Copilot Responses API failed (${response.status} ${response.statusText}): ${text.slice(0, 500)}`);
   }
-  return outputToAIMessage(JSON.parse(text) as Record<string, unknown>);
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    throw new Error(`Copilot Responses API returned non-JSON (${response.status}): ${text.slice(0, 500)}`);
+  }
+  return outputToAIMessage(payload);
 }
