@@ -76,7 +76,18 @@ function resolveCopilotGatewayProviderBaseUrl() {
   return hostOnlyForAiGatewayProviderBase(DEFAULT_COPILOT_ENTERPRISE_HOST);
 }
 
+function warnIfDebugCopilotProviderBase(origin) {
+  const lower = origin.toLowerCase();
+  if (lower.includes("workers.dev") && !lower.includes("githubcopilot.com")) {
+    console.warn(
+      `[aviso] base_url del proveedor Copilot (${origin}) parece un Worker de depuración, no Copilot Enterprise. ` +
+        `Para producción usa ${DEFAULT_COPILOT_ENTERPRISE_HOST} (o deja vacío AI_GATEWAY_COPILOT_BASE_URL).`
+    );
+  }
+}
+
 const copilotBaseUrl = resolveCopilotGatewayProviderBaseUrl();
+warnIfDebugCopilotProviderBase(copilotBaseUrl);
 const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
 if (!token) {
@@ -335,7 +346,7 @@ Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]) para
   AI_GATEWAY_PROVIDER_SLUG = ${copilotSlug}
   AI_GATEWAY_PROVIDER_PATH = ""
 
-  (El Worker usa la ruta específica del proveedor con path vacío; esto evita que Cloudflare agregue /v1 a la ruta).
+  (El Worker usa la ruta específica del proveedor con path vacío; upstream debe ser el host Copilot sin /v1 en la URL final).
 
 Para **GitHub Models** en su lugar: AI_GATEWAY_PROVIDER_SLUG=${providerSlug} y AI_GATEWAY_PROVIDER_PATH=inference (o omite; default inference en el código del Worker).
 
