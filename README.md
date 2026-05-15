@@ -188,7 +188,7 @@ Sin Docker. Sin plan Workers Paid. Sin Containers.
 
 ## CI: smoke remoto (GitHub Actions)
 
-El workflow [`.github/workflows/worker-smoke.yml`](.github/workflows/worker-smoke.yml) ejecuta `npm run smoke:worker` contra la URL pública del Worker.
+El workflow [`.github/workflows/worker-smoke.yml`](.github/workflows/worker-smoke.yml) ejecuta primero el job **`smoke`** (`npm run smoke:worker` contra la URL pública del Worker). Si existe el secreto **`LANGSMITH_API_KEY`**, un segundo job **`langsmith`** ejecuta preflight, sync de dataset y eval (B3); puedes exigir en branch protection solo el job `smoke` para no bloquear merges por fallos de la API LangSmith.
 
 1. En el repo de GitHub: **Settings → Secrets and variables → Actions → Variables**.
 2. Crea **`WORKER_SMOKE_URL`** con la base **sin** barra final, por ejemplo `https://ia-agent-worker.<cuenta>.workers.dev` (puede ser el mismo hostname que uses para “preview” si despliegas allí versiones de prueba).

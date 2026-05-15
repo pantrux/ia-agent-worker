@@ -15,9 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Check principal: debe poder usarse en branch protection sin depender de LangSmith.
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -42,19 +43,33 @@ jobs:
           fi
           npm run smoke:worker
 
+  # Job separado: fallos de API LangSmith (403, etc.) no bloquean el smoke del Worker.
+  # En branch protection, exige solo el job `smoke` si LangSmith aún se está configurando.
+  langsmith:
+    needs: smoke
+    if: ${{ secrets.LANGSMITH_API_KEY != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
       - name: LangSmith — preflight API (diagnóstico)
         env:
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
           LANGSMITH_WORKSPACE_ID: ${{ vars.LANGSMITH_WORKSPACE_ID }}
           LANGSMITH_ENDPOINT: ${{ vars.LANGSMITH_ENDPOINT }}
-        run: |
-          if [ -z "${LANGSMITH_API_KEY}" ]; then
-            echo "::notice::LANGSMITH_API_KEY no configurada; se omite preflight."
-            exit 0
-          fi
-          npm run langsmith:api-preflight
+        run: npm run langsmith:api-preflight
 
-      - name: LangSmith — sincronizar dataset y eval (opcional)
+      - name: LangSmith — sincronizar dataset y eval
         env:
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
           LANGSMITH_WORKSPACE_ID: ${{ vars.LANGSMITH_WORKSPACE_ID }}
@@ -67,9 +82,5 @@ jobs:
           WORKER_SMOKE_URL: ${{ vars.WORKER_SMOKE_URL }}
           WORKER_SMOKE_BFF_TOKEN: ${{ secrets.WORKER_SMOKE_BFF_TOKEN }}
         run: |
-          if [ -z "${LANGSMITH_API_KEY}" ]; then
-            echo "::notice::LANGSMITH_API_KEY no configurada; se omite sincronización y eval en LangSmith."
-            exit 0
-          fi
           npm run langsmith:dataset:sync
           npm run langsmith:eval

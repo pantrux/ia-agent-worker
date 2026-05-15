@@ -80,7 +80,7 @@ La forma exacta del config depende de la versión de **LangGraph.js**; seguir la
 ### 5) CI/CD
 
 - **Tracing en deploy:** propagar `LANGSMITH_API_KEY` en el workflow de deploy (como otros secretos), o documentar `secret put` manual.
-- **Eval B3:** secreto `LANGSMITH_API_KEY` en Actions + `WORKER_SMOKE_URL` (misma variable que el smoke); ver `docs/B3-langsmith-llmops.md` y el paso opcional en `worker-smoke.yml`.
+- **Eval B3:** secreto `LANGSMITH_API_KEY` en Actions + `WORKER_SMOKE_URL` (misma variable que el smoke); ver `docs/B3-langsmith-llmops.md` y el job `langsmith` en `worker-smoke.yml`.
 
 ### 6) Verificación
 

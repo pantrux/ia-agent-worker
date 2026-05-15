@@ -44,7 +44,12 @@ Por cada ejemplo del dataset:
 
 ## CI
 
-En [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml), tras el smoke remoto, si `secrets.LANGSMITH_API_KEY` está definido se ejecuta primero **`npm run langsmith:api-preflight`** (mismas variables `LANGSMITH_*` que el sync) y después `langsmith:dataset:sync` y `langsmith:eval`. Si el secreto no existe, los pasos LangSmith se omiten con aviso. Para **puerta estricta** en `main`, configura el secreto en el repositorio. Opcional: **`LANGSMITH_WORKSPACE_ID`** (UUID del **workspace**, no del proyecto). Opcional: **`LANGSMITH_ENDPOINT`** (p. ej. `https://eu.api.smith.langchain.com` para cuentas EU) si ves **403** en `/datasets` con la URL por defecto.
+El workflow [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml) tiene **dos jobs**:
+
+1. **`smoke`** — solo `npm run smoke:worker` (check principal del Worker). Debe poder marcarse como **única** comprobación obligatoria en branch protection.
+2. **`langsmith`** — solo si existe `secrets.LANGSMITH_API_KEY`: **`npm run langsmith:api-preflight`**, luego `langsmith:dataset:sync` y `langsmith:eval` (mismas variables `LANGSMITH_*`). Un **403** de la API LangSmith **no** marca en rojo el job `smoke`; revisa permisos de la service key o configura la protección de rama para **no** exigir el job `langsmith` hasta que la integración esté estable.
+
+Opcional: **`LANGSMITH_WORKSPACE_ID`** (UUID del **workspace**, no del proyecto). Opcional: **`LANGSMITH_ENDPOINT`** (p. ej. `https://eu.api.smith.langchain.com` para cuentas EU) si ves **403** en `/datasets` con la URL por defecto.
 
 ## Referencias
 
