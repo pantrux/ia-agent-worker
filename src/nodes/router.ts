@@ -60,7 +60,7 @@ function extractTextContent(content: unknown): string {
 function parseStructuredRouteResponse(raw: string): z.infer<typeof RouteSchema> | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  const fenced = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(trimmed);
   const jsonText = fenced?.[1]?.trim() || trimmed;
   try {
     return RouteSchema.parse(JSON.parse(jsonText));
