@@ -39,10 +39,10 @@ function stripCustomProviderModelPrefix(model: string, slugClean: string): strin
  *   - **GitHub Models:** `base_url` del proveedor = `https://models.github.ai` (solo host). El Worker usa
  *     `…/custom-{slug}/inference` (o `AI_GATEWAY_PROVIDER_PATH`); el SDK añade `/chat/completions` →
  *     `…/inference/chat/completions` upstream (ver `provision-ai-gateway.mjs`).
- *   - **GitHub Copilot Enterprise:** mismo `base_url` host Copilot en Cloudflare, pero el Worker usa la API unificada
- *     **`/compat`** y el campo `model` como **`custom-{slug}/{modelo}`** (recomendación Cloudflare para OpenAI-compat).
- *     Evita la ruta `…/custom-{slug}/v1/…`, que en algunos despliegues del gateway devolvía **400 / código 2005**
- *     («Failed to get response from provider») sin cuerpo útil del upstream.
+ *   - **GitHub Copilot Enterprise:** mismo `base_url` host Copilot en Cloudflare. El Worker usa la ruta
+ *     específica del proveedor con un path **vacío** (`""`) de manera predeterminada. El SDK añade `/chat/completions` →
+ *     `…/custom-{slug}/chat/completions` en el gateway, lo cual llega a Copilot de manera directa.
+ *     (Evita el uso de `/compat`, que forzaba `/v1/chat/completions` provocando un error 2005 en Copilot).
  * - Sin slug: **`/compat`** con el `model` tal cual.
  *
  * `AI_GATEWAY_API_TOKEN` opcional → `cf-aig-authorization`.
