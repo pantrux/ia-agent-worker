@@ -1,24 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Prueba por consola el mismo flujo GitHub Copilot que TradingAgents-crypto (llm_provider github-copilot):
+Prueba CLI el flujo Copilot alineado con TradingAgents-crypto + ajustes para GitHub actual.
 
-  1) Lee el token OAuth de GitHub desde un JSON (igual que el contenedor: clave `access_token`).
-  2) GET https://api.github.com/copilot_internal/v2/token (mismas cabeceras que trading_graph.py).
-  3) Si falla el intercambio, usa el token de GitHub como Bearer (fallback del contenedor).
-  4) POST chat completions contra https://api.githubcopilot.com/v1/chat/completions con modelo gpt-4o.
+- Valida credencial: GET https://api.github.com/user (REST + X-GitHub-Api-Version).
+  El NAS llama GET /user/copilot (trading_graph.py); esa ruta suele dar 404 en la API publica.
+- Intercambio: GET /copilot_internal/v2/token con cabeceras NAS + Accept vnd.github+json + X-GitHub-Api-Version.
+- Chat: POST {base}/v1/chat/completions con cabeceras de cliente Copilot; prueba bases del JSON de intercambio,
+  luego https://api.individual.githubcopilot.com y https://api.githubcopilot.com.
 
-No usa models.github.ai (GitHub Models REST); replica el host y modelo del contenedor.
-
-Ejemplos:
-
-  # Copia github_token.json del NAS (misma forma que /app/data/github_token.json) a ./data/
-  python scripts/probe_github_copilot_chat.py --token-file data/github_token.json
-
-  # O pega el access_token de OAuth directamente (sin guardar archivo)
-  python scripts/probe_github_copilot_chat.py --token gho_...
-
-Requisitos: Python 3.9+ (solo stdlib).
+Requisitos: Python 3.9+ (stdlib).
 """
 
 from __future__ import annotations
@@ -80,26 +71,71 @@ def _http_json(
     return status, parsed
 
 
-def _exchange_copilot(gh_token: str, timeout: int) -> tuple[str, str]:
-    """Devuelve (bearer_para_chat, descripcion)."""
-    url = "https://api.github.com/copilot_internal/v2/token"
-    headers = {
+def _github_rest_headers(gh_token: str, api_version: str) -> dict[str, str]:
+    return {
         "Authorization": f"token {gh_token}",
-        "Accept": "application/json",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": api_version,
+    }
+
+
+def _exchange_headers(gh_token: str, api_version: str) -> dict[str, str]:
+    return {
+        "Authorization": f"token {gh_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": api_version,
         "Editor-Version": "vscode/1.90.0",
         "Editor-Plugin-Version": "copilot-chat/0.17.2024051401",
         "User-Agent": "GitHubCopilot/1.155.0",
     }
-    status, body = _http_json("GET", url, headers, None, timeout)
+
+
+def _chat_headers(bearer: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {bearer}",
+        "Content-Type": "application/json",
+        "Editor-Version": "vscode/1.90.0",
+        "Editor-Plugin-Version": "copilot-chat/0.17.2024051401",
+        "User-Agent": "GitHubCopilot/1.155.0",
+        "Copilot-Integration-Id": "vscode-chat",
+    }
+
+
+def _bases_from_exchange(data: dict[str, Any] | None) -> list[str]:
+    if not data or not isinstance(data, dict):
+        return []
+    out: list[str] = []
+    for k in ("base_url", "baseUrl", "api_url", "endpoint"):
+        v = data.get(k)
+        if isinstance(v, str) and v.strip():
+            out.append(v.strip().rstrip("/"))
+    ep = data.get("endpoints")
+    if isinstance(ep, dict):
+        for k2 in ("api", "chat", "models"):
+            v2 = ep.get(k2)
+            if isinstance(v2, str) and v2.strip():
+                out.append(v2.strip().rstrip("/"))
+    seen: set[str] = set()
+    uniq: list[str] = []
+    for b in out:
+        if b not in seen:
+            seen.add(b)
+            uniq.append(b)
+    return uniq
+
+
+def _exchange_copilot(gh_token: str, api_version: str, timeout: int) -> tuple[str, str, dict[str, Any] | None]:
+    url = "https://api.github.com/copilot_internal/v2/token"
+    status, body = _http_json("GET", url, _exchange_headers(gh_token, api_version), None, timeout)
     if status == 200 and isinstance(body, dict):
-        tok = (body.get("token") or "").strip()
+        tok = str(body.get("token") or "").strip()
         if tok:
-            return tok, "copilot_internal/v2/token"
+            return tok, "copilot_internal/v2/token", body
     print(
-        f"Intercambio Copilot HTTP {status} (mismo fallback que el contenedor: token GitHub como Bearer).",
+        f"Intercambio Copilot HTTP {status} (fallback: token GitHub OAuth como Bearer).",
         file=sys.stderr,
     )
-    return gh_token, "github_oauth_token_fallback"
+    return gh_token, "github_oauth_token_fallback", body if isinstance(body, dict) else None
 
 
 def _copilot_chat(
@@ -111,71 +147,87 @@ def _copilot_chat(
 ) -> tuple[int, Any]:
     base = base.rstrip("/")
     url = f"{base}/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {bearer}",
-        "Content-Type": "application/json",
-    }
+    headers = _chat_headers(bearer)
     payload: dict[str, Any] = {
         "model": model,
         "messages": [{"role": "user", "content": user_message}],
         "stream": False,
     }
-    status, body = _http_json("POST", url, headers, payload, timeout)
-    return status, body
+    return _http_json("POST", url, headers, payload, timeout)
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(
-        description="Prueba chat GitHub Copilot (mismo flujo que TradingAgents-crypto github-copilot).",
-    )
+    p = argparse.ArgumentParser(description="Prueba GitHub Copilot (TradingAgents + cabeceras actuales).")
+    p.add_argument("--token-file", default="", help="JSON con access_token")
+    p.add_argument("--token", default="", help="OAuth access_token")
     p.add_argument(
-        "--token-file",
-        default="",
-        help="JSON con access_token (como data/github_token.json del contenedor)",
+        "--github-api-version",
+        default=os.environ.get("GITHUB_TOKEN_API_VERSION", "2026-03-10"),
+        help="X-GitHub-Api-Version para api.github.com",
     )
-    p.add_argument("--token", default="", help="OAuth access_token de GitHub (alternativa a --token-file)")
+    p.add_argument("--copilot-api-base", default="", help="Si se indica, solo se prueba ese host (sin rotacion)")
+    p.add_argument("--model", default="gpt-4o", help="Modelo")
+    p.add_argument("--message", "-m", default="Responde solo: OK", help="Mensaje usuario")
     p.add_argument(
-        "--copilot-api-base",
-        default="https://api.githubcopilot.com",
-        help="Base URL del API Copilot (igual que trading_graph.py)",
-    )
-    p.add_argument("--model", default="gpt-4o", help="Modelo (el contenedor fuerza gpt-4o)")
-    p.add_argument("--message", "-m", default="Responde solo: OK", help="Mensaje de usuario")
-    p.add_argument(
-        "--skip-copilot-status",
+        "--legacy-nas-user-copilot",
         action="store_true",
-        help="No llamar a GET /user/copilot (solo depuracion en el contenedor)",
+        help="Ademas llama GET /user/copilot como el NAS (suele 404)",
     )
-    p.add_argument("--timeout", type=int, default=120, help="Timeout en segundos")
+    p.add_argument("--skip-user", action="store_true", help="No llamar GET /user")
+    p.add_argument("--timeout", type=int, default=120)
     args = p.parse_args()
 
     gh = _read_access_token(args)
+    ver = args.github_api_version.strip()
 
-    if not args.skip_copilot_status:
-        st, copilot_user = _http_json(
+    if not args.skip_user:
+        st, u = _http_json("GET", "https://api.github.com/user", _github_rest_headers(gh, ver), None, args.timeout)
+        print(f"GET /user -> HTTP {st}", file=sys.stderr)
+        if isinstance(u, dict):
+            print(json.dumps({"login": u.get("login"), "id": u.get("id")}, indent=2), file=sys.stderr)
+
+    if args.legacy_nas_user_copilot:
+        st2, raw = _http_json(
             "GET",
             "https://api.github.com/user/copilot",
             {"Authorization": f"token {gh}"},
             None,
             args.timeout,
         )
-        print(f"GET /user/copilot -> HTTP {st}", file=sys.stderr)
-        if isinstance(copilot_user, (dict, list)):
-            print(json.dumps(copilot_user, indent=2, ensure_ascii=False), file=sys.stderr)
+        print(f"GET /user/copilot (legacy NAS) -> HTTP {st2}", file=sys.stderr)
+        print(json.dumps(raw, indent=2, ensure_ascii=False) if isinstance(raw, (dict, list)) else str(raw)[:800], file=sys.stderr)
+
+    bearer, source, ex_body = _exchange_copilot(gh, ver, args.timeout)
+    print(f"Bearer: {source}", file=sys.stderr)
+
+    bases = _bases_from_exchange(ex_body)
+    for fb in ("https://api.individual.githubcopilot.com", "https://api.githubcopilot.com"):
+        if fb not in bases:
+            bases.append(fb)
+    if args.copilot_api_base.strip():
+        bases = [args.copilot_api_base.strip().rstrip("/")]
+
+    last_status = 0
+    last_body: Any = None
+    for b in bases:
+        print(f"POST {b}/v1/chat/completions ...", file=sys.stderr)
+        status, body = _copilot_chat(bearer, b, args.model.strip(), args.message.strip(), args.timeout)
+        last_status, last_body = status, body
+        if 200 <= status < 300:
+            print(json.dumps(body, indent=2, ensure_ascii=False) if isinstance(body, (dict, list)) else body)
+            return 0
+        print(f"HTTP {status} en {b}", file=sys.stderr)
+        if isinstance(body, (dict, list)):
+            print(json.dumps(body, indent=2, ensure_ascii=False)[:1200], file=sys.stderr)
         else:
-            print(str(copilot_user)[:800], file=sys.stderr)
+            print(str(body)[:800], file=sys.stderr)
 
-    bearer, source = _exchange_copilot(gh, args.timeout)
-    print(f"Bearer usado: {source}", file=sys.stderr)
-
-    api_base = args.copilot_api_base.strip()
-    status, body = _copilot_chat(bearer, api_base, args.model.strip(), args.message.strip(), args.timeout)
-    print(f"POST {api_base.rstrip('/')}/v1/chat/completions model={args.model!r} -> HTTP {status}", file=sys.stderr)
-    if isinstance(body, (dict, list)):
-        print(json.dumps(body, indent=2, ensure_ascii=False))
+    print(f"Ultimo HTTP {last_status}", file=sys.stderr)
+    if isinstance(last_body, (dict, list)):
+        print(json.dumps(last_body, indent=2, ensure_ascii=False))
     else:
-        print(body)
-    return 0 if 200 <= status < 300 else 1
+        print(last_body)
+    return 1
 
 
 if __name__ == "__main__":
