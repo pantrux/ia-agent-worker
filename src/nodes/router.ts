@@ -100,8 +100,9 @@ export function createRouterNode(env: Env) {
           toolState: { ...state.toolState, router: "llm" },
         };
       }
-    } catch {
+    } catch (err) {
       // LLM failed, fall through to keyword routing
+      console.warn("[router] LLM invocation/parse failed, falling back to keyword routing:", err);
     }
 
     const [ind, intent] = keywordRoute(text);
