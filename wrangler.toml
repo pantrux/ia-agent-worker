@@ -17,7 +17,7 @@ ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
 # Copilot Enterprise: intercambio vía `copilot_internal/v2/token` y llamadas al host devuelto (p. ej. api.enterprise.githubcopilot.com).
 # Modelo Copilot Enterprise por defecto; no se define fallback para evitar cambiar el id enviado al gateway.
 # Cloudflare AI Gateway: `npm run provision:ai-gateway` crea gateway + proveedores. Copilot usa custom provider con path vacío.
-COPILOT_MODEL = "gpt-5.4"
+COPILOT_MODEL = "gpt-5.4-mini"
 OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-demo"
@@ -46,7 +46,7 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
 [env.preview.vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
-COPILOT_MODEL = "gpt-5.4"
+COPILOT_MODEL = "gpt-5.4-mini"
 OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
 LANGSMITH_TRACING = "true"
 LANGSMITH_PROJECT = "ia-agent-worker-preview"
