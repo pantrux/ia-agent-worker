@@ -218,7 +218,7 @@ npm run langsmith:dataset:sync
 npm run langsmith:eval
 ```
 
-En GitHub Actions, si configuras el secreto **`LANGSMITH_API_KEY`**, el mismo workflow de smoke (tras `/ping`) sincroniza el dataset y ejecuta la eval; sin ese secreto el paso se omite con un aviso. Variables opcionales: `LANGSMITH_WORKSPACE_ID` (UUID del **workspace**), `LANGSMITH_ENDPOINT` (p. ej. API EU: `https://eu.api.smith.langchain.com` si tu cuenta está en esa región), `LANGSMITH_EVAL_DATASET_NAME`, `EVAL_MIN_MEAN_SCORE`, `LANGSMITH_EXPERIMENT_PREFIX`.
+En GitHub Actions, si configuras el secreto **`LANGSMITH_API_KEY`**, el mismo workflow de smoke (tras `/ping`) sincroniza el dataset y ejecuta la eval; sin ese secreto el paso se omite con un aviso. Variables opcionales: `LANGSMITH_WORKSPACE_ID` (UUID del **workspace**), `LANGSMITH_ENDPOINT` (p. ej. API EU: `https://eu.api.smith.langchain.com` si tu cuenta está en esa región), `LANGSMITH_EVAL_DATASET_NAME`, `EVAL_MIN_MEAN_SCORE`, `LANGSMITH_EXPERIMENT_PREFIX` y **`LANGSMITH_EVAL_ENFORCE`** (`true` => score bajo falla CI; vacío/`false` => solo diagnóstico con resumen agregado en logs).
 
 ## Integración con la landing
 

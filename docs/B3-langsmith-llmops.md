@@ -4,7 +4,7 @@ Este documento sustituye la idea de un **dataset solo en Git** como fuente de ve
 
 - **LangSmith** es la plataforma unificada para trazas, datasets, experimentos y métricas de evaluación.
 - El repositorio mantiene un **snapshot versionado** (`evals/dataset-v0.json`) para revisiones en PR y reproducibilidad; el **dataset operativo** vive en LangSmith y se actualiza con el script de sincronización.
-- **GitHub Actions** actúa como puerta opcional: si existen credenciales, ejecuta sincronización + experimento y **falla** si la media de la métrica `eval_pass` cae por debajo del umbral.
+- **GitHub Actions** actúa como diagnóstico y, opcionalmente, como puerta: si existen credenciales, ejecuta sincronización + experimento. El score puede quedar como **diagnóstico** en PR y solo convertirse en **gate duro** si activas `LANGSMITH_EVAL_ENFORCE=true`.
 
 ## Referencia de API (sin prueba y error)
 
@@ -31,6 +31,7 @@ Diagnóstico rápido: `npm run langsmith:api-preflight`.
 | `WORKER_SMOKE_URL` | Sí en eval | Base URL del Worker (sin path). |
 | `WORKER_SMOKE_BFF_TOKEN` | Según despliegue | Bearer si el Worker exige `BFF_API_TOKEN`. |
 | `EVAL_MIN_MEAN_SCORE` | No | Media mínima de `eval_pass` (0–1). Por defecto `0.875`. |
+| `LANGSMITH_EVAL_ENFORCE` | No | Si es `true`/`1`, un score por debajo del umbral hace fallar el script. Vacío/`false` => deja resumen diagnóstico y exit 0. |
 
 ## Métrica `eval_pass` (funcional, no “IQ” del modelo)
 
@@ -45,7 +46,10 @@ Por cada ejemplo:
   - `status === "pending_approval"` en el cuerpo (interrupción HITL; el grafo ejecutó hasta el punto de aprobación).
 - Si el ejemplo incluye `outputs.replyMustInclude`, la respuesta debe contener esa subcadena (sin distinguir mayúsculas), salvo HITL (en ese caso no se exige coincidencia en el texto).
 
-`eval_pass = 1` solo si se cumple todo lo anterior. La media debe superar `EVAL_MIN_MEAN_SCORE` (por defecto `0.875`).
+`eval_pass = 1` solo si se cumple todo lo anterior. La media se compara con `EVAL_MIN_MEAN_SCORE` (por defecto `0.875`).
+
+- Si `LANGSMITH_EVAL_ENFORCE=true`, score bajo => **falla** el job.
+- Si `LANGSMITH_EVAL_ENFORCE` está vacío o `false`, score bajo => **solo diagnóstico**: el script imprime un resumen agregado (`httpOk_false`, `threadOk_false`, `replyOk_false`, etc.) y deja el experimento accesible en LangSmith.
 
 **Nota técnica:** el target pasado a `evaluate()` ya va envuelto en `traceable` por LangSmith; no añadas otro `traceable` alrededor de `POST /api/chat` en el script de eval, o los `outputs` vistos por el evaluador pueden no coincidir con la respuesta real y la métrica quedaría en 0.
 
@@ -54,7 +58,7 @@ Por cada ejemplo:
 El workflow [`.github/workflows/worker-smoke.yml`](../.github/workflows/worker-smoke.yml) tiene **dos jobs**:
 
 1. **`smoke`** — solo `npm run smoke:worker` (check principal del Worker). Debe poder marcarse como **única** comprobación obligatoria en branch protection.
-2. **`langsmith`** — solo si existe `secrets.LANGSMITH_API_KEY`: **`npm run langsmith:api-preflight`**, luego `langsmith:dataset:sync` y `langsmith:eval` (mismas variables `LANGSMITH_*`). Un **403** de la API LangSmith **no** marca en rojo el job `smoke`; revisa permisos de la service key o configura la protección de rama para **no** exigir el job `langsmith` hasta que la integración esté estable.
+2. **`langsmith`** — solo si existe `secrets.LANGSMITH_API_KEY`: **`npm run langsmith:api-preflight`**, luego `langsmith:dataset:sync` y `langsmith:eval` (mismas variables `LANGSMITH_*`). Un **403** de la API LangSmith **no** marca en rojo el job `smoke`; y un score bajo del experimento solo falla CI si además activas `LANGSMITH_EVAL_ENFORCE=true`.
 
 Opcional: **`LANGSMITH_WORKSPACE_ID`** (UUID del **workspace**, no del proyecto). Opcional: **`LANGSMITH_ENDPOINT`** (p. ej. `https://eu.api.smith.langchain.com` para cuentas EU) si ves **403** en `/datasets` con la URL por defecto.
 
