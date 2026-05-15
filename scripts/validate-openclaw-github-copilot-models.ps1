@@ -14,7 +14,8 @@
     - Gemini -> openai-completions -> POST .../chat/completions (mismo estilo NAS en Copilot)
     - GPT (gpt-*, o*, grok, etc.) -> openai-responses -> POST .../v1/responses
 
-  El script intenta extraer ghu_* desde openclaw.json o auth.json, o desde -TokenFile.
+  Con -PreferCatalog lee vendor y capabilities.type de GET /models; embeddings se omiten (skip).
+  Modelos gpt-4 / gpt-4o / gpt-3.5 en catalogo Enterprise van a chat/completions; familia gpt-5 y o* a /v1/responses.
 
   Seguridad: no pegues tokens en issues ni chats; si se filtro, revoca y genera otro en GitHub.
 
@@ -236,7 +237,7 @@ function Invoke-CopilotTokenExchange {
     $h = Get-OpenclawExchangeHeaders -GithubUserToken $GithubUserToken
     $uri = "https://api.github.com/copilot_internal/v2/token"
     try {
-        $r = Invoke-WebRequest -Uri $uri -Headers $h -Method Get -TimeoutSec 120
+        $r = Invoke-WebRequest -Uri $uri -Headers $h -Method Get -TimeoutSec 120 -UseBasicParsing
         $json = $r.Content | ConvertFrom-Json
         $tok = [string]$json.token
         if (-not $tok) { throw "Respuesta sin campo token" }
@@ -247,7 +248,7 @@ function Invoke-CopilotTokenExchange {
         Write-Warning "Intercambio con Authorization Bearer fallo: $($_.Exception.Message). Reintento con Authorization token ..."
         $h2 = $h.Clone()
         $h2["Authorization"] = "token $GithubUserToken"
-        $r = Invoke-WebRequest -Uri $uri -Headers $h2 -Method Get -TimeoutSec 120
+        $r = Invoke-WebRequest -Uri $uri -Headers $h2 -Method Get -TimeoutSec 120 -UseBasicParsing
         $json = $r.Content | ConvertFrom-Json
         $tok = [string]$json.token
         if (-not $tok) { throw "Respuesta sin campo token" }
@@ -257,10 +258,31 @@ function Invoke-CopilotTokenExchange {
 }
 
 function Resolve-Transport {
-    param([string] $ModelId)
+    param(
+        [string] $ModelId,
+        [string] $Vendor = "",
+        [string] $CapabilityType = ""
+    )
     $m = $ModelId.ToLowerInvariant()
-    if ($m -match "claude") { return "anthropic" }
-    if ($m -match "gemini") { return "chat" }
+    $v = ([string]$Vendor).Trim().ToLowerInvariant()
+    $ct = ([string]$CapabilityType).Trim().ToLowerInvariant()
+
+    if ($ct -eq "embedding" -or $m -match "embedding" -or $m -match "^text-embedding") {
+        return "skip"
+    }
+
+    if ($v -eq "anthropic" -or $m -match "claude") { return "anthropic" }
+    if ($v -eq "google" -or $m -match "gemini") { return "chat" }
+    if ($v -eq "xai" -or $m -match "^grok") { return "chat" }
+
+    # GPT-5+ y razonamiento tipo o* -> OpenAI Responses en Copilot Enterprise
+    if ($m -match "^gpt-5" -or $m -match "^o[0-9]") { return "responses" }
+
+    # Resto de ids OpenAI en catalogo (gpt-4o-2024-..., gpt-4.1, gpt-3.5, etc.) -> chat/completions
+    if ($m -match "^gpt-" ) { return "chat" }
+
+    if ($m -match "^(goldeneye|raptor)") { return "chat" }
+
     return "responses"
 }
 
@@ -346,12 +368,12 @@ $hAnthropic = Get-CopilotSessionHeaders -SessionBearer $session
 $hAnthropic["anthropic-version"] = "2023-06-01"
 $hAnthropic["anthropic-dangerous-direct-browser-access"] = "true"
 
-$modelIds = New-Object System.Collections.Generic.List[string]
+$testEntries = New-Object System.Collections.Generic.List[hashtable]
 if ($ModelsCsv.Trim()) {
     foreach ($p in ($ModelsCsv.Split(","))) {
         $x = $p.Trim()
         if ($x.StartsWith("github-copilot/")) { $x = $x.Substring("github-copilot/".Length) }
-        if ($x) { $modelIds.Add($x) }
+        if ($x) { $testEntries.Add(@{ Id = $x; Vendor = ""; CapType = "" }) }
     }
 }
 elseif ($PreferCatalog) {
@@ -359,34 +381,56 @@ elseif ($PreferCatalog) {
     try {
         $catalog = Invoke-RestMethod -Uri ($base + "/models") -Headers $hSession -Method Get -TimeoutSec 60
         $data = @($catalog.data)
+        $seenIds = @{}
         foreach ($e in $data) {
             if (-not $e) { continue }
             $id = [string]$e.id
             if (-not $id) { continue }
             if ($e.object -and $e.object -ne "model") { continue }
             if ($id.StartsWith("accounts/")) { continue }
-            $modelIds.Add($id.Trim())
+            $idTrim = $id.Trim()
+            if ($seenIds.ContainsKey($idTrim)) { continue }
+            $seenIds[$idTrim] = $true
+            $ven = ""
+            if ($null -ne $e.vendor) { $ven = [string]$e.vendor }
+            $capType = ""
+            if ($null -ne $e.capabilities -and $null -ne $e.capabilities.type) {
+                $capType = [string]$e.capabilities.type
+            }
+            $testEntries.Add(@{ Id = $idTrim; Vendor = $ven; CapType = $capType })
         }
-        Write-Host "Catalogo live: $($modelIds.Count) modelos"
+        Write-Host "Catalogo live: $($testEntries.Count) modelos"
     }
     catch {
         Write-Warning "GET /models fallo; usa lista estatica. $($_.Exception.Message)"
-        foreach ($m in (Get-DefaultOpenclawModelIds)) { $modelIds.Add($m) }
+        foreach ($m in (Get-DefaultOpenclawModelIds)) {
+            $testEntries.Add(@{ Id = $m; Vendor = ""; CapType = "" })
+        }
     }
 }
 else {
-    foreach ($m in (Get-DefaultOpenclawModelIds)) { $modelIds.Add($m) }
+    foreach ($m in (Get-DefaultOpenclawModelIds)) {
+        $testEntries.Add(@{ Id = $m; Vendor = ""; CapType = "" })
+    }
 }
 
 Write-Host ""
-Write-Host ">>> Pruebas por modelo (transporte segun model-metadata de Openclaw) ..." -ForegroundColor Green
+Write-Host ">>> Pruebas por modelo (transporte: vendor/catalogo + heuristica gpt-5 vs chat legacy) ..." -ForegroundColor Green
 Write-Host ""
 
 $ok = New-Object System.Collections.Generic.List[string]
 $fail = New-Object System.Collections.Generic.List[string]
+$skipped = New-Object System.Collections.Generic.List[string]
 
-foreach ($mid in $modelIds) {
-    $kind = Resolve-Transport -ModelId $mid
+foreach ($entry in $testEntries) {
+    $mid = $entry.Id
+    $kind = Resolve-Transport -ModelId $mid -Vendor $entry.Vendor -CapabilityType $entry.CapType
+    if ($kind -eq "skip") {
+        Write-Host "[SKIP] $mid  (embedding / no chat)" -ForegroundColor DarkGray
+        $skipped.Add($mid)
+        continue
+    }
+
     $url = ""
     $bodyObj = $null
     $headers = $null
@@ -421,7 +465,8 @@ foreach ($mid in $modelIds) {
     }
 
     $json = $bodyObj | ConvertTo-Json -Depth 12 -Compress
-    $label = "[$kind] $mid"
+    $vnote = if ($entry.Vendor) { " vendor=$($entry.Vendor)" } else { "" }
+    $label = "[$kind] $mid$vnote"
     try {
         $null = Invoke-RestMethod -Uri $url -Headers $headers -Method Post -Body $json -ContentType "application/json; charset=utf-8" -TimeoutSec 120
         Write-Host "[OK]   $label  -> $url" -ForegroundColor Green
@@ -447,6 +492,7 @@ Write-Host ""
 Write-Host "--- Resumen ---" -ForegroundColor Cyan
 Write-Host "OK ($($ok.Count)): $($ok -join ', ')"
 Write-Host "Fallo ($($fail.Count)): $($fail -join ', ')"
+Write-Host "Omitidos ($($skipped.Count)): $($skipped -join ', ')"
 
 if ($ok.Count -eq 0) {
     exit 1
