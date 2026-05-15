@@ -1,11 +1,11 @@
 ---
-description: PRs — evaluar reviews, aplicar fixes, responder en GitHub y merge solo con criterios cumplidos
+description: PRs — evaluar reviews, aplicar fixes, responder en GitHub y merge con criterios cumplidos
 alwaysApply: true
 ---
 
 # Pull requests: reviews, trazabilidad y merge
 
-Reglas operativas para PRs de este repositorio (y el mismo criterio si el agente trabaja aquí como raíz del workspace).
+Reglas operativas para PRs en **cualquier repositorio** cuando la regla está instalada de forma global (`npm run sync:cursor-global-rules` → `~/.cursor/rules/`). En este repo también se versiona en `.cursor/rules/` para el equipo.
 
 ## 1. Reviews, comentarios y sugerencias
 
@@ -18,14 +18,19 @@ Reglas operativas para PRs de este repositorio (y el mismo criterio si el agente
 - Tras evaluar o corregir, **responder en GitHub** en el hilo correspondiente o con un comentario en el PR (p. ej. `gh pr comment`, respuesta a review thread vía API, o resolución del comentario en la UI) indicando: qué se hizo, en qué commit, o por qué se desestima.
 - Objetivo: **futura auditoría** sin depender del chat de Cursor.
 
-## 3. Merge (condiciones estrictas)
+## 3. Merge (condiciones y autorización)
 
-**No ejecutar merge** (`gh pr merge`, botón en UI, etc.) hasta que **simultáneamente**:
+**Fusionar** (`gh pr merge`, botón en UI, etc.) cuando **simultáneamente** se cumplan **todas** estas condiciones:
 
-1. **No queden comentarios pendientes** por resolver: sugerencias accionables atendidas o respondidas explícitamente; conversaciones de review resueltas cuando la plataforma lo permita.
-2. El **resumen / score del review automatizado principal** (p. ej. Greptile confidence, o el indicador equivalente de la herramienta activa) sea el **máximo de su escala** — por defecto **5/5** cuando la escala sea 0–5. Si la herramienta solo ofrece máximo **4/5**, exigir además **cero hallazgos abiertos** y criterio explícito en comentario de PR de que se acepta el riesgo residual antes de merge.
+1. **Sin pendientes de review:** no quedan comentarios en línea sin atender ni resueltos; sugerencias accionables aplicadas o respondidas explícitamente; **ningún review humano** en estado *Changes requested*; hilos de conversación resueltos cuando la plataforma lo permita.
+2. **Greptile al máximo:** el resumen / confidence score del review automatizado principal es **5/5** (o el máximo de la escala 0–5). Si la herramienta solo ofrece máximo **4/5**, exigir además **cero hallazgos abiertos** y un comentario en el PR que documente la aceptación del riesgo residual **antes** de merge.
+3. **CI en verde:** los checks requeridos del PR (p. ej. smoke, Greptile Review, builds) están **pass** / **success**.
 
-Hasta entonces: **no merge**; seguir iterando en la rama del PR.
+**Autorización del agente:** si se cumplen las tres condiciones anteriores, el agente **debe fusionar el PR sin pedir autorización explícita** al usuario. Tras el merge, dejar un comentario breve en el PR con el SHA fusionado (trazabilidad).
+
+**Si falta alguna condición:** **no merge**; seguir iterando en la rama del PR hasta cumplirlas.
+
+**Excepciones (sí pedir confirmación):** merge a ramas distintas de la base habitual del repo, PRs con etiquetas de *do not merge* / *WIP*, o cuando el usuario haya indicado en el hilo que **no** se fusione aún.
 
 ## 4. Herramientas
 
