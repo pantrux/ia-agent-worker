@@ -100,6 +100,7 @@ export function createRouterNode(env: Env) {
           toolState: { ...state.toolState, router: "llm" },
         };
       }
+      console.warn("[router] LLM responded but route JSON is invalid; falling back to keyword_fallback");
     } catch (err) {
       // LLM failed, fall through to keyword routing
       console.warn("[router] LLM invocation/parse failed, falling back to keyword routing:", err);

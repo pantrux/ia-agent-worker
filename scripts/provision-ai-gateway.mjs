@@ -76,6 +76,22 @@ function resolveCopilotGatewayProviderBaseUrl() {
   return hostOnlyForAiGatewayProviderBase(DEFAULT_COPILOT_ENTERPRISE_HOST);
 }
 
+function assertCopilotProviderBaseNotDebug(origin) {
+  if ((process.env.AI_GATEWAY_SKIP_COPILOT_PROVIDER || "").trim() === "1") return;
+  const lower = origin.toLowerCase();
+  if (!lower.includes("workers.dev")) return;
+  console.error(
+    `[error] base_url del proveedor Copilot (${origin}) apunta a un Worker (*.workers.dev), no a Copilot Enterprise. ` +
+      `Para producción usa ${DEFAULT_COPILOT_ENTERPRISE_HOST} o deja vacío AI_GATEWAY_COPILOT_BASE_URL. ` +
+      `Para forzar una URL de depuración: AI_GATEWAY_ALLOW_DEBUG_COPILOT_BASE_URL=1`
+  );
+  if (process.env.AI_GATEWAY_ALLOW_DEBUG_COPILOT_BASE_URL === "1") {
+    console.warn("[aviso] AI_GATEWAY_ALLOW_DEBUG_COPILOT_BASE_URL=1: se continúa con base_url de depuración.");
+    return;
+  }
+  process.exit(1);
+}
+
 const copilotBaseUrl = resolveCopilotGatewayProviderBaseUrl();
 const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
@@ -303,6 +319,7 @@ try {
     "OpenAI-compatible upstream for ia-agent-worker (GitHub Models REST inference)."
   );
   if ((process.env.AI_GATEWAY_SKIP_COPILOT_PROVIDER || "").trim() !== "1") {
+    assertCopilotProviderBaseNotDebug(copilotBaseUrl);
     await ensureCustomProvider(
       copilotSlug,
       copilotBaseUrl,
@@ -335,7 +352,7 @@ Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]) para
   AI_GATEWAY_PROVIDER_SLUG = ${copilotSlug}
   AI_GATEWAY_PROVIDER_PATH = ""
 
-  (El Worker usa la ruta específica del proveedor con path vacío; esto evita que Cloudflare agregue /v1 a la ruta).
+  (El Worker usa la ruta específica del proveedor con path vacío; upstream debe ser el host Copilot sin /v1 en la URL final).
 
 Para **GitHub Models** en su lugar: AI_GATEWAY_PROVIDER_SLUG=${providerSlug} y AI_GATEWAY_PROVIDER_PATH=inference (o omite; default inference en el código del Worker).
 
