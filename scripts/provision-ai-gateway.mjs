@@ -76,18 +76,23 @@ function resolveCopilotGatewayProviderBaseUrl() {
   return hostOnlyForAiGatewayProviderBase(DEFAULT_COPILOT_ENTERPRISE_HOST);
 }
 
-function warnIfDebugCopilotProviderBase(origin) {
+function assertCopilotProviderBaseNotDebug(origin) {
   const lower = origin.toLowerCase();
-  if (lower.includes("workers.dev") && !lower.includes("githubcopilot.com")) {
-    console.warn(
-      `[aviso] base_url del proveedor Copilot (${origin}) parece un Worker de depuración, no Copilot Enterprise. ` +
-        `Para producción usa ${DEFAULT_COPILOT_ENTERPRISE_HOST} (o deja vacío AI_GATEWAY_COPILOT_BASE_URL).`
-    );
+  if (!lower.includes("workers.dev")) return;
+  console.error(
+    `[error] base_url del proveedor Copilot (${origin}) apunta a un Worker (*.workers.dev), no a Copilot Enterprise. ` +
+      `Para producción usa ${DEFAULT_COPILOT_ENTERPRISE_HOST} o deja vacío AI_GATEWAY_COPILOT_BASE_URL. ` +
+      `Para forzar una URL de depuración: AI_GATEWAY_ALLOW_DEBUG_COPILOT_BASE_URL=1`
+  );
+  if (process.env.AI_GATEWAY_ALLOW_DEBUG_COPILOT_BASE_URL === "1") {
+    console.warn("[aviso] AI_GATEWAY_ALLOW_DEBUG_COPILOT_BASE_URL=1: se continúa con base_url de depuración.");
+    return;
   }
+  process.exit(1);
 }
 
 const copilotBaseUrl = resolveCopilotGatewayProviderBaseUrl();
-warnIfDebugCopilotProviderBase(copilotBaseUrl);
+assertCopilotProviderBaseNotDebug(copilotBaseUrl);
 const token = (process.env.CF_AI_GATEWAY_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "").trim();
 
 if (!token) {
