@@ -6,8 +6,12 @@
   Usa access_token de data/github_token.json como Bearer y las cabeceras de cliente Copilot (vscode/copilot-chat).
   POST https://api.githubcopilot.com/chat/completions (sin /v1), igual que el SDK OpenAI en el contenedor NAS.
 
-  Por defecto recorre una lista amplia de ids de modelo; muchos devolveran 400/404 segun plan y disponibilidad.
+  Por defecto (-Preset default) solo prueba modelos habituales en api.githubcopilot.com (gpt-4o, gpt-4o-mini, gpt-3.5-turbo).
+  Usa -Preset wide para el catalogo largo (muchos model_not_supported segun plan).
   Personaliza con -Models, -ModelsFile o -ModelsCsv.
+
+.PARAMETER Preset
+  default = pocos modelos tipicos; wide = barrido amplio de ids (ruidoso en 400).
 
 .PARAMETER TokenFile
   JSON con access_token (defecto: data/github_token.json bajo la raiz del repo).
@@ -19,10 +23,12 @@
   Mensaje de usuario corto para cada prueba.
 
 .PARAMETER Models
-  Lista explicita de ids de modelo (PowerShell: -Models a -Models b).
+  Ids de modelo. En PowerShell no uses -Models dos veces: usa coma en un solo argumento,
+  matriz o -ModelsCsv. Ejemplos: -Models "gpt-4o,gpt-4o-mini"  o  -Models @('gpt-4o','gpt-4o-mini').
 
 .PARAMETER ModelsFile
   Archivo UTF-8: un id de modelo por linea; lineas vacias y # comentario ignoradas.
+  Ruta relativa: se busca respecto al directorio actual y, si no existe, respecto a la raiz del repo.
 
 .PARAMETER ModelsCsv
   Lista separada por comas (ej: gpt-4o,gpt-4o-mini).
@@ -37,7 +43,16 @@
   .\scripts\probe-copilot-chat-models.ps1
 
 .EXAMPLE
+  .\scripts\probe-copilot-chat-models.ps1 -Preset wide
+
+.EXAMPLE
   .\scripts\probe-copilot-chat-models.ps1 -ModelsCsv "gpt-4o,gpt-4o-mini,o3-mini"
+
+.EXAMPLE
+  .\scripts\probe-copilot-chat-models.ps1 -Models "gpt-4o,gpt-4o-mini"
+
+.EXAMPLE
+  .\scripts\probe-copilot-chat-models.ps1 -Models @('gpt-4o','gpt-4o-mini')
 
 .EXAMPLE
   .\scripts\probe-copilot-chat-models.ps1 -ModelsFile .\mis-modelos.txt
@@ -51,6 +66,8 @@ param(
     [string[]] $Models = @(),
     [string] $ModelsFile = "",
     [string] $ModelsCsv = "",
+    [ValidateSet("default", "wide")]
+    [string] $Preset = "default",
     [int] $DelayMs = 400,
     [switch] $DryRun
 )
@@ -84,10 +101,22 @@ function Get-HttpStatusFromError {
     catch { return $null }
 }
 
+function Resolve-ModelsFilePath {
+    param([string] $RawPath, [string] $RepoRoot)
+    $p = $RawPath.Trim()
+    if ([System.IO.Path]::IsPathRooted($p)) { return $p }
+    $here = (Get-Location).Path
+    $cand1 = [System.IO.Path]::GetFullPath((Join-Path $here $p))
+    if (Test-Path -LiteralPath $cand1) { return $cand1 }
+    $cand2 = [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $p))
+    if (Test-Path -LiteralPath $cand2) { return $cand2 }
+    return $cand1
+}
+
 function Read-ModelsFromFile {
     param([string] $Path)
     if (-not (Test-Path -LiteralPath $Path)) {
-        Write-Error "No existe ModelsFile: $Path"
+        Write-Error ("No existe ModelsFile: {0}. Crealo (UTF-8, un id por linea) o usa -ModelsCsv / -Models ""a,b"" / -Preset wide." -f $Path)
     }
     $lines = Get-Content -LiteralPath $Path -Encoding UTF8
     $out = New-Object System.Collections.Generic.List[string]
@@ -100,8 +129,16 @@ function Read-ModelsFromFile {
     return $out
 }
 
-function Get-DefaultModelList {
-    # Lista amplia: lo que responda depende del plan Copilot y de GitHub; sirve como barrido inicial.
+function Get-NarrowDefaultModelList {
+    # Coincide con lo que suele aceptar api.githubcopilot.com en planes Copilot tipicos (probar con -Preset wide si quieres mas ids).
+    return @(
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-3.5-turbo"
+    )
+}
+
+function Get-WideModelCatalog {
     return @(
         "gpt-4o",
         "gpt-4o-mini",
@@ -161,17 +198,23 @@ if ($ModelsCsv.Trim()) {
     }
 }
 elseif ($ModelsFile.Trim()) {
-    foreach ($m in (Read-ModelsFromFile -Path $ModelsFile.Trim())) {
+    $mf = Resolve-ModelsFilePath -RawPath $ModelsFile -RepoRoot $repoRoot
+    foreach ($m in (Read-ModelsFromFile -Path $mf)) {
         $modelList.Add($m)
     }
 }
 elseif ($Models -and $Models.Count -gt 0) {
-    foreach ($m in $Models) {
-        if ($m.Trim()) { $modelList.Add($m.Trim()) }
+    foreach ($entry in $Models) {
+        if (-not $entry) { continue }
+        foreach ($p in ($entry -split ",")) {
+            $m = $p.Trim()
+            if ($m) { $modelList.Add($m) }
+        }
     }
 }
 else {
-    foreach ($m in (Get-DefaultModelList)) { $modelList.Add($m) }
+    $catalog = if ($Preset -eq "wide") { Get-WideModelCatalog } else { Get-NarrowDefaultModelList }
+    foreach ($m in $catalog) { $modelList.Add($m) }
 }
 
 $url = ($HostBase.TrimEnd("/") + "/chat/completions")
@@ -181,6 +224,9 @@ Write-Host "=== Probe Copilot chat/completions (solo metodo 3) ===" -ForegroundC
 Write-Host "TokenFile: $TokenFile"
 Write-Host "POST $url"
 Write-Host "Modelos a probar: $($modelList.Count)"
+if (-not $ModelsCsv.Trim() -and -not $ModelsFile.Trim() -and (-not $Models -or $Models.Count -eq 0)) {
+    Write-Host "Origen de lista: preset $Preset" -ForegroundColor DarkGray
+}
 Write-Host ""
 
 if ($DryRun) {
