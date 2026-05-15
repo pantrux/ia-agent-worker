@@ -15,9 +15,10 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 [vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
 # Copilot Enterprise: intercambio vía `copilot_internal/v2/token` y llamadas al host devuelto (p. ej. api.enterprise.githubcopilot.com).
+# Modelo: `ChatOpenAI` usa /chat/completions; ids tipo `gpt-5.4-mini` suelen exigir /v1/responses (ver `remapCopilotModelIdForChatCompletions` en `src/llm-client.ts`).
 # Etapa 1 (sin AI Gateway): deja sin definir `AI_GATEWAY_ACCOUNT_ID` / `AI_GATEWAY_ID` o pon `AI_GATEWAY_DISABLED=true` en `.dev.vars`.
-COPILOT_MODEL = "gpt-5.4-mini"
-COPILOT_MODEL_FALLBACK = "gpt-5.4"
+COPILOT_MODEL = "gpt-5.4"
+COPILOT_MODEL_FALLBACK = "gpt-4o-mini"
 OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
 # Etapa 1: sin vars de AI Gateway activas las llamadas van directo al upstream. Etapa 2: descomenta AI_GATEWAY_* y pon `AI_GATEWAY_DISABLED = "false"` (o elimina esta línea).
 AI_GATEWAY_DISABLED = "true"
@@ -47,8 +48,8 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
 [env.preview.vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
-COPILOT_MODEL = "gpt-5.4-mini"
-COPILOT_MODEL_FALLBACK = "gpt-5.4"
+COPILOT_MODEL = "gpt-5.4"
+COPILOT_MODEL_FALLBACK = "gpt-4o-mini"
 OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
 AI_GATEWAY_DISABLED = "true"
 LANGSMITH_TRACING = "true"

@@ -2,7 +2,7 @@ import { AIMessage, SystemMessage } from "@langchain/core/messages";
 import type { GraphState } from "../state.js";
 import type { Env } from "../env.js";
 import { getToolsForIndustry } from "../tools/crm.js";
-import { createChatOpenAI, DEFAULT_COPILOT_MODEL, normalizeModelIdForGithubModelsInference } from "../llm-client.js";
+import { createChatOpenAI, DEFAULT_COPILOT_MODEL, normalizeModelIdForGithubModelsInference, remapCopilotModelIdForChatCompletions } from "../llm-client.js";
 
 /** Coincide con `COPILOT_MODEL` por defecto en `wrangler.toml` y `DEFAULT_COPILOT_MODEL` en `llm-client.ts`. */
 const DEFAULT_MODEL = DEFAULT_COPILOT_MODEL;
@@ -31,11 +31,17 @@ export function createModelNode(env: Env) {
 
     const rawModel = env.COPILOT_MODEL?.trim() || DEFAULT_MODEL;
     const baseForNormalize = env.OPENAI_API_BASE?.trim() || "";
-    const usedModel = normalizeModelIdForGithubModelsInference(baseForNormalize, rawModel);
+    const usedModel = remapCopilotModelIdForChatCompletions(
+      baseForNormalize,
+      normalizeModelIdForGithubModelsInference(baseForNormalize, rawModel)
+    );
     const fallbackRaw = env.COPILOT_MODEL_FALLBACK?.trim();
     let fallbackModel = "";
     if (fallbackRaw && fallbackRaw !== rawModel) {
-      const n = normalizeModelIdForGithubModelsInference(baseForNormalize, fallbackRaw);
+      const n = remapCopilotModelIdForChatCompletions(
+        baseForNormalize,
+        normalizeModelIdForGithubModelsInference(baseForNormalize, fallbackRaw)
+      );
       if (n !== usedModel) fallbackModel = n;
     }
 
