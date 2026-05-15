@@ -48,6 +48,18 @@ function normalizeTargetOutputs(raw) {
   return raw;
 }
 
+/** El evaluador recibe `outputs` del run raíz; a veces la métrica útil está en `run.outputs` o en un hijo del RunTree. */
+function extractChatPayloadFromRun(run) {
+  if (!run || typeof run !== "object") return {};
+  const fromOutputs = normalizeTargetOutputs(run.outputs);
+  if ("httpOk" in fromOutputs) return fromOutputs;
+  for (const c of run.child_runs ?? []) {
+    const nested = extractChatPayloadFromRun(c);
+    if ("httpOk" in nested) return nested;
+  }
+  return {};
+}
+
 function buildTarget(baseUrl) {
   // Un solo traceable: `evaluate()` / `_forward` ya envuelve el target con `traceable`.
   // Un doble `traceable` aquí dejaba `run.outputs` mal alineado con el evaluador → eval_pass 0.
@@ -103,8 +115,12 @@ function buildTarget(baseUrl) {
 
 function evaluators() {
   return [
-    async ({ outputs, referenceOutputs }) => {
-      const o = normalizeTargetOutputs(outputs);
+    async (params) => {
+      const { outputs, referenceOutputs, run } = params;
+      let o = normalizeTargetOutputs(outputs);
+      if (!("httpOk" in o)) {
+        o = extractChatPayloadFromRun(run);
+      }
       const reply = String(o?.reply ?? "").trim();
       const must =
         referenceOutputs?.replyMustInclude != null
