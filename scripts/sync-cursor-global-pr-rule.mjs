@@ -20,6 +20,9 @@ if (!existsSync(source)) {
 }
 
 mkdirSync(targetDir, { recursive: true });
+if (existsSync(target)) {
+  console.warn(`Aviso: se sobreescribirá la regla global existente: ${target}`);
+}
 copyFileSync(source, target);
 console.log(`Regla global instalada: ${target}`);
 console.log("Reinicia o recarga Cursor si la regla no aparece de inmediato en Agent.");
