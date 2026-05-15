@@ -28,12 +28,12 @@ LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 #   npx wrangler secret put BFF_API_TOKEN --env preview
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
-# B1 AI Gateway (Copilot Enterprise). Orden: provision → check:ai-gateway → deploy. Copilot: cliente usa /compat (AI_GATEWAY_PROVIDER_PATH solo Models).
+# B1 AI Gateway (Copilot Enterprise). Orden: provision → check:ai-gateway → deploy. Copilot usa path vacío por defecto (para apuntar a /chat/completions directo).
 AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
 AI_GATEWAY_ID = "ia-agent-worker-llm"
 AI_GATEWAY_PROVIDER_SLUG = "github-copilot-enterprise"
-# Opcional; ignorado para Copilot en runtime (compat). Útil si cambias a slug github-models sin tocar wrangler.
-AI_GATEWAY_PROVIDER_PATH = "v1"
+# Para Copilot dejar vacío o no definir (así llega como /chat/completions). Para GitHub Models usar "inference".
+AI_GATEWAY_PROVIDER_PATH = ""
 # EXPOSE_CHAT_ERROR: solo depuración local (.dev.vars) — no activar en [vars] de producción (filtra detail/stack en 500).
 
 # Worker separado para staging/preview (mismo D1 que prod por defecto — valorar D1 dedicado).
@@ -59,5 +59,5 @@ DEPLOYMENT_ENV = "preview"
 AI_GATEWAY_ACCOUNT_ID = "8a31ec012e21b8f414288de35697c564"
 AI_GATEWAY_ID = "ia-agent-worker-llm"
 AI_GATEWAY_PROVIDER_SLUG = "github-copilot-enterprise"
-# Opcional; ignorado para Copilot en runtime. Ver comentario en [vars].
-AI_GATEWAY_PROVIDER_PATH = "v1"
+# Opcional; ignorado o vacío para Copilot. Para GitHub Models usar "inference".
+AI_GATEWAY_PROVIDER_PATH = ""

@@ -333,14 +333,15 @@ Añade en el Worker (dashboard o wrangler.toml [vars] / [env.preview.vars]) para
   AI_GATEWAY_ACCOUNT_ID = ${accountId}
   AI_GATEWAY_ID         = ${gatewayId}
   AI_GATEWAY_PROVIDER_SLUG = ${copilotSlug}
+  AI_GATEWAY_PROVIDER_PATH = ""
 
-  (El Worker usa la URL \`/compat\` y el modelo \`custom-${copilotSlug}/…\`; no hace falta \`AI_GATEWAY_PROVIDER_PATH\` para Copilot.)
+  (El Worker usa la ruta específica del proveedor con path vacío; esto evita que Cloudflare agregue /v1 a la ruta).
 
 Para **GitHub Models** en su lugar: AI_GATEWAY_PROVIDER_SLUG=${providerSlug} y AI_GATEWAY_PROVIDER_PATH=inference (o omite; default inference en el código del Worker).
 
 Quita o pon AI_GATEWAY_DISABLED=false para que el Worker use el gateway (ver resolveAiGatewayLlmConfig).
 
-Upstream Copilot desde el gateway: host del proveedor = ${copilotBaseUrl.replace(/\/+$/, "")} (ruta \`/v1/chat/completions\` la resuelve el unified \`/compat\`).
+Upstream Copilot desde el gateway: host del proveedor = ${copilotBaseUrl.replace(/\/+$/, "")} (ruta \`/chat/completions\` se agrega directamente).
 
 Luego: npm run deploy   (o tu pipeline)
 

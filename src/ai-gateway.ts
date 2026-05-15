@@ -81,22 +81,23 @@ export function resolveAiGatewayLlmConfig(
       };
     }
     const upstreamIsCopilot = upstream.baseUrl.toLowerCase().includes("githubcopilot.com");
-    if (upstreamIsCopilot) {
-      const baseUrl = aiGatewayCompatBaseUrl(accountId, gatewayId);
-      const upstreamModel = stripCustomProviderModelPrefix(model, slugClean);
-      const compatModel = `custom-${slugClean}/${upstreamModel}`;
-      return {
-        apiKey: upstream.apiKey,
-        baseUrl,
-        model: compatModel,
-        ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
-      };
-    }
     const gatewayRoot = aiGatewayCustomProviderBaseUrl(accountId, gatewayId, slugClean);
+
+    // Para GitHub Models el default es "inference" (-> /inference/chat/completions).
+    // Para Copilot, el default debe ser vacío (-> /chat/completions, ya que Cloudflare /compat fuerza /v1/chat/completions que Copilot rechaza con 2005).
+    const isExplicitPath = env.AI_GATEWAY_PROVIDER_PATH !== undefined && env.AI_GATEWAY_PROVIDER_PATH.trim() !== "";
     const rawPath = env.AI_GATEWAY_PROVIDER_PATH?.trim().replace(/^\/+/, "").replace(/\/+$/, "") ?? "";
-    const providerPath = rawPath || "inference";
-    const baseUrl = `${gatewayRoot}/${providerPath}`;
+    
+    let providerPath = "";
+    if (isExplicitPath) {
+      providerPath = rawPath;
+    } else {
+      providerPath = upstreamIsCopilot ? "" : "inference";
+    }
+
+    const baseUrl = providerPath ? `${gatewayRoot}/${providerPath}` : gatewayRoot;
     const upstreamModel = stripCustomProviderModelPrefix(model, slugClean);
+    
     return {
       apiKey: upstream.apiKey,
       baseUrl,
