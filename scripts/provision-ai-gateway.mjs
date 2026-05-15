@@ -44,10 +44,20 @@ const copilotSlug =
 
 const DEFAULT_COPILOT_ENTERPRISE_HOST = "https://api.enterprise.githubcopilot.com";
 
+/** Origen (`https://host`) para `base_url` del proveedor en AI Gateway: evita `/v1` duplicado con `AI_GATEWAY_PROVIDER_PATH=v1`. */
+function hostOnlyForAiGatewayProviderBase(urlStr) {
+  const trimmed = urlStr.replace(/\/+$/, "");
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed;
+  }
+}
+
 /** Host `base_url` del custom provider Copilot en AI Gateway (sin barra final). */
 function resolveCopilotGatewayProviderBaseUrl() {
   const explicit = (process.env.AI_GATEWAY_COPILOT_BASE_URL || "").trim();
-  if (explicit) return explicit.replace(/\/+$/, "");
+  if (explicit) return hostOnlyForAiGatewayProviderBase(explicit);
 
   const openaiBase = (process.env.OPENAI_API_BASE || "").trim();
   if (openaiBase) {
@@ -58,12 +68,12 @@ function resolveCopilotGatewayProviderBaseUrl() {
           `Define AI_GATEWAY_COPILOT_BASE_URL si tu host Copilot no es el predeterminado. ` +
           `Se usa ${DEFAULT_COPILOT_ENTERPRISE_HOST} para el custom provider «${copilotSlug}».`
       );
-      return DEFAULT_COPILOT_ENTERPRISE_HOST.replace(/\/+$/, "");
+      return hostOnlyForAiGatewayProviderBase(DEFAULT_COPILOT_ENTERPRISE_HOST);
     }
-    return openaiBase.replace(/\/+$/, "");
+    return hostOnlyForAiGatewayProviderBase(openaiBase);
   }
 
-  return DEFAULT_COPILOT_ENTERPRISE_HOST.replace(/\/+$/, "");
+  return hostOnlyForAiGatewayProviderBase(DEFAULT_COPILOT_ENTERPRISE_HOST);
 }
 
 const copilotBaseUrl = resolveCopilotGatewayProviderBaseUrl();
