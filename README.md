@@ -23,6 +23,7 @@ Port completo del agente [`pantrux/ia-agent-mvp`](https://github.com/pantrux/ia-
 | Agente | LangGraph.js (`@langchain/langgraph`) |
 | LLM | GitHub Models API (`@langchain/openai` → `https://models.github.ai/inference`) |
 | Persistencia | Cloudflare D1 (SQLite serverless) — CRM + checkpoints |
+| Ingesta multicanal (PAN-17) | Cloudflare Queues — producer `POST /api/agent/messages`, consumer en el mismo Worker |
 | HITL | `interrupt()` + `Command({ resume })` de LangGraph.js |
 | Auth LLM | Token GitHub (`gh auth token`) reusado como Bearer hacia GitHub Models |
 
@@ -31,8 +32,9 @@ Port completo del agente [`pantrux/ia-agent-mvp`](https://github.com/pantrux/ia-
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/ping` | Healthcheck |
-| POST | `/api/chat` | Enviar mensaje al agente. Si el Worker tiene `BFF_API_TOKEN`, enviar `Authorization: Bearer …`. |
+| POST | `/api/chat` | Enviar mensaje al agente (síncrono). Metadata LangSmith: `channel: web`. Si el Worker tiene `BFF_API_TOKEN`, enviar `Authorization: Bearer …`. |
 | POST | `/api/chat/resume` | Reanudar tras HITL (aprobar/denegar); misma regla Bearer si aplica. |
+| POST | `/api/agent/messages` | Encolar mensaje con payload normalizado (202). Misma regla Bearer si aplica. Ver [`docs/CHAT-QUEUE-PAYLOAD.md`](docs/CHAT-QUEUE-PAYLOAD.md). |
 
 ### POST /api/chat
 
@@ -75,13 +77,24 @@ npx wrangler secret put COPILOT_GITHUB_TOKEN
 # Secreto para trazas en LangSmith
 npx wrangler secret put LANGSMITH_API_KEY
 
-# Opcional (A2): token compartido para el BFF — exige Bearer en POST /api/chat y /api/chat/resume
+# Opcional (A2): token compartido para el BFF — exige Bearer en POST /api/chat, /api/chat/resume y /api/agent/messages
 npx wrangler secret put BFF_API_TOKEN
 ```
 
+### Cloudflare Queues (PAN-17)
+
+Crea las colas referenciadas en `wrangler.toml` (nombres distintos para preview):
+
+```bash
+npx wrangler queues create ia-agent-chat-queue
+npx wrangler queues create ia-agent-chat-queue-preview
+```
+
+Contrato del mensaje y política HITL en cola: [`docs/CHAT-QUEUE-PAYLOAD.md`](docs/CHAT-QUEUE-PAYLOAD.md).
+
 ## Autenticación del BFF (Bearer, A2)
 
-Si defines el secreto **`BFF_API_TOKEN`** en el Worker (`npx wrangler secret put BFF_API_TOKEN` y, en preview, `--env preview`), las rutas **`POST /api/chat`** y **`POST /api/chat/resume`** rechazan peticiones sin cabecera válida:
+Si defines el secreto **`BFF_API_TOKEN`** en el Worker (`npx wrangler secret put BFF_API_TOKEN` y, en preview, `--env preview`), las rutas **`POST /api/chat`**, **`POST /api/chat/resume`** y **`POST /api/agent/messages`** rechazan peticiones sin cabecera válida:
 
 ```http
 Authorization: Bearer <mismo valor que BFF_API_TOKEN>

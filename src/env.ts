@@ -1,7 +1,11 @@
+import type { Queue } from "@cloudflare/workers-types";
 import type { CrmDatabase } from "./db/crm-db.js";
+import type { NormalizedChatPayload } from "./chat-queue-payload.js";
 
 export interface Env {
   DB: CrmDatabase;
+  /** Producer PAN-17: mensajes normalizados hacia el consumer del mismo Worker. */
+  CHAT_INGEST_QUEUE: Queue<NormalizedChatPayload>;
   COPILOT_GITHUB_TOKEN: string;
   ALLOWED_ORIGINS: string;
   COPILOT_MODEL: string;
