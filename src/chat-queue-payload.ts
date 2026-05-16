@@ -13,6 +13,8 @@ export function parseThreadId(raw: string | undefined): string | null {
 export const telegramDeliverySchema = z.object({
   kind: z.literal("telegram"),
   chat_id: z.string().trim().min(1).max(64),
+  /** `update_id` de Telegram; clave de pending KV por mensaje (evita races entre retries). */
+  message_id: z.string().trim().min(1).max(64),
 });
 
 export const chatDeliverySchema = telegramDeliverySchema;

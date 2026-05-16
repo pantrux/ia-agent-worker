@@ -24,7 +24,7 @@ import {
 import { extractLastAiReply } from "./chat-reply.js";
 import { deliverChannelReply } from "./channel-delivery/index.js";
 import {
-  clearPendingTelegramDelivery,
+  clearPendingTelegramDeliveryBestEffort,
   getPendingTelegramDelivery,
   putPendingTelegramDelivery,
 } from "./chat-pending-delivery.js";
@@ -131,7 +131,10 @@ async function processQueueChatMessage(
   const threadId = await resolveQueueThreadId(data.thread_hint, () => lookupKvThreadId(env, data));
   const { channel, user_id: userId, text } = data;
   const delivery = data.delivery;
-  const telegramChatId = delivery?.kind === "telegram" ? delivery.chat_id : undefined;
+  const telegram =
+    delivery?.kind === "telegram"
+      ? { chatId: delivery.chat_id, messageId: delivery.message_id }
+      : undefined;
 
   if (delivery) {
     try {
@@ -141,22 +144,26 @@ async function processQueueChatMessage(
     }
   }
 
-  if (telegramChatId && delivery) {
-    const pending = await getPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
-    if (pending) {
-      if (pending.text !== text) {
-        await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
-      } else {
-        try {
-          await deliverChannelReply(env, delivery, pending.reply);
-          await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
-          msg.ack();
-          return;
-        } catch (deliveryErr) {
-          console.error("[queue] Telegram delivery retry failed:", deliveryErr);
-          msg.retry({ delaySeconds: 30 });
-          return;
-        }
+  if (telegram && delivery) {
+    const pending = await getPendingTelegramDelivery(
+      env.CHAT_THREAD_KV,
+      telegram.chatId,
+      telegram.messageId
+    );
+    if (pending && pending.text === text) {
+      try {
+        await deliverChannelReply(env, delivery, pending.reply);
+        await clearPendingTelegramDeliveryBestEffort(
+          env.CHAT_THREAD_KV,
+          telegram.chatId,
+          telegram.messageId
+        );
+        msg.ack();
+        return;
+      } catch (deliveryErr) {
+        console.error("[queue] Telegram delivery retry failed:", deliveryErr);
+        msg.retry({ delaySeconds: 30 });
+        return;
       }
     }
   }
@@ -173,14 +180,22 @@ async function processQueueChatMessage(
   } catch (e: unknown) {
     if (isGraphInterruptError(e)) {
       console.warn("[queue] GraphInterrupt (HITL); ack. thread_id=", threadId);
-      if (telegramChatId) {
-        await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
+      if (telegram) {
+        await clearPendingTelegramDeliveryBestEffort(
+          env.CHAT_THREAD_KV,
+          telegram.chatId,
+          telegram.messageId
+        );
       }
       msg.ack();
       return;
     }
-    if (telegramChatId) {
-      await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
+    if (telegram) {
+      await clearPendingTelegramDeliveryBestEffort(
+        env.CHAT_THREAD_KV,
+        telegram.chatId,
+        telegram.messageId
+      );
     }
     console.error("[queue] error en invoke:", e);
     msg.retry({ delaySeconds: 30 });
@@ -193,13 +208,14 @@ async function processQueueChatMessage(
   }
 
   const reply = extractLastAiReply(result);
-  if (telegramChatId) {
+  if (telegram) {
     try {
-      await putPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId, {
-        threadId,
-        reply,
-        text,
-      });
+      await putPendingTelegramDelivery(
+        env.CHAT_THREAD_KV,
+        telegram.chatId,
+        telegram.messageId,
+        { threadId, reply, text }
+      );
     } catch (kvErr) {
       console.error("[queue] KV pending persist failed (continuing):", kvErr);
     }
@@ -207,17 +223,23 @@ async function processQueueChatMessage(
 
   try {
     await deliverChannelReply(env, delivery, reply);
-    if (telegramChatId) {
-      await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
-    }
-    msg.ack();
   } catch (deliveryErr) {
     console.error(
       "[queue] Telegram delivery failed (pending en KV; reintento sin grafo):",
       deliveryErr
     );
     msg.retry({ delaySeconds: 30 });
+    return;
   }
+
+  if (telegram) {
+    await clearPendingTelegramDeliveryBestEffort(
+      env.CHAT_THREAD_KV,
+      telegram.chatId,
+      telegram.messageId
+    );
+  }
+  msg.ack();
 }
 
 async function handleEnqueueAgentMessage(request: Request, env: Env): Promise<Response> {
