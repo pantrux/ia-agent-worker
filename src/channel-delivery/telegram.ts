@@ -1,5 +1,7 @@
 const TELEGRAM_TEXT_MAX = 4096;
 
+type TelegramApiResponse = { ok: boolean; description?: string };
+
 export async function sendTelegramMessage(
   env: { TELEGRAM_BOT_TOKEN?: string },
   chatId: string,
@@ -19,8 +21,19 @@ export async function sendTelegramMessage(
     }),
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Telegram sendMessage failed: ${res.status} ${errText.slice(0, 500)}`);
+  let body: TelegramApiResponse = { ok: false };
+  try {
+    body = (await res.json()) as TelegramApiResponse;
+  } catch {
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Telegram sendMessage failed: ${res.status} ${errText.slice(0, 500)}`);
+    }
+  }
+
+  if (!res.ok || !body.ok) {
+    throw new Error(
+      `Telegram sendMessage failed: ${res.status} ${(body.description ?? "").slice(0, 500)}`
+    );
   }
 }

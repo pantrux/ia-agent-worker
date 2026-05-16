@@ -20,11 +20,11 @@ Todos los campos son obligatorios salvo `thread_hint`.
 |-------|------|-------------|
 | `delivery.kind` | `"telegram"` | Adaptador de entrega. |
 | `delivery.chat_id` | string | Chat de Telegram (`message.chat.id`). |
-| `delivery.message_id` | string | `update_id` del Update de Telegram; slot KV de pending por mensaje. |
+| `delivery.update_id` | string | `update_id` del Update de Telegram (no `message.message_id`); slot KV de pending. |
 
-Continuidad de hilo: KV `CHAT_THREAD_KV`, clave `telegram:chat:{chat_id}` → `thread_id` (best-effort antes del grafo).
+Continuidad de hilo: KV `CHAT_THREAD_KV`, clave `telegram:chat:{chat_id}` → `thread_id` (TTL 90 días, renovable).
 
-Pending de entrega: `telegram:pending:{chat_id}:{message_id}` → `{ threadId, reply, text }` con TTL 24 h. Si `sendMessage` falla tras grafo OK, el **reintento de cola solo reenvía** ese pending (sin re-invoke). `clear` del pending es best-effort tras ack para no duplicar Telegram si KV.delete falla.
+Pending de entrega: `telegram:pending:{chat_id}:{update_id}` → `{ threadId, reply, text }` con TTL 24 h. Si `sendMessage` falla tras grafo OK, el **reintento de cola solo reenvía** ese pending (sin re-invoke). `clear` del pending es best-effort tras ack para no duplicar Telegram si KV.delete falla.
 
 Preview: namespace KV `CHAT_THREAD_KV_preview` (aislado de prod).
 

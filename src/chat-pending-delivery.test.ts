@@ -7,7 +7,7 @@ import {
 } from "./chat-pending-delivery.js";
 
 describe("chat-pending-delivery", () => {
-  it("clave estable por chat_id y message_id", () => {
+  it("clave estable por chat_id y update_id", () => {
     expect(telegramPendingDeliveryKey("42", "7")).toBe("telegram:pending:42:7");
   });
 

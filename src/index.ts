@@ -133,7 +133,7 @@ async function processQueueChatMessage(
   const delivery = data.delivery;
   const telegram =
     delivery?.kind === "telegram"
-      ? { chatId: delivery.chat_id, messageId: delivery.message_id }
+      ? { chatId: delivery.chat_id, updateId: delivery.update_id }
       : undefined;
 
   if (delivery) {
@@ -148,7 +148,7 @@ async function processQueueChatMessage(
     const pending = await getPendingTelegramDelivery(
       env.CHAT_THREAD_KV,
       telegram.chatId,
-      telegram.messageId
+      telegram.updateId
     );
     if (pending && pending.text === text) {
       try {
@@ -156,7 +156,7 @@ async function processQueueChatMessage(
         await clearPendingTelegramDeliveryBestEffort(
           env.CHAT_THREAD_KV,
           telegram.chatId,
-          telegram.messageId
+          telegram.updateId
         );
         msg.ack();
         return;
@@ -184,7 +184,7 @@ async function processQueueChatMessage(
         await clearPendingTelegramDeliveryBestEffort(
           env.CHAT_THREAD_KV,
           telegram.chatId,
-          telegram.messageId
+          telegram.updateId
         );
       }
       msg.ack();
@@ -194,7 +194,7 @@ async function processQueueChatMessage(
       await clearPendingTelegramDeliveryBestEffort(
         env.CHAT_THREAD_KV,
         telegram.chatId,
-        telegram.messageId
+        telegram.updateId
       );
     }
     console.error("[queue] error en invoke:", e);
@@ -213,7 +213,7 @@ async function processQueueChatMessage(
       await putPendingTelegramDelivery(
         env.CHAT_THREAD_KV,
         telegram.chatId,
-        telegram.messageId,
+        telegram.updateId,
         { threadId, reply, text }
       );
     } catch (kvErr) {
@@ -236,7 +236,7 @@ async function processQueueChatMessage(
     await clearPendingTelegramDeliveryBestEffort(
       env.CHAT_THREAD_KV,
       telegram.chatId,
-      telegram.messageId
+      telegram.updateId
     );
   }
   msg.ack();

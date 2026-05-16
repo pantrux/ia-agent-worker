@@ -37,13 +37,13 @@ describe("parseNormalizedChatPayload", () => {
       channel: "telegram",
       user_id: "telegram:99",
       text: "hola",
-      delivery: { kind: "telegram", chat_id: "12345", message_id: "9001" },
+      delivery: { kind: "telegram", chat_id: "12345", update_id: "9001" },
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.data.delivery?.kind).toBe("telegram");
       expect(r.data.delivery?.chat_id).toBe("12345");
-      expect(r.data.delivery?.message_id).toBe("9001");
+      expect(r.data.delivery?.update_id).toBe("9001");
     }
   });
 
