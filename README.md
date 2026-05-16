@@ -96,6 +96,13 @@ npx wrangler queues create ia-agent-chat-queue-preview-dlq
 
 Contrato del mensaje y política HITL en cola: [`docs/CHAT-QUEUE-PAYLOAD.md`](docs/CHAT-QUEUE-PAYLOAD.md).
 
+### Telegram (PAN-18)
+
+- KV `CHAT_THREAD_KV` (creado con `wrangler kv namespace create CHAT_THREAD_KV`; ids en `wrangler.toml`).
+- Secreto `TELEGRAM_BOT_TOKEN` para `sendMessage` desde el consumer cuando el payload incluye `delivery.telegram`.
+- Webhook en **aaas-landing**: `POST /api/webhooks/telegram` → encola vía `POST /api/agent/messages`.
+- Diseño: [`docs/PAN-18-c2-channel-webhooks-design.md`](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-18-c2-channel-webhooks-design.md).
+
 **Workers Builds (PR / ramas no producción):** el despliegue por defecto ejecuta `npx wrangler versions upload`. Con colas nuevas, configura en el panel de Cloudflare el comando **no producción** a `npm run cf:versions-upload` (crea las colas si faltan y luego sube la versión). En **producción** (`main`), si el comando es `npm run deploy`, ya incluye `ensure-chat-queues` antes de `wrangler deploy`.
 
 ## Autenticación del BFF (Bearer, A2)

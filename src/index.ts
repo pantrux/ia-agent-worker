@@ -11,15 +11,20 @@ import {
 import {
   parseNormalizedChatPayload,
   parseThreadId,
+  resolveQueueThreadId,
   resolveThreadIdFromHint,
   buildChatLangSmithMetadata,
   buildChatLangSmithTags,
+  type NormalizedChatPayload,
 } from "./chat-queue-payload.js";
 import {
   configureLangSmithEnv,
   isGraphInterruptError,
   runChatMessageGraph,
 } from "./chat-invocation.js";
+import { extractLastAiReply } from "./chat-reply.js";
+import { deliverChannelReply } from "./channel-delivery/index.js";
+import { getTelegramThreadId, putTelegramThreadId } from "./chat-thread-kv.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
@@ -88,6 +93,23 @@ interface ChatRequest {
 interface ResumeRequest {
   thread_id: string;
   approved: boolean;
+}
+
+async function lookupKvThreadId(env: Env, data: NormalizedChatPayload): Promise<string | null> {
+  if (data.delivery?.kind === "telegram") {
+    return getTelegramThreadId(env.CHAT_THREAD_KV, data.delivery.chat_id);
+  }
+  return null;
+}
+
+async function persistThreadAfterDelivery(
+  env: Env,
+  data: NormalizedChatPayload,
+  threadId: string
+): Promise<void> {
+  if (data.delivery?.kind === "telegram") {
+    await putTelegramThreadId(env.CHAT_THREAD_KV, data.delivery.chat_id, threadId);
+  }
 }
 
 async function handleEnqueueAgentMessage(request: Request, env: Env): Promise<Response> {
@@ -197,17 +219,26 @@ export default {
           continue;
         }
 
-        const threadId = resolveThreadIdFromHint(parsed.data.thread_hint);
+        const threadId = await resolveQueueThreadId(parsed.data.thread_hint, () =>
+          lookupKvThreadId(env, parsed.data)
+        );
         const { channel, user_id: userId, text } = parsed.data;
 
         try {
-          await runChatMessageGraph(env, {
+          const result = await runChatMessageGraph(env, {
             text,
             threadId,
             channel,
             userId,
             operation: "queue_chat",
           });
+
+          if (parsed.data.delivery) {
+            const reply = extractLastAiReply(result);
+            await deliverChannelReply(env, parsed.data.delivery, reply);
+            await persistThreadAfterDelivery(env, parsed.data, threadId);
+          }
+
           msg.ack();
         } catch (e: unknown) {
           if (isGraphInterruptError(e)) {
@@ -274,9 +305,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
       operation: "chat",
     });
 
-    const messages = result.messages ?? [];
-    const lastMsg = messages[messages.length - 1];
-    const reply = lastMsg ? (typeof lastMsg.content === "string" ? lastMsg.content : String(lastMsg.content)) : "";
+    const reply = extractLastAiReply(result);
 
     return finish(
       jsonResponse(
@@ -373,9 +402,7 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
       config
     );
 
-    const messages = result.messages ?? [];
-    const lastMsg = messages[messages.length - 1];
-    const reply = lastMsg ? (typeof lastMsg.content === "string" ? lastMsg.content : String(lastMsg.content)) : "";
+    const reply = extractLastAiReply(result);
 
     return finish(
       jsonResponse(
