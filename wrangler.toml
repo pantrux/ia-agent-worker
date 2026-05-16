@@ -69,10 +69,10 @@ binding = "DB"
 database_name = "ia-agent-db"
 database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
+# Namespace dedicado preview (`CHAT_THREAD_KV_preview`) — no comparte hilos Telegram con prod.
 [[env.preview.kv_namespaces]]
 binding = "CHAT_THREAD_KV"
-id = "fc1a0df42f6a493886bf6b8d25788134"
-preview_id = "1439742f07494ce5947dc0cec13cbff3"
+id = "1439742f07494ce5947dc0cec13cbff3"
 
 [env.preview.vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"

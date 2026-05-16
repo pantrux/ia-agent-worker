@@ -12,7 +12,6 @@ import {
   parseNormalizedChatPayload,
   parseThreadId,
   resolveQueueThreadId,
-  resolveThreadIdFromHint,
   buildChatLangSmithMetadata,
   buildChatLangSmithTags,
   type NormalizedChatPayload,
@@ -102,7 +101,8 @@ async function lookupKvThreadId(env: Env, data: NormalizedChatPayload): Promise<
   return null;
 }
 
-async function persistThreadAfterDelivery(
+/** Best-effort: KV antes del grafo/entrega para que reintentos de cola reutilicen el mismo hilo. */
+async function persistThreadForChannel(
   env: Env,
   data: NormalizedChatPayload,
   threadId: string
@@ -224,6 +224,14 @@ export default {
         );
         const { channel, user_id: userId, text } = parsed.data;
 
+        if (parsed.data.delivery) {
+          try {
+            await persistThreadForChannel(env, parsed.data, threadId);
+          } catch (kvErr) {
+            console.error("[queue] KV persist failed (continuing):", kvErr);
+          }
+        }
+
         try {
           const result = await runChatMessageGraph(env, {
             text,
@@ -236,7 +244,6 @@ export default {
           if (parsed.data.delivery) {
             const reply = extractLastAiReply(result);
             await deliverChannelReply(env, parsed.data.delivery, reply);
-            await persistThreadAfterDelivery(env, parsed.data, threadId);
           }
 
           msg.ack();

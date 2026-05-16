@@ -21,7 +21,7 @@ Todos los campos son obligatorios salvo `thread_hint`.
 | `delivery.kind` | `"telegram"` | Adaptador de entrega. |
 | `delivery.chat_id` | string | Chat de Telegram (`message.chat.id`). |
 
-Continuidad de hilo en Telegram: KV `CHAT_THREAD_KV`, clave `telegram:chat:{chat_id}` → `thread_id` (el consumer lee antes del grafo y escribe tras entrega exitosa).
+Continuidad de hilo en Telegram: KV `CHAT_THREAD_KV`, clave `telegram:chat:{chat_id}` → `thread_id`. El consumer **persiste en KV antes del grafo y de `sendMessage`** (best-effort) para que los reintentos de cola reutilicen el mismo hilo. Preview usa namespace KV distinto (`CHAT_THREAD_KV_preview` en `wrangler.toml`).
 
 Ejemplo:
 
