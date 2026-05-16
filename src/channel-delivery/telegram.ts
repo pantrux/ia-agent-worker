@@ -21,13 +21,13 @@ export async function sendTelegramMessage(
     }),
   });
 
+  const raw = await res.text();
   let body: TelegramApiResponse = { ok: false };
   try {
-    body = (await res.json()) as TelegramApiResponse;
+    body = JSON.parse(raw) as TelegramApiResponse;
   } catch {
     if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(`Telegram sendMessage failed: ${res.status} ${errText.slice(0, 500)}`);
+      throw new Error(`Telegram sendMessage failed: ${res.status} ${raw.slice(0, 500)}`);
     }
   }
 

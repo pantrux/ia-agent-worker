@@ -41,6 +41,17 @@ describe("sendTelegramMessage", () => {
     ).rejects.toThrow(/blocked/);
   });
 
+  it("incluye cuerpo no-JSON en error HTTP", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("gateway timeout", { status: 502 })))
+    );
+
+    await expect(
+      sendTelegramMessage({ TELEGRAM_BOT_TOKEN: "t" }, "1", "x")
+    ).rejects.toThrow(/502 gateway timeout/);
+  });
+
   it("falla sin token", async () => {
     await expect(sendTelegramMessage({}, "1", "x")).rejects.toThrow(/TELEGRAM_BOT_TOKEN/);
   });
