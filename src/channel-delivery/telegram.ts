@@ -26,14 +26,12 @@ export async function sendTelegramMessage(
   try {
     body = JSON.parse(raw) as TelegramApiResponse;
   } catch {
-    if (!res.ok) {
-      throw new Error(`Telegram sendMessage failed: ${res.status} ${raw.slice(0, 500)}`);
-    }
+    throw new Error(`Telegram sendMessage failed: ${res.status} ${raw.slice(0, 500)}`);
   }
 
   if (!res.ok || !body.ok) {
     throw new Error(
-      `Telegram sendMessage failed: ${res.status} ${(body.description ?? "").slice(0, 500)}`
+      `Telegram sendMessage failed: ${res.status} ${(body.description ?? raw).slice(0, 500)}`
     );
   }
 }
