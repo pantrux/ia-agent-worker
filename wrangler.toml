@@ -3,6 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2025-10-08"
 compatibility_flags = ["nodejs_compat"]
 account_id = "8a31ec012e21b8f414288de35697c564"
+# Export a Logpush (`workers_trace_events`): requiere job en la cuenta y plan Workers de pago. Ver docs/B2b-worker-access-metrics-export.md
+logpush = true
 
 [observability]
 enabled = true
@@ -38,6 +40,7 @@ AI_GATEWAY_PROVIDER_PATH = ""
 # Worker separado para staging/preview (mismo D1 que prod por defecto — valorar D1 dedicado).
 [env.preview]
 name = "ia-agent-worker-preview"
+logpush = true
 
 [[env.preview.d1_databases]]
 binding = "DB"

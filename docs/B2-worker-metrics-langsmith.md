@@ -4,7 +4,7 @@ Este documento cierra el entregable **B2** del roadmap LLMOps: **observabilidad 
 
 **Issue de seguimiento:** [PAN-7](https://linear.app/pantrux/issue/PAN-7/b2-metricas-worker-dashboards-langsmith).
 
-**Seguimiento implementación (B2b):** [PAN-9](https://linear.app/pantrux/issue/PAN-9/b2b-export-o-agregacion-automatica-de-metricas-worker-p95-historico) — entregable **B2b** declarado en [ROADMAP-IMPLEMENTATION.md](./ROADMAP-IMPLEMENTATION.md) y [ROADMAP-CF-LANGSMITH.md](./ROADMAP-CF-LANGSMITH.md) (Fase B). Etiquetas Linear del issue: **Feature** + **Área → Observabilidad**.
+**Seguimiento implementación (B2b):** [PAN-9](https://linear.app/pantrux/issue/PAN-9/b2b-export-o-agregacion-automatica-de-metricas-worker-p95-historico) — entregable **B2b** declarado en [ROADMAP-IMPLEMENTATION.md](./ROADMAP-IMPLEMENTATION.md) y [ROADMAP-CF-LANGSMITH.md](./ROADMAP-CF-LANGSMITH.md) (Fase B). Documentación de entrega: [B2b-worker-access-metrics-export.md](./B2b-worker-access-metrics-export.md). Etiquetas Linear del issue: **Feature** + **Área → Observabilidad**.
 
 ## 1. Fuentes de verdad (decisión de arquitectura)
 
@@ -52,6 +52,14 @@ Cada respuesta HTTP relevante pasa por `logWorkerAccess`, que escribe **una lín
 ### 2.3 Retención de logs en Cloudflare
 
 La **retención efectiva** de Workers Logs depende del plan y del producto de observabilidad contratado; revísalo en la documentación actual de Cloudflare y en la configuración de tu cuenta. Si el equipo necesita histórico > ventana por defecto o correlación centralizada, la vía estándar es **Logpush** hacia tu almacén o SIEM (coste y gobernanza aparte).
+
+### 2.4 B2b — Export, Logpush y p95 histórico
+
+Para **percentiles continuos** (p. ej. p95 de `duration_ms` por `operation` en una ventana) y **histórico** fuera de la consola, el equipo adoptó el flujo documentado en **[B2b-worker-access-metrics-export.md](./B2b-worker-access-metrics-export.md)**:
+
+- **Decisión:** Logpush del dataset **`workers_trace_events`** hacia almacén propio (R2/S3/SIEM), reutilizando los `console.log` JSON ya emitidos.
+- **Implementación en repo:** script `npm run metrics:access-aggregate` sobre NDJSON (trace o líneas access directas), tests `npm run test:access-aggregate`, workflow CI **B2b — agregación access logs**.
+- **Configuración Worker:** `logpush = true` en `wrangler.toml` (tras crear el job Logpush en la cuenta, habilitar en el Worker según la guía de Cloudflare).
 
 ## 3. LangSmith — vistas por proyecto y entorno
 

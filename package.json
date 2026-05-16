@@ -19,6 +19,8 @@
     "rotate:bff-secret": "node ./scripts/rotate-bff-secret.mjs",
     "rotate:copilot-github-token": "node ./scripts/rotate-copilot-github-token.mjs",
     "sync:cursor-global-rules": "node ./scripts/sync-cursor-global-pr-rule.mjs",
+    "metrics:access-aggregate": "node scripts/aggregate-ia-agent-access.mjs",
+    "test:access-aggregate": "node --test scripts/aggregate-ia-agent-access.test.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy": "wrangler deploy",

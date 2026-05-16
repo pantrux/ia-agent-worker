@@ -1,0 +1,39 @@
+# B2b (PAN-9): agregador de métricas sobre logs `ia_agent_access` (fixtures + CLI smoke).
+
+name: B2b — agregación access logs
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+  schedule:
+    # Lunes 05:17 UTC — comprobación semanal del job de agregación
+    - cron: "17 5 * * 1"
+
+concurrency:
+  group: b2b-access-metrics-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Tests agregador (fixtures)
+        run: npm run test:access-aggregate
+
+      - name: CLI — muestra agregados (access-only fixture)
+        run: npm run metrics:access-aggregate -- --file scripts/fixtures/access-only-sample.ndjson
