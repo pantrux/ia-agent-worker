@@ -66,7 +66,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 
 | ID | Entregable | PR / referencia | Estado | Notas |
 |----|------------|-----------------|--------|-------|
-| C1 | Queues + payload normalizado + metadata `channel` | — | N/A | |
+| C1 | Queues + payload normalizado + metadata `channel` | [PR #39](https://github.com/pantrux/ia-agent-worker/pull/39) (merge `efbbc4f`, 2026-05-16) | Ejecutado | Contrato y runbook: [CHAT-QUEUE-PAYLOAD.md](./CHAT-QUEUE-PAYLOAD.md). Linear [PAN-17](https://linear.app/pantrux/issue/PAN-17) Done. |
 | C2 | BFF / webhooks por canal | — | N/A | |
 | C3 | Durable Objects / Agents SDK si aplica | — | N/A | |
 
@@ -124,5 +124,6 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | 2026-05-15 | **B2 / PAN-7:** guía métricas Worker (Observability + `ia_agent_access`) y dashboards LangSmith en [B2-worker-metrics-langsmith.md](./B2-worker-metrics-langsmith.md); seguimiento en [PR #35](https://github.com/pantrux/ia-agent-worker/pull/35). |
 | 2026-05-15 | **B2b / PAN-9:** fila **B2b** en tablero y en `ROADMAP-CF-LANGSMITH` (export/agregación p95); issue [PAN-9](https://linear.app/pantrux/issue/PAN-9); grupo Linear **Área** (Observabilidad, Frontend, Backend-Worker, Seguridad). |
 | 2026-05-16 | **B2b / PAN-9:** [PR #38](https://github.com/pantrux/ia-agent-worker/pull/38) — documento [B2b-worker-access-metrics-export.md](./B2b-worker-access-metrics-export.md), agregador NDJSON + CI, `logpush = true` en Wrangler; guía B2 §2.4 enlazada. |
+| 2026-05-16 | **C1 / PAN-17:** merge [PR #39](https://github.com/pantrux/ia-agent-worker/pull/39) a `main` (`efbbc4f`); colas + DLQ, `POST /api/agent/messages`, consumer `queue()`, metadata `channel` en LangSmith; Greptile 5/5; [CHAT-QUEUE-PAYLOAD.md](./CHAT-QUEUE-PAYLOAD.md). |
 
 Actualiza esta tabla al cierre de cada hito relevante.
