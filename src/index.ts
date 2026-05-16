@@ -1,5 +1,5 @@
-import { HumanMessage } from "@langchain/core/messages";
 import { Command } from "@langchain/langgraph";
+import type { ExportedHandler } from "@cloudflare/workers-types";
 import type { Env } from "./env.js";
 import { buildGraph } from "./graph.js";
 import { logWorkerAccess } from "./access-log.js";
@@ -8,6 +8,18 @@ import {
   parseTrustedAaasUserIdHeader,
   type BffAuthFailureReason,
 } from "./bff-auth.js";
+import {
+  parseNormalizedChatPayload,
+  parseThreadId,
+  resolveThreadIdFromHint,
+  buildChatLangSmithMetadata,
+  buildChatLangSmithTags,
+} from "./chat-queue-payload.js";
+import {
+  configureLangSmithEnv,
+  isGraphInterruptError,
+  runChatMessageGraph,
+} from "./chat-invocation.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
@@ -68,6 +80,54 @@ function jsonBffUnauthorized(request: Request, env: Env, t0: number, reason: Bff
   return res;
 }
 
+interface ChatRequest {
+  message: string;
+  thread_id?: string;
+}
+
+interface ResumeRequest {
+  thread_id: string;
+  approved: boolean;
+}
+
+async function handleEnqueueAgentMessage(request: Request, env: Env): Promise<Response> {
+  const t0 = Date.now();
+  const requestTs = new Date(t0).toISOString();
+  const finish = (res: Response, err?: string) => {
+    logWorkerAccess(request, env, {
+      operation: "agent_messages_enqueue",
+      status: res.status,
+      durationMs: Date.now() - t0,
+      requestTs,
+      error: err,
+    });
+    return res;
+  };
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return finish(jsonResponse({ error: "Invalid JSON body" }, 400, request, env));
+  }
+
+  const parsed = parseNormalizedChatPayload(body);
+  if (!parsed.ok) {
+    return finish(jsonResponse({ error: parsed.error }, 400, request, env), "validation");
+  }
+
+  try {
+    await env.CHAT_INGEST_QUEUE.send(parsed.data, { contentType: "json" });
+  } catch (e) {
+    console.error("Queue send error:", e);
+    return finish(jsonResponse({ error: "Failed to enqueue message" }, 502, request, env), "queue_send");
+  }
+
+  return finish(
+    jsonResponse({ accepted: true, channel: parsed.data.channel }, 202, request, env)
+  );
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const cors = corsHeaders(request, env);
@@ -110,6 +170,12 @@ export default {
       return handleResume(request, env);
     }
 
+    if (path === "/api/agent/messages" && request.method === "POST") {
+      const auth = verifyBffApiAuth(request, env);
+      if (!auth.ok) return jsonBffUnauthorized(request, env, t0, auth.reason);
+      return handleEnqueueAgentMessage(request, env);
+    }
+
     const res = jsonResponse({ error: "Not found" }, 404, request, env);
     logWorkerAccess(request, env, {
       operation: "not_found",
@@ -119,49 +185,55 @@ export default {
     });
     return res;
   },
-} satisfies ExportedHandler<Env>;
 
-interface ChatRequest {
-  message: string;
-  thread_id?: string;
-}
+  async queue(batch, env: Env): Promise<void> {
+    for (const msg of batch.messages) {
+      try {
+        const raw = msg.body as unknown;
+        const parsed = parseNormalizedChatPayload(raw);
+        if (!parsed.ok) {
+          console.error("[queue] payload inválido (ack, sin reintento):", parsed.error);
+          msg.ack();
+          continue;
+        }
 
-interface ResumeRequest {
-  thread_id: string;
-  approved: boolean;
-}
+        const threadId = resolveThreadIdFromHint(parsed.data.thread_hint);
+        const { channel, user_id: userId, text } = parsed.data;
 
-const THREAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-let langSmithEnvWarned = false;
-
-function parseThreadId(raw: string | undefined): string | null {
-  const value = raw?.trim();
-  if (!value) return null;
-  return THREAD_ID_RE.test(value) ? value : null;
-}
-
-function configureLangSmithEnv(env: Env): void {
-  const proc = (globalThis as { process?: { env: Record<string, string | undefined> } }).process;
-  if (!proc?.env) {
-    if (!langSmithEnvWarned) {
-      console.warn("[LangSmith] process.env no disponible; tracing desactivado.");
-      langSmithEnvWarned = true;
+        try {
+          await runChatMessageGraph(env, {
+            text,
+            threadId,
+            channel,
+            userId,
+            operation: "queue_chat",
+          });
+          msg.ack();
+        } catch (e: unknown) {
+          if (isGraphInterruptError(e)) {
+            console.warn(
+              "[queue] GraphInterrupt (HITL): sin canal de respuesta asíncrono; ack. thread_id=",
+              threadId
+            );
+            msg.ack();
+            continue;
+          }
+          console.error("[queue] error en invoke:", e);
+          msg.retry({ delaySeconds: 30 });
+        }
+      } catch (loopErr) {
+        console.error("[queue] error inesperado por mensaje:", loopErr);
+        msg.retry({ delaySeconds: 60 });
+      }
     }
-    return;
-  }
-  if (!env.LANGSMITH_API_KEY) return;
-  proc.env.LANGSMITH_API_KEY = env.LANGSMITH_API_KEY;
-  if (env.LANGSMITH_TRACING) proc.env.LANGSMITH_TRACING = env.LANGSMITH_TRACING;
-  if (env.LANGSMITH_PROJECT) proc.env.LANGSMITH_PROJECT = env.LANGSMITH_PROJECT;
-  if (env.LANGCHAIN_CALLBACKS_BACKGROUND) {
-    proc.env.LANGCHAIN_CALLBACKS_BACKGROUND = env.LANGCHAIN_CALLBACKS_BACKGROUND;
-  }
-}
+  },
+} satisfies ExportedHandler<Env>;
 
 async function handleChat(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();
   const requestTs = new Date(t0).toISOString();
   const aaasUserId = parseTrustedAaasUserIdHeader(request, env);
+  const userId = aaasUserId ?? "anonymous";
 
   const finish = (res: Response, threadId?: string, err?: string) => {
     logWorkerAccess(request, env, {
@@ -194,25 +266,13 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
   const threadId = parsedThreadId ?? crypto.randomUUID();
 
   try {
-    configureLangSmithEnv(env);
-    const graph = buildGraph(env);
-    const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
-    const config = {
-      configurable: { thread_id: threadId },
-      metadata: {
-        thread_id: threadId,
-        operation: "chat",
-        runtime: "cloudflare-worker",
-        ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
-        ...(aaasUserId ? { aaas_user_id: aaasUserId } : {}),
-      },
-      tags: ["api:chat", "langsmith", ...deploymentTags],
-    };
-
-    const result = await graph.invoke(
-      { messages: [new HumanMessage(body.message)] },
-      config
-    );
+    const result = await runChatMessageGraph(env, {
+      text: body.message,
+      threadId,
+      channel: "web",
+      userId,
+      operation: "chat",
+    });
 
     const messages = result.messages ?? [];
     const lastMsg = messages[messages.length - 1];
@@ -234,8 +294,8 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
       threadId
     );
   } catch (e: unknown) {
-    const err = e as { name?: string; value?: unknown };
-    if (err.name === "GraphInterrupt" || String(e).includes("GraphInterrupt")) {
+    if (isGraphInterruptError(e)) {
+      const err = e as { value?: unknown };
       const interruptValue = err.value ?? null;
       return finish(
         jsonResponse(
@@ -261,6 +321,7 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();
   const requestTs = new Date(t0).toISOString();
   const aaasUserId = parseTrustedAaasUserIdHeader(request, env);
+  const userId = aaasUserId ?? "anonymous";
 
   const finish = (res: Response, threadId?: string, err?: string) => {
     logWorkerAccess(request, env, {
@@ -294,16 +355,17 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
     configureLangSmithEnv(env);
     const graph = buildGraph(env);
     const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
+    const channel = "web";
     const config = {
       configurable: { thread_id: threadId },
-      metadata: {
-        thread_id: threadId,
+      metadata: buildChatLangSmithMetadata({
+        threadId,
+        channel,
+        userId,
         operation: "resume",
-        runtime: "cloudflare-worker",
-        ...(env.DEPLOYMENT_ENV ? { deployment: env.DEPLOYMENT_ENV } : {}),
-        ...(aaasUserId ? { aaas_user_id: aaasUserId } : {}),
-      },
-      tags: ["api:resume", "langsmith", ...deploymentTags],
+        deploymentEnv: env.DEPLOYMENT_ENV,
+      }),
+      tags: buildChatLangSmithTags(deploymentTags, channel),
     };
 
     const result = await graph.invoke(
@@ -321,6 +383,7 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
           thread_id: threadId,
           reply,
           industry: result.industry,
+          intent: result.intent,
           tool_state: result.toolState,
         },
         200,

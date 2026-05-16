@@ -25,9 +25,19 @@ export async function loadStudioEnv(): Promise<Env> {
     );
   }
 
+  const studioQueueNoop = {
+    send: async () => {
+      throw new Error("CHAT_INGEST_QUEUE no está disponible en LangGraph Studio (solo Worker).");
+    },
+    sendBatch: async () => {
+      throw new Error("CHAT_INGEST_QUEUE no está disponible en LangGraph Studio (solo Worker).");
+    },
+  } as unknown as Env["CHAT_INGEST_QUEUE"];
+
   return {
     DB: wrapSqlJsAsCrmDatabase(db),
     COPILOT_GITHUB_TOKEN: token,
+    CHAT_INGEST_QUEUE: studioQueueNoop,
     ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "http://localhost:3000",
     COPILOT_MODEL: process.env.COPILOT_MODEL ?? DEFAULT_COPILOT_MODEL,
     OPENAI_API_BASE: process.env.OPENAI_API_BASE ?? "https://api.enterprise.githubcopilot.com",
