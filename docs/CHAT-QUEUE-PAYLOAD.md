@@ -36,6 +36,8 @@ Ejemplo:
 
 Tras superar `max_retries`, los mensajes van a la **dead-letter queue** (`ia-agent-chat-queue-dlq` / `…-preview-dlq`) para inspección manual.
 
+En `wrangler.toml`, **`max_batch_size = 1`**: cada mensaje ejecuta el grafo completo (LLM + D1); lotes mayores arriesgan timeout de CPU en la invocación del consumer.
+
 El handler `queue` del Worker consume la cola, invoca el grafo LangGraph con un único `HumanMessage` y:
 
 - **Éxito:** `ack()` del mensaje.

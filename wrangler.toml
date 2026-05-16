@@ -19,9 +19,10 @@ database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 binding = "CHAT_INGEST_QUEUE"
 queue = "ia-agent-chat-queue"
 
+# Un mensaje por batch: cada uno ejecuta grafo + LLM (lotes grandes arriesgan timeout de CPU del Worker).
 [[queues.consumers]]
 queue = "ia-agent-chat-queue"
-max_batch_size = 10
+max_batch_size = 1
 max_batch_timeout = 5
 max_retries = 5
 dead_letter_queue = "ia-agent-chat-queue-dlq"
@@ -82,7 +83,7 @@ queue = "ia-agent-chat-queue-preview"
 
 [[env.preview.queues.consumers]]
 queue = "ia-agent-chat-queue-preview"
-max_batch_size = 10
+max_batch_size = 1
 max_batch_timeout = 5
 max_retries = 5
 dead_letter_queue = "ia-agent-chat-queue-preview-dlq"
