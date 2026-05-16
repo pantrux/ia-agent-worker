@@ -4,6 +4,8 @@
 COPILOT_GITHUB_TOKEN=
 # Opcional — si se define, POST /api/chat y /api/chat/resume exigen el mismo Bearer
 BFF_API_TOKEN=
+# PAN-18: token de @BotFather (tambien: npx wrangler secret put TELEGRAM_BOT_TOKEN --env="")
+# TELEGRAM_BOT_TOKEN=
 # Opcional — AI Gateway (compat sin slug, o …/custom-{slug} con AI_GATEWAY_PROVIDER_SLUG)
 # AI_GATEWAY_ACCOUNT_ID=
 # AI_GATEWAY_ID=

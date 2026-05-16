@@ -67,7 +67,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | ID | Entregable | PR / referencia | Estado | Notas |
 |----|------------|-----------------|--------|-------|
 | C1 | Queues + payload normalizado + metadata `channel` | [PR #39](https://github.com/pantrux/ia-agent-worker/pull/39) (merge `efbbc4f`, 2026-05-16) | Ejecutado | Contrato y runbook: [CHAT-QUEUE-PAYLOAD.md](./CHAT-QUEUE-PAYLOAD.md). Linear [PAN-17](https://linear.app/pantrux/issue/PAN-17) Done. |
-| C2 | BFF / webhooks por canal | — | N/A | |
+| C2 | BFF / webhooks por canal (Telegram v1) | [PR #41](https://github.com/pantrux/ia-agent-worker/pull/41) (merge `62971de`) + [PR #33 `aaas-landing`](https://github.com/pantrux/aaas-landing/pull/33) (`c2cb3ab`) | Ejecutado | `delivery` en cola, `CHAT_THREAD_KV`, pending por `update_id`, `sendTelegramMessage`; webhook en Pages. Ver [`CHAT-QUEUE-PAYLOAD.md`](./CHAT-QUEUE-PAYLOAD.md) § Telegram y [`PAN-18-c2-channel-webhooks-design.md`](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-18-c2-channel-webhooks-design.md). [PAN-18](https://linear.app/pantrux/issue/PAN-18) Done. |
 | C3 | Durable Objects / Agents SDK si aplica | — | N/A | |
 
 ---
@@ -125,5 +125,6 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | 2026-05-15 | **B2b / PAN-9:** fila **B2b** en tablero y en `ROADMAP-CF-LANGSMITH` (export/agregación p95); issue [PAN-9](https://linear.app/pantrux/issue/PAN-9); grupo Linear **Área** (Observabilidad, Frontend, Backend-Worker, Seguridad). |
 | 2026-05-16 | **B2b / PAN-9:** [PR #38](https://github.com/pantrux/ia-agent-worker/pull/38) — documento [B2b-worker-access-metrics-export.md](./B2b-worker-access-metrics-export.md), agregador NDJSON + CI, `logpush = true` en Wrangler; guía B2 §2.4 enlazada. |
 | 2026-05-16 | **C1 / PAN-17:** merge [PR #39](https://github.com/pantrux/ia-agent-worker/pull/39) a `main` (`efbbc4f`); colas + DLQ, `POST /api/agent/messages`, consumer `queue()`, metadata `channel` en LangSmith; Greptile 5/5; [CHAT-QUEUE-PAYLOAD.md](./CHAT-QUEUE-PAYLOAD.md). |
+| 2026-05-16 | **C2 / PAN-18:** merge [PR #41](https://github.com/pantrux/ia-agent-worker/pull/41) (`62971de`); entrega Telegram en consumer (KV hilo + pending + Bot API); BFF webhook en [PR #33 aaas-landing](https://github.com/pantrux/aaas-landing/pull/33); validado en producción. |
 
 Actualiza esta tabla al cierre de cada hito relevante.
