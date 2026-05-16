@@ -86,7 +86,7 @@ El workflow **`.github/workflows/b2b-access-metrics.yml`** ejecuta `npm run test
 - [x] **Decisión documentada:** §1 (Logpush `workers_trace_events` → almacén propio; motivos y retención).
 - [x] **Implementación mínima verificable:** agregador CLI + tests + CI (§2 y §4).
 - [x] **Documentación:** este documento y enlace desde la guía B2 (§2.4).
-- [ ] **Trazabilidad GitHub:** enlazar el PR de `ia-agent-worker` desde el issue Linear al fusionar; PR espejo en `aaas-landing` solo si se actualiza allí el tablero espejo.
+- [x] **Trazabilidad GitHub:** [PR #38](https://github.com/pantrux/ia-agent-worker/pull/38) en `ia-agent-worker`; enlazar desde Linear PAN-9 al revisar/mergear. PR espejo en `aaas-landing` solo si se actualiza allí el tablero espejo.
 
 ---
 
