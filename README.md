@@ -86,8 +86,12 @@ npx wrangler secret put BFF_API_TOKEN
 Crea las colas referenciadas en `wrangler.toml` (nombres distintos para preview):
 
 ```bash
+npm run ensure:chat-queues
+# o manualmente (incluye colas DLQ para mensajes tras max_retries):
 npx wrangler queues create ia-agent-chat-queue
+npx wrangler queues create ia-agent-chat-queue-dlq
 npx wrangler queues create ia-agent-chat-queue-preview
+npx wrangler queues create ia-agent-chat-queue-preview-dlq
 ```
 
 Contrato del mensaje y política HITL en cola: [`docs/CHAT-QUEUE-PAYLOAD.md`](docs/CHAT-QUEUE-PAYLOAD.md).

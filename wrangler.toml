@@ -14,7 +14,7 @@ binding = "DB"
 database_name = "ia-agent-db"
 database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
-# PAN-17: cola de ingesta multicanal (crear con `wrangler queues create ia-agent-chat-queue`).
+# PAN-17: colas de ingesta + DLQ (crear con `npm run ensure:chat-queues`).
 [[queues.producers]]
 binding = "CHAT_INGEST_QUEUE"
 queue = "ia-agent-chat-queue"
@@ -24,6 +24,7 @@ queue = "ia-agent-chat-queue"
 max_batch_size = 10
 max_batch_timeout = 5
 max_retries = 5
+dead_letter_queue = "ia-agent-chat-queue-dlq"
 
 [vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
@@ -84,3 +85,4 @@ queue = "ia-agent-chat-queue-preview"
 max_batch_size = 10
 max_batch_timeout = 5
 max_retries = 5
+dead_letter_queue = "ia-agent-chat-queue-preview-dlq"

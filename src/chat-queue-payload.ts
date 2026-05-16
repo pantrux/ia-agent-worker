@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-/** UUID v4 (misma regla que `POST /api/chat` para `thread_id`). */
-export const THREAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/** UUID v4 RFC 4122: versión `4` en el tercer bloque y variante 8/9/a/b en el cuarto. */
+export const THREAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function parseThreadId(raw: string | undefined): string | null {
   const value = raw?.trim();

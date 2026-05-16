@@ -34,6 +34,8 @@ Ejemplo:
 
 ### Consumer (mismo Worker)
 
+Tras superar `max_retries`, los mensajes van a la **dead-letter queue** (`ia-agent-chat-queue-dlq` / `…-preview-dlq`) para inspección manual.
+
 El handler `queue` del Worker consume la cola, invoca el grafo LangGraph con un único `HumanMessage` y:
 
 - **Éxito:** `ack()` del mensaje.
@@ -57,9 +59,11 @@ Creación de colas (una por entorno desplegado):
 
 ```bash
 npm run ensure:chat-queues
-# o manualmente:
+# o manualmente (incluye DLQ para mensajes tras max_retries):
 npx wrangler queues create ia-agent-chat-queue
+npx wrangler queues create ia-agent-chat-queue-dlq
 npx wrangler queues create ia-agent-chat-queue-preview
+npx wrangler queues create ia-agent-chat-queue-preview-dlq
 ```
 
 En **Workers Builds**, si el deploy de ramas usa solo `wrangler versions upload`, configura el comando a `npm run cf:versions-upload` para crear las colas automáticamente con el token del build (permiso Queues).

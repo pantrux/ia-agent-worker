@@ -33,6 +33,16 @@ describe("parseNormalizedChatPayload", () => {
   });
 });
 
+describe("parseThreadId", () => {
+  it("rechaza UUID no v4 (p. ej. v1)", () => {
+    expect(parseThreadId("6ba7b810-9dad-11d1-80b4-00c04fd430c8")).toBeNull();
+  });
+
+  it("rechaza v4 con nibble de variante inválido", () => {
+    expect(parseThreadId("a0eebc99-9c0b-4ef8-cb6d-6bb9bd380a11")).toBeNull();
+  });
+});
+
 describe("resolveThreadIdFromHint", () => {
   it("usa UUID v4 válido como thread", () => {
     const id = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";

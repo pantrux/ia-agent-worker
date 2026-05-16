@@ -7,7 +7,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const queues = ["ia-agent-chat-queue", "ia-agent-chat-queue-preview"];
+const queues = [
+  "ia-agent-chat-queue",
+  "ia-agent-chat-queue-dlq",
+  "ia-agent-chat-queue-preview",
+  "ia-agent-chat-queue-preview-dlq",
+];
 
 for (const q of queues) {
   const r = spawnSync("npx", ["wrangler", "queues", "create", q], {
