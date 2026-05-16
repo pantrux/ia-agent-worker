@@ -56,11 +56,15 @@ En todas las invocaciones de chat (HTTP `web`, cola o resume HTTP) se envían al
 Creación de colas (una por entorno desplegado):
 
 ```bash
+npm run ensure:chat-queues
+# o manualmente:
 npx wrangler queues create ia-agent-chat-queue
 npx wrangler queues create ia-agent-chat-queue-preview
 ```
 
-Coste y modelo de consumo: [Queues — Pricing](https://developers.cloudflare.com/queues/platform/pricing/) (operaciones por volumen de mensaje, reintentos suman lecturas).
+En **Workers Builds**, si el deploy de ramas usa solo `wrangler versions upload`, configura el comando a `npm run cf:versions-upload` para crear las colas automáticamente con el token del build (permiso Queues).
+
+Coste y modelo de consumo: [Queues — Pricing](https://developers.cloudflare.com/queues/platform/pricing/) (operaciones por volumen de mensaje; reintentos suman lecturas).
 
 ## Alcance fuera de PAN-17
 

@@ -92,6 +92,8 @@ npx wrangler queues create ia-agent-chat-queue-preview
 
 Contrato del mensaje y política HITL en cola: [`docs/CHAT-QUEUE-PAYLOAD.md`](docs/CHAT-QUEUE-PAYLOAD.md).
 
+**Workers Builds (PR / ramas no producción):** el despliegue por defecto ejecuta `npx wrangler versions upload`. Con colas nuevas, configura en el panel de Cloudflare el comando **no producción** a `npm run cf:versions-upload` (crea las colas si faltan y luego sube la versión). En **producción** (`main`), si el comando es `npm run deploy`, ya incluye `ensure-chat-queues` antes de `wrangler deploy`.
+
 ## Autenticación del BFF (Bearer, A2)
 
 Si defines el secreto **`BFF_API_TOKEN`** en el Worker (`npx wrangler secret put BFF_API_TOKEN` y, en preview, `--env preview`), las rutas **`POST /api/chat`**, **`POST /api/chat/resume`** y **`POST /api/agent/messages`** rechazan peticiones sin cabecera válida:
