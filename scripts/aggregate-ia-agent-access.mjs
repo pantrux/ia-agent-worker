@@ -62,11 +62,11 @@ async function collectRows(lines, opts) {
 
 async function main() {
   const opts = parseArgs(process.argv);
-  const input = opts.file ? fs.createReadStream(opts.file) : process.stdin;
   if (opts.file && !fs.existsSync(opts.file)) {
     console.error(`No existe el fichero: ${opts.file}`);
     process.exit(1);
   }
+  const input = opts.file ? fs.createReadStream(opts.file) : process.stdin;
   const rl = readline.createInterface({ input, crlfDelay: Infinity });
   const { rows, linesRead, parseErrors } = await collectRows(rl, { scriptName: opts.scriptName });
   const aggregate = aggregateAccessRows(rows);

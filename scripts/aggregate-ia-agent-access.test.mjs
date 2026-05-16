@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -109,13 +110,17 @@ test("CLI con --script-name reduce filas", () => {
 });
 
 test("CLI sin filas access emite código de salida 2", () => {
-  const emptyPath = path.join(__dirname, "fixtures", "empty.ndjson");
+  const emptyPath = path.join(os.tmpdir(), `ia-agent-access-empty-${process.pid}-${Date.now()}.ndjson`);
   fs.writeFileSync(emptyPath, '{"ScriptName":"x","Logs":[]}\n', "utf8");
   try {
     const r = spawnSync(process.execPath, [scriptPath, "--file", emptyPath], { encoding: "utf8" });
     assert.equal(r.status, 2);
     assert.ok(String(r.stdout).includes("access_rows"));
   } finally {
-    fs.unlinkSync(emptyPath);
+    try {
+      fs.unlinkSync(emptyPath);
+    } catch {
+      // ignorar si otro proceso ya borró el fichero temporal
+    }
   }
 });
