@@ -31,6 +31,31 @@ describe("parseNormalizedChatPayload", () => {
     });
     expect(r.ok).toBe(false);
   });
+
+  it("acepta delivery telegram opcional (PAN-18)", () => {
+    const r = parseNormalizedChatPayload({
+      channel: "telegram",
+      user_id: "telegram:99",
+      text: "hola",
+      delivery: { kind: "telegram", chat_id: "12345", update_id: "9001" },
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.data.delivery?.kind).toBe("telegram");
+      expect(r.data.delivery?.chat_id).toBe("12345");
+      expect(r.data.delivery?.update_id).toBe("9001");
+    }
+  });
+
+  it("rechaza delivery con kind desconocido", () => {
+    const r = parseNormalizedChatPayload({
+      channel: "telegram",
+      user_id: "telegram:99",
+      text: "hola",
+      delivery: { kind: "slack", chat_id: "x" },
+    });
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe("parseThreadId", () => {

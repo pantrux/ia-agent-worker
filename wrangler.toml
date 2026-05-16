@@ -14,6 +14,12 @@ binding = "DB"
 database_name = "ia-agent-db"
 database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
 
+# PAN-18: hilo LangGraph por chat de Telegram (`telegram:chat:{chat_id}` → thread_id).
+[[kv_namespaces]]
+binding = "CHAT_THREAD_KV"
+id = "fc1a0df42f6a493886bf6b8d25788134"
+preview_id = "1439742f07494ce5947dc0cec13cbff3"
+
 # PAN-17: colas de ingesta + DLQ (crear con `npm run ensure:chat-queues`).
 [[queues.producers]]
 binding = "CHAT_INGEST_QUEUE"
@@ -40,6 +46,9 @@ LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 # Secreto opcional del BFF (A2): si existe, POST /api/chat y /api/chat/resume exigen `Authorization: Bearer …`
 #   npx wrangler secret put BFF_API_TOKEN
 #   npx wrangler secret put BFF_API_TOKEN --env preview
+# PAN-18 Telegram (entrega desde consumer de cola):
+#   npx wrangler secret put TELEGRAM_BOT_TOKEN
+#   npx wrangler secret put TELEGRAM_BOT_TOKEN --env preview
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
 # B1 AI Gateway (Copilot Enterprise). Orden: provision → check:ai-gateway → deploy. Copilot usa path vacío por defecto (para apuntar a /chat/completions directo).
@@ -59,6 +68,11 @@ logpush = true
 binding = "DB"
 database_name = "ia-agent-db"
 database_id = "878d2c1e-3a72-438a-a32e-f2e12c263193"
+
+# Namespace dedicado preview (`CHAT_THREAD_KV_preview`) — no comparte hilos Telegram con prod.
+[[env.preview.kv_namespaces]]
+binding = "CHAT_THREAD_KV"
+id = "1439742f07494ce5947dc0cec13cbff3"
 
 [env.preview.vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"

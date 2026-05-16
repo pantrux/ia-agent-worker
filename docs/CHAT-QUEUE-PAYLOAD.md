@@ -12,6 +12,21 @@ Todos los campos son obligatorios salvo `thread_hint`.
 | `user_id` | string | Identificador del usuario en el canal (externo al Worker). Máx. 256 caracteres. |
 | `text` | string | Texto del mensaje al agente. |
 | `thread_hint` | string opcional | Si es un **UUID v4** válido, se usa como `thread_id` del grafo (checkpoint D1). En cualquier otro caso se ignora y se crea un **nuevo** `thread_id`. |
+| `delivery` | objeto opcional | Si está presente, el consumer envía la respuesta del grafo al canal externo (PAN-18). |
+
+### `delivery` (PAN-18)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `delivery.kind` | `"telegram"` | Adaptador de entrega. |
+| `delivery.chat_id` | string | Chat de Telegram (`message.chat.id`). |
+| `delivery.update_id` | string | `update_id` del Update de Telegram (no `message.message_id`); slot KV de pending. |
+
+Continuidad de hilo: KV `CHAT_THREAD_KV`, clave `telegram:chat:{chat_id}` → `thread_id` (TTL 90 días, renovable).
+
+Pending de entrega: `telegram:pending:{chat_id}:{update_id}` → `{ threadId, reply, text }` con TTL 24 h. Si `sendMessage` falla tras grafo OK, el **reintento de cola solo reenvía** ese pending (sin re-invoke). `clear` del pending es best-effort tras ack para no duplicar Telegram si KV.delete falla.
+
+Preview: namespace KV `CHAT_THREAD_KV_preview` (aislado de prod).
 
 Ejemplo:
 
@@ -72,7 +87,14 @@ En **Workers Builds**, si el deploy de ramas usa solo `wrangler versions upload`
 
 Coste y modelo de consumo: [Queues — Pricing](https://developers.cloudflare.com/queues/platform/pricing/) (operaciones por volumen de mensaje; reintentos suman lecturas).
 
-## Alcance fuera de PAN-17
+## Telegram (PAN-18)
 
-- Entrega de la respuesta del agente al usuario en canales asíncronos (Slack/Teams): PAN-18 y sucesivos.
+- Webhook BFF: `POST /api/webhooks/telegram` en **aaas-landing** (Pages).
+- Secreto Pages `TELEGRAM_WEBHOOK_SECRET` ↔ cabecera `X-Telegram-Bot-Api-Secret-Token`.
+- Secreto Worker `TELEGRAM_BOT_TOKEN` para `sendMessage` tras el consumer.
+- Runbook: [`PAN-18-c2-channel-webhooks-design.md`](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-18-c2-channel-webhooks-design.md).
+
+## Alcance fuera de PAN-17 / PAN-18 v1
+
+- Slack / Microsoft Teams (mismo patrón `delivery`, issues posteriores).
 - Reanudación HITL vía cola: no soportada; usar `/api/chat/resume`.

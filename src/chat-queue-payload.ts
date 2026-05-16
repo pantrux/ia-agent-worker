@@ -9,12 +9,25 @@ export function parseThreadId(raw: string | undefined): string | null {
   return THREAD_ID_RE.test(value) ? value : null;
 }
 
-/** Contrato cola / `POST /api/agent/messages` (PAN-17). */
+/** Entrega asíncrona al usuario (PAN-18). */
+export const telegramDeliverySchema = z.object({
+  kind: z.literal("telegram"),
+  chat_id: z.string().trim().min(1).max(64),
+  /** `update_id` del Update de Telegram (no `message.message_id`); clave KV de pending por mensaje. */
+  update_id: z.string().trim().min(1).max(64),
+});
+
+export const chatDeliverySchema = telegramDeliverySchema;
+
+export type ChatDelivery = z.infer<typeof chatDeliverySchema>;
+
+/** Contrato cola / `POST /api/agent/messages` (PAN-17 + PAN-18). */
 export const normalizedChatPayloadSchema = z.object({
   channel: z.string().trim().min(1).max(64),
   user_id: z.string().trim().min(1).max(256),
   text: z.string().trim().min(1).max(32000),
   thread_hint: z.string().trim().min(1).max(128).optional(),
+  delivery: chatDeliverySchema.optional(),
 });
 
 export type NormalizedChatPayload = z.infer<typeof normalizedChatPayloadSchema>;
@@ -41,6 +54,18 @@ export function resolveThreadIdFromHint(threadHint: string | undefined): string 
   const parsed = parseThreadId(threadHint);
   return parsed ?? crypto.randomUUID();
 }
+
+export type ResolveQueueThreadIdFn = (
+  threadHint: string | undefined,
+  lookupKvThread: () => Promise<string | null>
+) => Promise<string>;
+
+/** KV (Telegram) tiene prioridad sobre `thread_hint`; si no hay ninguno → UUID nuevo. */
+export const resolveQueueThreadId: ResolveQueueThreadIdFn = async (threadHint, lookupKvThread) => {
+  const fromKv = await lookupKvThread();
+  if (fromKv) return fromKv;
+  return resolveThreadIdFromHint(threadHint);
+};
 
 export type ChatLangSmithOperation = "chat" | "resume" | "queue_chat";
 
