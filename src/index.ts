@@ -23,6 +23,11 @@ import {
 } from "./chat-invocation.js";
 import { extractLastAiReply } from "./chat-reply.js";
 import { deliverChannelReply } from "./channel-delivery/index.js";
+import {
+  clearPendingTelegramDelivery,
+  getPendingTelegramDelivery,
+  putPendingTelegramDelivery,
+} from "./chat-pending-delivery.js";
 import { getTelegramThreadId, putTelegramThreadId } from "./chat-thread-kv.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -109,6 +114,109 @@ async function persistThreadForChannel(
 ): Promise<void> {
   if (data.delivery?.kind === "telegram") {
     await putTelegramThreadId(env.CHAT_THREAD_KV, data.delivery.chat_id, threadId);
+  }
+}
+
+type QueueMessage = { ack(): void; retry(options?: { delaySeconds?: number }): void };
+
+/**
+ * Consumer de cola: grafo + entrega Telegram. Si la Bot API falla tras grafo OK,
+ * guarda reply en KV y en reintento solo reenvía (sin duplicar invoke).
+ */
+async function processQueueChatMessage(
+  env: Env,
+  data: NormalizedChatPayload,
+  msg: QueueMessage
+): Promise<void> {
+  const threadId = await resolveQueueThreadId(data.thread_hint, () => lookupKvThreadId(env, data));
+  const { channel, user_id: userId, text } = data;
+  const delivery = data.delivery;
+  const telegramChatId = delivery?.kind === "telegram" ? delivery.chat_id : undefined;
+
+  if (delivery) {
+    try {
+      await persistThreadForChannel(env, data, threadId);
+    } catch (kvErr) {
+      console.error("[queue] KV thread persist failed (continuing):", kvErr);
+    }
+  }
+
+  if (telegramChatId && delivery) {
+    const pending = await getPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
+    if (pending) {
+      if (pending.text !== text) {
+        await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
+      } else {
+        try {
+          await deliverChannelReply(env, delivery, pending.reply);
+          await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
+          msg.ack();
+          return;
+        } catch (deliveryErr) {
+          console.error("[queue] Telegram delivery retry failed:", deliveryErr);
+          msg.retry({ delaySeconds: 30 });
+          return;
+        }
+      }
+    }
+  }
+
+  let result;
+  try {
+    result = await runChatMessageGraph(env, {
+      text,
+      threadId,
+      channel,
+      userId,
+      operation: "queue_chat",
+    });
+  } catch (e: unknown) {
+    if (isGraphInterruptError(e)) {
+      console.warn("[queue] GraphInterrupt (HITL); ack. thread_id=", threadId);
+      if (telegramChatId) {
+        await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
+      }
+      msg.ack();
+      return;
+    }
+    if (telegramChatId) {
+      await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
+    }
+    console.error("[queue] error en invoke:", e);
+    msg.retry({ delaySeconds: 30 });
+    return;
+  }
+
+  if (!delivery) {
+    msg.ack();
+    return;
+  }
+
+  const reply = extractLastAiReply(result);
+  if (telegramChatId) {
+    try {
+      await putPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId, {
+        threadId,
+        reply,
+        text,
+      });
+    } catch (kvErr) {
+      console.error("[queue] KV pending persist failed (continuing):", kvErr);
+    }
+  }
+
+  try {
+    await deliverChannelReply(env, delivery, reply);
+    if (telegramChatId) {
+      await clearPendingTelegramDelivery(env.CHAT_THREAD_KV, telegramChatId);
+    }
+    msg.ack();
+  } catch (deliveryErr) {
+    console.error(
+      "[queue] Telegram delivery failed (pending en KV; reintento sin grafo):",
+      deliveryErr
+    );
+    msg.retry({ delaySeconds: 30 });
   }
 }
 
@@ -219,46 +327,7 @@ export default {
           continue;
         }
 
-        const threadId = await resolveQueueThreadId(parsed.data.thread_hint, () =>
-          lookupKvThreadId(env, parsed.data)
-        );
-        const { channel, user_id: userId, text } = parsed.data;
-
-        if (parsed.data.delivery) {
-          try {
-            await persistThreadForChannel(env, parsed.data, threadId);
-          } catch (kvErr) {
-            console.error("[queue] KV persist failed (continuing):", kvErr);
-          }
-        }
-
-        try {
-          const result = await runChatMessageGraph(env, {
-            text,
-            threadId,
-            channel,
-            userId,
-            operation: "queue_chat",
-          });
-
-          if (parsed.data.delivery) {
-            const reply = extractLastAiReply(result);
-            await deliverChannelReply(env, parsed.data.delivery, reply);
-          }
-
-          msg.ack();
-        } catch (e: unknown) {
-          if (isGraphInterruptError(e)) {
-            console.warn(
-              "[queue] GraphInterrupt (HITL): sin canal de respuesta asíncrono; ack. thread_id=",
-              threadId
-            );
-            msg.ack();
-            continue;
-          }
-          console.error("[queue] error en invoke:", e);
-          msg.retry({ delaySeconds: 30 });
-        }
+        await processQueueChatMessage(env, parsed.data, msg);
       } catch (loopErr) {
         console.error("[queue] error inesperado por mensaje:", loopErr);
         msg.retry({ delaySeconds: 60 });
