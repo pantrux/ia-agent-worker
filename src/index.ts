@@ -1,7 +1,7 @@
-import { Command } from "@langchain/langgraph";
+import { routeAgentRequest } from "agents";
 import type { ExportedHandler } from "@cloudflare/workers-types";
 import type { Env } from "./env.js";
-import { buildGraph } from "./graph.js";
+import { WebSessionAgent } from "./agents/web-session-agent.js";
 import { logWorkerAccess } from "./access-log.js";
 import {
   verifyBffApiAuth,
@@ -12,14 +12,12 @@ import {
   parseNormalizedChatPayload,
   parseThreadId,
   resolveQueueThreadId,
-  buildChatLangSmithMetadata,
-  buildChatLangSmithTags,
   type NormalizedChatPayload,
 } from "./chat-queue-payload.js";
 import {
-  configureLangSmithEnv,
   isGraphInterruptError,
   runChatMessageGraph,
+  runChatResumeGraph,
 } from "./chat-invocation.js";
 import { extractLastAiReply } from "./chat-reply.js";
 import { deliverChannelReply } from "./channel-delivery/index.js";
@@ -282,6 +280,18 @@ async function handleEnqueueAgentMessage(request: Request, env: Env): Promise<Re
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const agentT0 = Date.now();
+    const agentResponse = await routeAgentRequest(request, env, { cors: true });
+    if (agentResponse) {
+      logWorkerAccess(request, env, {
+        operation: "agent_route",
+        status: agentResponse.status,
+        durationMs: Date.now() - agentT0,
+        requestTs: new Date(agentT0).toISOString(),
+      });
+      return agentResponse;
+    }
+
     const cors = corsHeaders(request, env);
     const t0 = Date.now();
 
@@ -357,6 +367,8 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+export { WebSessionAgent };
 
 async function handleChat(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();
@@ -479,26 +491,13 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    configureLangSmithEnv(env);
-    const graph = buildGraph(env);
-    const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
-    const channel = "web";
-    const config = {
-      configurable: { thread_id: threadId },
-      metadata: buildChatLangSmithMetadata({
-        threadId,
-        channel,
-        userId,
-        operation: "resume",
-        deploymentEnv: env.DEPLOYMENT_ENV,
-      }),
-      tags: buildChatLangSmithTags(deploymentTags, channel),
-    };
-
-    const result = await graph.invoke(
-      new Command({ resume: { approved: body.approved ?? false } }),
-      config
-    );
+    const result = await runChatResumeGraph(env, {
+      threadId,
+      channel: "web",
+      userId,
+      approved: body.approved ?? false,
+      operation: "resume",
+    });
 
     const reply = extractLastAiReply(result);
 
@@ -518,6 +517,22 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
       threadId
     );
   } catch (e: unknown) {
+    if (isGraphInterruptError(e)) {
+      const err = e as { value?: unknown };
+      return finish(
+        jsonResponse(
+          {
+            thread_id: threadId,
+            status: "pending_approval",
+            interrupt: err.value ?? null,
+          },
+          200,
+          request,
+          env
+        ),
+        threadId
+      );
+    }
     console.error("Resume error:", e);
     const errCode = e instanceof Error ? e.name : "internal_error";
     return finish(jsonResponse(chatInternalErrorBody(env, e), 500, request, env), threadId, errCode);

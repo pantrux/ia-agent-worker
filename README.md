@@ -24,6 +24,7 @@ Port completo del agente [`pantrux/ia-agent-mvp`](https://github.com/pantrux/ia-
 | LLM | GitHub Models API (`@langchain/openai` → `https://models.github.ai/inference`) |
 | Persistencia | Cloudflare D1 (SQLite serverless) — CRM + checkpoints |
 | Ingesta multicanal (PAN-17) | Cloudflare Queues — producer `POST /api/agent/messages`, consumer en el mismo Worker |
+| Sesión WebSocket (PAN-19) | Agents SDK + Durable Object `WebSessionAgent` — mismo grafo LangGraph; ver [`docs/ADR-C3-websocket-langgraph-hybrid.md`](docs/ADR-C3-websocket-langgraph-hybrid.md) |
 | HITL | `interrupt()` + `Command({ resume })` de LangGraph.js |
 | Auth LLM | Token GitHub (`gh auth token`) reusado como Bearer hacia GitHub Models |
 
@@ -35,6 +36,7 @@ Port completo del agente [`pantrux/ia-agent-mvp`](https://github.com/pantrux/ia-
 | POST | `/api/chat` | Enviar mensaje al agente (síncrono). Metadata LangSmith: `channel: web`. Si el Worker tiene `BFF_API_TOKEN`, enviar `Authorization: Bearer …`. |
 | POST | `/api/chat/resume` | Reanudar tras HITL (aprobar/denegar); misma regla Bearer si aplica. |
 | POST | `/api/agent/messages` | Encolar mensaje con payload normalizado (202). Misma regla Bearer si aplica. Ver [`docs/CHAT-QUEUE-PAYLOAD.md`](docs/CHAT-QUEUE-PAYLOAD.md). |
+| WS | `/agents/web-session-agent/{session_id}?ticket=…` | Demo web en tiempo real (ticket emitido por Pages `POST /api/ws/session`). Requiere `WS_TICKET_SECRET` (mismo valor que en Pages). |
 
 ### POST /api/chat
 

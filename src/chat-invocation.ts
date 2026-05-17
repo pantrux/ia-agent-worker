@@ -1,4 +1,5 @@
 import { HumanMessage } from "@langchain/core/messages";
+import { Command } from "@langchain/langgraph";
 import type { Env } from "./env.js";
 import { buildGraph } from "./graph.js";
 import type { ChatLangSmithOperation } from "./chat-queue-payload.js";
@@ -35,6 +36,31 @@ export type ChatGraphInvokeResult = Awaited<ReturnType<ReturnType<typeof buildGr
 /**
  * Invoca el grafo con un único mensaje humano (HTTP síncrono o consumer de cola).
  */
+function buildGraphInvokeConfig(
+  env: Env,
+  params: {
+    threadId: string;
+    channel: string;
+    userId: string;
+    operation: ChatLangSmithOperation;
+    sessionId?: string;
+  }
+) {
+  const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
+  return {
+    configurable: { thread_id: params.threadId },
+    metadata: buildChatLangSmithMetadata({
+      threadId: params.threadId,
+      channel: params.channel,
+      userId: params.userId,
+      operation: params.operation,
+      deploymentEnv: env.DEPLOYMENT_ENV,
+      sessionId: params.sessionId,
+    }),
+    tags: buildChatLangSmithTags(deploymentTags, params.channel),
+  };
+}
+
 export async function runChatMessageGraph(
   env: Env,
   params: {
@@ -43,22 +69,28 @@ export async function runChatMessageGraph(
     channel: string;
     userId: string;
     operation: ChatLangSmithOperation;
+    sessionId?: string;
   }
 ): Promise<ChatGraphInvokeResult> {
   configureLangSmithEnv(env);
   const graph = buildGraph(env);
-  const deploymentTags = env.DEPLOYMENT_ENV ? [`env:${env.DEPLOYMENT_ENV}`] : [];
-  const config = {
-    configurable: { thread_id: params.threadId },
-    metadata: buildChatLangSmithMetadata({
-      threadId: params.threadId,
-      channel: params.channel,
-      userId: params.userId,
-      operation: params.operation,
-      deploymentEnv: env.DEPLOYMENT_ENV,
-    }),
-    tags: buildChatLangSmithTags(deploymentTags, params.channel),
-  };
-
+  const config = buildGraphInvokeConfig(env, params);
   return graph.invoke({ messages: [new HumanMessage(params.text)] }, config);
+}
+
+export async function runChatResumeGraph(
+  env: Env,
+  params: {
+    threadId: string;
+    channel: string;
+    userId: string;
+    approved: boolean;
+    operation: ChatLangSmithOperation;
+    sessionId?: string;
+  }
+): Promise<ChatGraphInvokeResult> {
+  configureLangSmithEnv(env);
+  const graph = buildGraph(env);
+  const config = buildGraphInvokeConfig(env, params);
+  return graph.invoke(new Command({ resume: { approved: params.approved } }), config);
 }
