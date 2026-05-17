@@ -33,6 +33,15 @@ max_batch_timeout = 5
 max_retries = 5
 dead_letter_queue = "ia-agent-chat-queue-dlq"
 
+# PAN-19: Agents SDK — sesión WebSocket demo web.
+[[durable_objects.bindings]]
+name = "WebSessionAgent"
+class_name = "WebSessionAgent"
+
+[[migrations]]
+tag = "v2-pan19-web-session-agent"
+new_sqlite_classes = ["WebSessionAgent"]
+
 [vars]
 ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
 # Copilot Enterprise: intercambio vía `copilot_internal/v2/token` y llamadas al host devuelto (p. ej. api.enterprise.githubcopilot.com).
@@ -49,6 +58,9 @@ LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 # PAN-18 Telegram (entrega desde consumer de cola):
 #   npx wrangler secret put TELEGRAM_BOT_TOKEN
 #   npx wrangler secret put TELEGRAM_BOT_TOKEN --env preview
+# PAN-19 WebSocket ticket (mismo valor en Pages `WS_TICKET_SECRET`):
+#   npx wrangler secret put WS_TICKET_SECRET
+#   npx wrangler secret put WS_TICKET_SECRET --env preview
 # Metadata LangSmith (`deployment` en runs); producción por defecto
 DEPLOYMENT_ENV = "production"
 # B1 AI Gateway (Copilot Enterprise). Orden: provision → check:ai-gateway → deploy. Copilot usa path vacío por defecto (para apuntar a /chat/completions directo).
@@ -101,3 +113,7 @@ max_batch_size = 1
 max_batch_timeout = 5
 max_retries = 5
 dead_letter_queue = "ia-agent-chat-queue-preview-dlq"
+
+[[env.preview.durable_objects.bindings]]
+name = "WebSessionAgent"
+class_name = "WebSessionAgent"

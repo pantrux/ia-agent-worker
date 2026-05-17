@@ -67,7 +67,12 @@ export const resolveQueueThreadId: ResolveQueueThreadIdFn = async (threadHint, l
   return resolveThreadIdFromHint(threadHint);
 };
 
-export type ChatLangSmithOperation = "chat" | "resume" | "queue_chat";
+export type ChatLangSmithOperation =
+  | "chat"
+  | "resume"
+  | "queue_chat"
+  | "ws_chat"
+  | "ws_resume";
 
 export function buildChatLangSmithMetadata(params: {
   threadId: string;
@@ -75,6 +80,7 @@ export function buildChatLangSmithMetadata(params: {
   userId: string;
   operation: ChatLangSmithOperation;
   deploymentEnv?: string;
+  sessionId?: string;
 }): Record<string, string> {
   const meta: Record<string, string> = {
     thread_id: params.threadId,
@@ -84,6 +90,7 @@ export function buildChatLangSmithMetadata(params: {
     runtime: "cloudflare-worker",
   };
   if (params.deploymentEnv) meta.deployment = params.deploymentEnv;
+  if (params.sessionId) meta.session_id = params.sessionId;
   return meta;
 }
 

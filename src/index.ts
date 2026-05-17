@@ -1,6 +1,8 @@
 import { Command } from "@langchain/langgraph";
+import { routeAgentRequest } from "agents";
 import type { ExportedHandler } from "@cloudflare/workers-types";
 import type { Env } from "./env.js";
+import { WebSessionAgent } from "./agents/web-session-agent.js";
 import { buildGraph } from "./graph.js";
 import { logWorkerAccess } from "./access-log.js";
 import {
@@ -282,6 +284,9 @@ async function handleEnqueueAgentMessage(request: Request, env: Env): Promise<Re
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const agentResponse = await routeAgentRequest(request, env, { cors: true });
+    if (agentResponse) return agentResponse;
+
     const cors = corsHeaders(request, env);
     const t0 = Date.now();
 
@@ -357,6 +362,8 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+export { WebSessionAgent };
 
 async function handleChat(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();

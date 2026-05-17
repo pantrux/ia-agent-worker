@@ -36,15 +36,16 @@
     "@langchain/core": "^0.3",
     "@langchain/langgraph": "^0.2",
     "@langchain/openai": "^0.5",
+    "agents": "^0.12.4",
     "langsmith": "^0.3.76",
     "zod": "^3.23"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260501",
     "@langchain/langgraph-cli": "^0.0.40",
-    "sql.js": "^1.11.0",
     "@types/node": "^22.10.0",
     "dotenv": "^16.4.7",
+    "sql.js": "^1.11.0",
     "typescript": "^5.7",
     "vitest": "^3.1.4",
     "wrangler": "^4"

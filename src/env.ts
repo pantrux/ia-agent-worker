@@ -1,9 +1,14 @@
-import type { KVNamespace, Queue } from "@cloudflare/workers-types";
+import type { DurableObjectNamespace, KVNamespace, Queue } from "@cloudflare/workers-types";
 import type { CrmDatabase } from "./db/crm-db.js";
 import type { NormalizedChatPayload } from "./chat-queue-payload.js";
+import type { WebSessionAgent } from "./agents/web-session-agent.js";
 
 export interface Env {
   DB: CrmDatabase;
+  /** PAN-19: sesión WebSocket demo web (Agents SDK). */
+  WebSessionAgent: DurableObjectNamespace<WebSessionAgent>;
+  /** Secreto compartido con Pages para firmar tickets WS (`WS_TICKET_SECRET`). */
+  WS_TICKET_SECRET?: string;
   /** Producer PAN-17: mensajes normalizados hacia el consumer del mismo Worker. */
   CHAT_INGEST_QUEUE: Queue<NormalizedChatPayload>;
   /** PAN-18: `telegram:chat:{id}` → `thread_id` UUID para continuidad de conversación. */
