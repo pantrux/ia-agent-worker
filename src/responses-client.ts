@@ -251,10 +251,10 @@ async function readResponsesSseStream(
   let completed: Record<string, unknown> | null = null;
   let deltaCount = 0;
   const trackDelta = onDelta
-    ? (delta: string) => {
+    ? async (delta: string) => {
         if (!delta) return;
         deltaCount += 1;
-        onDelta(delta);
+        await onDelta(delta);
       }
     : undefined;
 
