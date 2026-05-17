@@ -354,9 +354,9 @@ export async function invokeResponsesIfRequired(
       payload.type === "response.completed" && payload.response && typeof payload.response === "object"
         ? (payload.response as Record<string, unknown>)
         : payload;
-    const text = textContent(outputToAIMessage(completed).content);
-    await emitStreamedTextDeltas(text, onTokenDelta);
-    return outputToAIMessage(completed);
+    const message = outputToAIMessage(completed);
+    await emitStreamedTextDeltas(textContent(message.content), onTokenDelta);
+    return message;
   }
 
   const text = await response.text();
