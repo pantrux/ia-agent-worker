@@ -46,8 +46,10 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
   async onConnect(connection: Connection, ctx: ConnectionContext): Promise<void> {
     const url = new URL(ctx.request.url);
     const ticket = url.searchParams.get("ticket");
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const sessionIdFromPath = decodeURIComponent(pathParts[pathParts.length - 1] ?? "");
     const payload = await verifyWsTicket(this.env.WS_TICKET_SECRET, ticket);
-    if (!payload || payload.sid !== this.name) {
+    if (!payload || payload.sid !== sessionIdFromPath) {
       this.safeSend(connection, {
         type: "error",
         code: "unauthorized",

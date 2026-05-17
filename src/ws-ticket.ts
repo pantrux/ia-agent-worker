@@ -55,6 +55,8 @@ export async function signWsTicket(
   secret: string,
   params: { sessionId: string; userId?: string; nowSec?: number }
 ): Promise<string> {
+  const sec = secret.trim();
+  if (!sec) throw new Error("WS_TICKET_SECRET vacío");
   const now = params.nowSec ?? Math.floor(Date.now() / 1000);
   const payload: WsTicketPayload = {
     sid: params.sessionId,
@@ -63,7 +65,7 @@ export async function signWsTicket(
   if (params.userId) payload.uid = params.userId;
   const enc = new TextEncoder();
   const payloadB64 = base64UrlEncode(enc.encode(JSON.stringify(payload)));
-  const sig = await hmacSign(secret, payloadB64);
+  const sig = await hmacSign(sec, payloadB64);
   return `${payloadB64}.${sig}`;
 }
 
