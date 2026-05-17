@@ -17,6 +17,11 @@ describe("classifyChatGraphError", () => {
     expect(r.code).toBe("rate_limited");
   });
 
+  it("no clasifica 429 embebido en otro token como rate limit", () => {
+    const r = classifyChatGraphError(new Error("operation-42999 failed"));
+    expect(r.code).toBe("internal_error");
+  });
+
   it("detecta fallo de proveedor", () => {
     const r = classifyChatGraphError(new Error('400 [{"message":"Failed to get response from provider"}]'));
     expect(r.code).toBe("provider_error");

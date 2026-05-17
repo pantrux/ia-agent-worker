@@ -8,7 +8,7 @@ export function classifyChatGraphError(
   const lower = raw.toLowerCase();
 
   if (
-    lower.includes("429") ||
+    /\b429\b/.test(lower) ||
     lower.includes("rate limited") ||
     lower.includes("quota exceeded") ||
     lower.includes("too many requests")
