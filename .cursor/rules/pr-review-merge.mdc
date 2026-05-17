@@ -36,6 +36,25 @@ Reglas operativas para PRs en **cualquier repositorio** cuando la regla está in
 
 **Excepciones (sí pedir confirmación):** merge a ramas distintas de la base habitual del repo, PRs con etiquetas de *do not merge* / *WIP*, o cuando el usuario haya indicado en el hilo que **no** se fusione aún.
 
+### Prohibiciones explícitas (nunca sustituyen el checklist)
+
+- **No fusionar** porque el usuario pida desplegar, cerrar una issue, «seguir con lo operativo» o «ya está en producción». El deploy es **después** del merge correcto, salvo hotfix acordado explícitamente en el hilo del PR.
+- **No fusionar** con Greptile &lt; 5/5 (o 4/5 sin cero hallazgos + comentario de riesgo) aunque CI esté verde.
+- **No fusionar** con comentarios en línea sin **respuesta en GitHub** (fix en commit **o** descarte documentado en el hilo). Un resumen solo en el chat de Cursor **no cuenta**.
+- **No fusionar** un PR de follow-up sustituyendo la trazabilidad de otro: los hilos del PR original deben quedar respondidos; el follow-up referencia commits y cierra código pendiente.
+- **No tocar** `deployment_configs.env_vars` de Pages con `secret_text` vacío: los secretos van solo con `wrangler pages secret put` / script del repo (ver runbooks PAN-19).
+
+### Checklist obligatorio antes de `gh pr merge`
+
+Ejecutar en orden y **no omitir pasos**:
+
+1. `gh pr view <n> --json statusCheckRollup,reviewDecision` y `gh pr checks <n>` — anotar checks en fail.
+2. Listar **todos** los comentarios en línea: `gh api repos/{owner}/{repo}/pulls/<n>/comments`.
+3. Por cada comentario: aplicar fix y push **o** `gh api .../pulls/comments/{id}/replies` con commit SHA / issue de aplazamiento (p. ej. PAN-34).
+4. Confirmar último comentario Greptile: **5/5** y sin hallazgos abiertos en el cuerpo del resumen.
+5. Re-ejecutar Greptile si hubo commits nuevos tras el último 5/5.
+6. Solo entonces `gh pr merge` + `gh pr comment` con SHA fusionado.
+
 ## 4. Herramientas
 
 - Preferir **GitHub CLI** (`gh pr view`, `gh pr checks`, `gh api` para threads) cuando el entorno esté autenticado.
