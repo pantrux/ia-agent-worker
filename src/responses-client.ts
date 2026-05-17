@@ -179,13 +179,48 @@ function outputToAIMessage(payload: Record<string, unknown>): AIMessage {
   });
 }
 
+const RESPONSES_DELTA_EVENT_TYPES = new Set([
+  "response.output_text.delta",
+  "response.text.delta",
+]);
+
+function extractResponsesStreamDelta(payload: Record<string, unknown>, eventType: string): string {
+  if (RESPONSES_DELTA_EVENT_TYPES.has(eventType) || RESPONSES_DELTA_EVENT_TYPES.has(String(payload.type ?? ""))) {
+    const delta = payload.delta;
+    if (typeof delta === "string") return delta;
+    if (delta && typeof delta === "object" && "text" in delta && typeof delta.text === "string") {
+      return delta.text;
+    }
+  }
+  return "";
+}
+
+/** Emite texto en trozos y cede el event loop para que el WS y el cliente pinten (gateway sin deltas SSE). */
+export async function emitStreamedTextDeltas(
+  text: string,
+  onDelta: ChatWsTokenDeltaHandler,
+  chunkSize = 32
+): Promise<void> {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  for (let i = 0; i < trimmed.length; i += chunkSize) {
+    onDelta(trimmed.slice(i, i + chunkSize));
+    await Promise.resolve();
+  }
+}
+
 function parseResponsesSseChunk(
   block: string,
   onDelta?: ChatWsTokenDeltaHandler
 ): Record<string, unknown> | null {
   const lines = block.split("\n");
   const dataLines: string[] = [];
+  let eventType = "";
   for (const line of lines) {
+    if (line.startsWith("event:")) {
+      eventType = line.slice(6).trim();
+      continue;
+    }
     if (line.startsWith("data:")) {
       dataLines.push(line.slice(5).trim());
     }
@@ -198,11 +233,9 @@ function parseResponsesSseChunk(
   } catch {
     return null;
   }
-  const eventType = typeof payload.type === "string" ? payload.type : "";
-  if (eventType === "response.output_text.delta") {
-    const delta = typeof payload.delta === "string" ? payload.delta : "";
-    if (delta && onDelta) onDelta(delta);
-  }
+  const type = typeof payload.type === "string" ? payload.type : eventType;
+  const delta = extractResponsesStreamDelta(payload, type);
+  if (delta && onDelta) onDelta(delta);
   return payload;
 }
 
@@ -214,6 +247,14 @@ async function readResponsesSseStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let completed: Record<string, unknown> | null = null;
+  let deltaCount = 0;
+  const trackDelta = onDelta
+    ? (delta: string) => {
+        if (!delta) return;
+        deltaCount += 1;
+        onDelta(delta);
+      }
+    : undefined;
 
   try {
     while (true) {
@@ -223,7 +264,7 @@ async function readResponsesSseStream(
       const parts = buffer.split("\n\n");
       buffer = parts.pop() ?? "";
       for (const part of parts) {
-        const payload = parseResponsesSseChunk(part, onDelta);
+        const payload = parseResponsesSseChunk(part, trackDelta);
         if (!payload) continue;
         if (payload.type === "response.completed" && payload.response && typeof payload.response === "object") {
           completed = payload.response as Record<string, unknown>;
@@ -232,13 +273,18 @@ async function readResponsesSseStream(
     }
 
     if (buffer.trim()) {
-      const payload = parseResponsesSseChunk(buffer, onDelta);
+      const payload = parseResponsesSseChunk(buffer, trackDelta);
       if (payload?.type === "response.completed" && payload.response && typeof payload.response === "object") {
         completed = payload.response as Record<string, unknown>;
       }
     }
   } finally {
     reader.releaseLock();
+  }
+
+  if (completed && trackDelta && deltaCount === 0) {
+    const fallbackText = textContent(outputToAIMessage(completed).content);
+    await emitStreamedTextDeltas(fallbackText, trackDelta);
   }
 
   return completed;
@@ -290,10 +336,27 @@ export async function invokeResponsesIfRequired(
     throw new Error(`Copilot Responses API failed (${response.status} ${response.statusText}): ${text.slice(0, 500)}`);
   }
 
-  if (onTokenDelta && response.body) {
-    const completed = await readResponsesSseStream(response.body, onTokenDelta);
-    if (completed) return outputToAIMessage(completed);
-    throw new Error("Copilot Responses API stream ended without response.completed");
+  if (onTokenDelta) {
+    const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+    if (response.body && contentType.includes("text/event-stream")) {
+      const completed = await readResponsesSseStream(response.body, onTokenDelta);
+      if (completed) return outputToAIMessage(completed);
+      throw new Error("Copilot Responses API stream ended without response.completed");
+    }
+    const raw = await response.text();
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      throw new Error(`Copilot Responses API returned non-JSON (${response.status}): ${raw.slice(0, 500)}`);
+    }
+    const completed =
+      payload.type === "response.completed" && payload.response && typeof payload.response === "object"
+        ? (payload.response as Record<string, unknown>)
+        : payload;
+    const message = outputToAIMessage(completed);
+    await emitStreamedTextDeltas(textContent(message.content), onTokenDelta);
+    return message;
   }
 
   const text = await response.text();
