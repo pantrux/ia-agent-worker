@@ -66,7 +66,7 @@ Supuestos: 100 sesiones concurrentes, 10 mensajes/min, mensajes cortos.
 
 - `wrangler.toml` requiere migración DO `new_sqlite_classes`.
 - Export de `WebSessionAgent` en entry Worker.
-- Dependencia `agents` con `--legacy-peer-deps` (peer `zod@4` vs LangChain `zod@3`).
+- Dependencia `agents` con peer `zod@^4` incompatible con LangChain (`zod@3`). **Mitigación:** `.npmrc` con `legacy-peer-deps=true` (CI y local); no subir `zod@4` hasta que el stack LangGraph lo soporte.
 
 ## Referencias
 

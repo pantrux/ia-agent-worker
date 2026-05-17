@@ -25,8 +25,14 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
     userId: "anonymous",
   };
 
-  private send(connection: Connection, msg: WsServerMessage): void {
-    connection.send(serializeWsServerMessage(msg));
+  /** Ignora envíos si el socket ya no está abierto (p. ej. cliente desconectado durante el grafo). */
+  private safeSend(connection: Connection, msg: WsServerMessage): void {
+    try {
+      if (connection.readyState !== WebSocket.OPEN) return;
+      connection.send(serializeWsServerMessage(msg));
+    } catch (e) {
+      console.warn("[WebSessionAgent] send skipped (connection closed):", e);
+    }
   }
 
   private ensureThreadId(): string {
@@ -42,7 +48,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
     const ticket = url.searchParams.get("ticket");
     const payload = await verifyWsTicket(this.env.WS_TICKET_SECRET, ticket);
     if (!payload || payload.sid !== this.name) {
-      this.send(connection, {
+      this.safeSend(connection, {
         type: "error",
         code: "unauthorized",
         message: "Ticket inválido o expirado",
@@ -57,10 +63,28 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
     }
 
     const threadId = parseThreadId(this.state.threadId);
-    this.send(connection, {
+    this.safeSend(connection, {
       type: "ready",
       session_id: this.name,
       thread_id: threadId,
+    });
+  }
+
+  onClose(connection: Connection, code: number, reason: string, wasClean: boolean): void {
+    console.warn("[WebSessionAgent] connection closed", {
+      session_id: this.name,
+      connection_id: connection.id,
+      code,
+      reason,
+      wasClean,
+    });
+  }
+
+  onError(connection: Connection, error: unknown): void {
+    console.error("[WebSessionAgent] connection error", {
+      session_id: this.name,
+      connection_id: connection.id,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 
@@ -68,7 +92,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
     const raw = typeof message === "string" ? message : new TextDecoder().decode(message);
     const parsed = parseWsClientMessage(raw);
     if (!parsed) {
-      this.send(connection, {
+      this.safeSend(connection, {
         type: "error",
         code: "invalid_message",
         message: "Mensaje WS no reconocido",
@@ -77,7 +101,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
     }
 
     if (parsed.type === "ping") {
-      this.send(connection, { type: "pong" });
+      this.safeSend(connection, { type: "pong" });
       return;
     }
 
@@ -88,7 +112,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
     if (parsed.type === "resume") {
       const threadId = parseThreadId(this.state.threadId);
       if (!threadId) {
-        this.send(connection, {
+        this.safeSend(connection, {
           type: "error",
           code: "no_thread",
           message: "No hay hilo activo para reanudar",
@@ -105,7 +129,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
           sessionId,
         });
         const reply = extractLastAiReply(result);
-        this.send(connection, {
+        this.safeSend(connection, {
           type: "reply",
           text: reply,
           thread_id: threadId,
@@ -116,7 +140,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
       } catch (e: unknown) {
         if (isGraphInterruptError(e)) {
           const err = e as { value?: unknown };
-          this.send(connection, {
+          this.safeSend(connection, {
             type: "hitl_pending",
             thread_id: threadId,
             interrupt: err.value ?? null,
@@ -124,7 +148,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
           return;
         }
         console.error("[WebSessionAgent] resume error:", e);
-        this.send(connection, {
+        this.safeSend(connection, {
           type: "error",
           code: "internal_error",
           message: "Error al reanudar el grafo",
@@ -144,7 +168,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
         sessionId,
       });
       const reply = extractLastAiReply(result);
-      this.send(connection, {
+      this.safeSend(connection, {
         type: "reply",
         text: reply,
         thread_id: threadId,
@@ -155,7 +179,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
     } catch (e: unknown) {
       if (isGraphInterruptError(e)) {
         const err = e as { value?: unknown };
-        this.send(connection, {
+        this.safeSend(connection, {
           type: "hitl_pending",
           thread_id: threadId,
           interrupt: err.value ?? null,
@@ -163,7 +187,7 @@ export class WebSessionAgent extends Agent<Env, WebSessionAgentState> {
         return;
       }
       console.error("[WebSessionAgent] chat error:", e);
-      this.send(connection, {
+      this.safeSend(connection, {
         type: "error",
         code: "internal_error",
         message: "Error al ejecutar el grafo",
