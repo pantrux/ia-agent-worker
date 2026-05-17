@@ -1,3 +1,4 @@
+import { AIMessage } from "@langchain/core/messages";
 import { describe, expect, it } from "vitest";
 import {
   extractGraphInterruptValue,
@@ -41,12 +42,16 @@ describe("throwIfGraphInterrupted", () => {
     }
   });
 
-  it("sintetiza HITL cuando intent delete_customer sin tool call", () => {
+  it("lanza si hay tool call crítico sin ToolMessage", () => {
     expect(() =>
-      throwIfGraphInterrupted(
-        { intent: "delete_customer", messages: [] },
-        { userText: "Elimina el cliente cust-001 del CRM" }
-      )
+      throwIfGraphInterrupted({
+        messages: [
+          new AIMessage({
+            content: "",
+            tool_calls: [{ id: "tc1", name: "delete_customer_record", args: { customer_id: "cust-001" } }],
+          }),
+        ],
+      })
     ).toThrowError("GraphInterrupt");
   });
 

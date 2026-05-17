@@ -6,8 +6,12 @@ import type { ChatLangSmithOperation } from "./chat-queue-payload.js";
 import { buildChatLangSmithMetadata, buildChatLangSmithTags } from "./chat-queue-payload.js";
 import {
   findUnresolvedCriticalToolApproval,
-  synthesizeHitlForDeleteIntent,
+  readSyntheticHitlPending,
+  resolveSyntheticDeleteHitl,
+  SYNTHETIC_HITL_PENDING_KEY,
 } from "./hitl-pending.js";
+import { executeSyntheticHitlResume, snapshotHasPendingInterrupt } from "./hitl-synthetic-resume.js";
+import type { GraphState } from "./state.js";
 
 let langSmithEnvWarned = false;
 
@@ -63,18 +67,42 @@ function throwGraphInterruptValue(value: unknown): void {
   throw err;
 }
 
-export function throwIfGraphInterrupted(
-  result: unknown,
-  opts?: { userText?: string }
-): void {
+export function throwIfGraphInterrupted(result: unknown): void {
   if (hasGraphInterrupt(result)) {
     throwGraphInterruptValue(extractGraphInterruptValue(result));
     return;
   }
-  const pending =
-    findUnresolvedCriticalToolApproval(result) ??
-    (opts?.userText ? synthesizeHitlForDeleteIntent(result, opts.userText) : undefined);
+  const pending = findUnresolvedCriticalToolApproval(result);
   if (pending !== undefined) throwGraphInterruptValue(pending);
+}
+
+async function exposePendingHitl(
+  env: Env,
+  graph: ReturnType<typeof buildGraph>,
+  config: ReturnType<typeof buildGraphInvokeConfig>,
+  result: unknown,
+  userText?: string
+): Promise<void> {
+  if (hasGraphInterrupt(result)) {
+    throwGraphInterruptValue(extractGraphInterruptValue(result));
+    return;
+  }
+  const unresolved = findUnresolvedCriticalToolApproval(result);
+  if (unresolved) {
+    throwGraphInterruptValue(unresolved);
+    return;
+  }
+  if (!userText) return;
+
+  const synthetic = await resolveSyntheticDeleteHitl(env, result, userText);
+  if (!synthetic) return;
+
+  const toolState = {
+    ...((result as { toolState?: Record<string, unknown> }).toolState ?? {}),
+    [SYNTHETIC_HITL_PENDING_KEY]: synthetic,
+  };
+  await graph.updateState(config, { toolState });
+  throwGraphInterruptValue(synthetic);
 }
 
 export type ChatGraphInvokeResult = Awaited<ReturnType<ReturnType<typeof buildGraph>["invoke"]>>;
@@ -122,7 +150,7 @@ export async function runChatMessageGraph(
   const graph = buildGraph(env);
   const config = buildGraphInvokeConfig(env, params);
   const result = await graph.invoke({ messages: [new HumanMessage(params.text)] }, config);
-  throwIfGraphInterrupted(result, { userText: params.text });
+  await exposePendingHitl(env, graph, config, result, params.text);
   return result;
 }
 
@@ -140,6 +168,14 @@ export async function runChatResumeGraph(
   configureLangSmithEnv(env);
   const graph = buildGraph(env);
   const config = buildGraphInvokeConfig(env, params);
+  const snapshot = await graph.getState(config);
+  const stateValues = snapshot.values as GraphState;
+  const synthetic = readSyntheticHitlPending(stateValues.toolState);
+
+  if (synthetic && !snapshotHasPendingInterrupt(snapshot)) {
+    return executeSyntheticHitlResume(env, graph, config, { approved: params.approved }, synthetic, stateValues);
+  }
+
   const result = await graph.invoke(new Command({ resume: { approved: params.approved } }), config);
   throwIfGraphInterrupted(result);
   return result;

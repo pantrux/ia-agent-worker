@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Industry } from "../state.js";
 import type { CrmDatabase } from "../db/crm-db.js";
 
-function createCrmTools(db: CrmDatabase) {
+export function createCrmTools(db: CrmDatabase) {
   const findCustomerByName = tool(
     async ({ name }) => {
       const result = await db
