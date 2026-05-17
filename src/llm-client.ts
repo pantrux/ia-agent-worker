@@ -4,7 +4,7 @@ import { getCopilotToken } from "./copilot-token.js";
 import { resolveAiGatewayLlmConfig } from "./ai-gateway.js";
 
 /** Por defecto: Copilot Enterprise usa el id corto del catálogo Copilot. */
-export const DEFAULT_COPILOT_MODEL = "gpt-5.4-mini";
+export const DEFAULT_COPILOT_MODEL = "gpt-5-mini";
 
 /**
  * Si la base es inferencia GitHub Models, el cuerpo `model` debe ser `{publisher}/{nombre}`.
