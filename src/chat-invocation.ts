@@ -12,6 +12,12 @@ import {
 } from "./hitl-pending.js";
 import { executeSyntheticHitlResume, snapshotHasPendingInterrupt } from "./hitl-synthetic-resume.js";
 import type { GraphState } from "./state.js";
+import {
+  CHAT_WS_REPLY_RESET_KEY,
+  CHAT_WS_TOKEN_DELTA_KEY,
+  type ChatWsReplyResetHandler,
+  type ChatWsTokenDeltaHandler,
+} from "./chat-ws-stream.js";
 
 let langSmithEnvWarned = false;
 
@@ -144,11 +150,21 @@ export async function runChatMessageGraph(
     userId: string;
     operation: ChatLangSmithOperation;
     sessionId?: string;
+    /** Solo canal web/WS: emite deltas token a token hacia el cliente (PAN-33). */
+    onTokenDelta?: ChatWsTokenDeltaHandler;
+    /** Solo canal web/WS: limpia buffer incremental antes de cada invocación del modelo. */
+    onReplyReset?: ChatWsReplyResetHandler;
   }
 ): Promise<ChatGraphInvokeResult> {
   configureLangSmithEnv(env);
   const graph = buildGraph(env);
   const config = buildGraphInvokeConfig(env, params);
+  if (params.onTokenDelta) {
+    config.configurable[CHAT_WS_TOKEN_DELTA_KEY] = params.onTokenDelta;
+  }
+  if (params.onReplyReset) {
+    config.configurable[CHAT_WS_REPLY_RESET_KEY] = params.onReplyReset;
+  }
   const result = await graph.invoke({ messages: [new HumanMessage(params.text)] }, config);
   await exposePendingHitl(env, graph, config, result, params.text);
   return result;

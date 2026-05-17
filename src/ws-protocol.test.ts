@@ -25,6 +25,30 @@ describe("ws-protocol", () => {
     expect(JSON.parse(s)).toEqual({ type: "ready", session_id: "s1", thread_id: null });
   });
 
+  it("serializes reply_reset", () => {
+    const s = serializeWsServerMessage({
+      type: "reply_reset",
+      thread_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    });
+    expect(JSON.parse(s)).toEqual({
+      type: "reply_reset",
+      thread_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    });
+  });
+
+  it("serializes reply_delta", () => {
+    const s = serializeWsServerMessage({
+      type: "reply_delta",
+      delta: "Hola",
+      thread_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    });
+    expect(JSON.parse(s)).toEqual({
+      type: "reply_delta",
+      delta: "Hola",
+      thread_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    });
+  });
+
   it("serializes hitl_pending", () => {
     const interrupt = { kind: "tool_approval", tool: "delete_customer_record" };
     const s = serializeWsServerMessage({

@@ -1,6 +1,7 @@
 import { AIMessage, type BaseMessage } from "@langchain/core/messages";
 import type { StructuredToolInterface } from "@langchain/core/tools";
 import type { Env } from "./env.js";
+import type { ChatWsTokenDeltaHandler } from "./chat-ws-stream.js";
 import { getCopilotToken } from "./copilot-token.js";
 import { resolveAiGatewayLlmConfig } from "./ai-gateway.js";
 import {
@@ -178,11 +179,77 @@ function outputToAIMessage(payload: Record<string, unknown>): AIMessage {
   });
 }
 
+function parseResponsesSseChunk(
+  block: string,
+  onDelta?: ChatWsTokenDeltaHandler
+): Record<string, unknown> | null {
+  const lines = block.split("\n");
+  const dataLines: string[] = [];
+  for (const line of lines) {
+    if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trim());
+    }
+  }
+  const dataLine = dataLines.join("\n");
+  if (!dataLine || dataLine === "[DONE]") return null;
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(dataLine) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const eventType = typeof payload.type === "string" ? payload.type : "";
+  if (eventType === "response.output_text.delta") {
+    const delta = typeof payload.delta === "string" ? payload.delta : "";
+    if (delta && onDelta) onDelta(delta);
+  }
+  return payload;
+}
+
+async function readResponsesSseStream(
+  body: ReadableStream<Uint8Array>,
+  onDelta?: ChatWsTokenDeltaHandler
+): Promise<Record<string, unknown> | null> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let completed: Record<string, unknown> | null = null;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() ?? "";
+      for (const part of parts) {
+        const payload = parseResponsesSseChunk(part, onDelta);
+        if (!payload) continue;
+        if (payload.type === "response.completed" && payload.response && typeof payload.response === "object") {
+          completed = payload.response as Record<string, unknown>;
+        }
+      }
+    }
+
+    if (buffer.trim()) {
+      const payload = parseResponsesSseChunk(buffer, onDelta);
+      if (payload?.type === "response.completed" && payload.response && typeof payload.response === "object") {
+        completed = payload.response as Record<string, unknown>;
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return completed;
+}
+
 export async function invokeResponsesIfRequired(
   env: Env,
   messages: BaseMessage[],
   tools: StructuredToolInterface[] = [],
-  model?: string
+  model?: string,
+  onTokenDelta?: ChatWsTokenDeltaHandler
 ): Promise<AIMessage | null> {
   const upstreamRaw = await getCopilotToken(env.COPILOT_GITHUB_TOKEN, env.OPENAI_API_BASE);
   const upstream = {
@@ -207,7 +274,7 @@ export async function invokeResponsesIfRequired(
   const body: Record<string, unknown> = {
     model: cfg.model,
     input: toResponsesInput(messages),
-    stream: false,
+    stream: Boolean(onTokenDelta),
   };
   if (tools.length) {
     body.tools = toResponsesTools(tools);
@@ -218,10 +285,18 @@ export async function invokeResponsesIfRequired(
     headers,
     body: JSON.stringify(body),
   });
-  const text = await response.text();
   if (!response.ok) {
+    const text = await response.text();
     throw new Error(`Copilot Responses API failed (${response.status} ${response.statusText}): ${text.slice(0, 500)}`);
   }
+
+  if (onTokenDelta && response.body) {
+    const completed = await readResponsesSseStream(response.body, onTokenDelta);
+    if (completed) return outputToAIMessage(completed);
+    throw new Error("Copilot Responses API stream ended without response.completed");
+  }
+
+  const text = await response.text();
   let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(text) as Record<string, unknown>;

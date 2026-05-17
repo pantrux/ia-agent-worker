@@ -187,6 +187,31 @@ describe("dispatchWebSessionWsMessage (PAN-32)", () => {
     ]);
   });
 
+  it("chat: emite reply_delta cuando el grafo hace streaming (PAN-33)", async () => {
+    runChatMessageGraph.mockImplementation(async (_env, params) => {
+      params.onReplyReset?.();
+      params.onTokenDelta?.("Hel");
+      params.onTokenDelta?.("lo");
+      return graphReply("Hello");
+    });
+
+    await dispatchWebSessionWsMessage(deps(), { type: "chat", text: "hola" });
+
+    expect(sent).toEqual([
+      { type: "reply_reset", thread_id: THREAD_ID },
+      { type: "reply_delta", delta: "Hel", thread_id: THREAD_ID },
+      { type: "reply_delta", delta: "lo", thread_id: THREAD_ID },
+      {
+        type: "reply",
+        text: "Hello",
+        thread_id: THREAD_ID,
+        industry: "retail",
+        intent: "lookup_order",
+        tool_state: { ok: true },
+      },
+    ]);
+  });
+
   it("chat asigna thread_id en estado si aún no existía", async () => {
     state = { threadId: "", userId: "anon" };
     runChatMessageGraph.mockImplementation(async (_env, params) => {
