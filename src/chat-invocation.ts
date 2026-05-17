@@ -36,10 +36,15 @@ export function isGraphInterruptError(e: unknown): boolean {
  * `result.__interrupt__` (no siempre lanza). Sin esta comprobación, HTTP/WS devuelven
  * `reply` vacío en lugar de `pending_approval` / `hitl_pending`.
  */
-export function extractGraphInterruptValue(result: unknown): unknown | undefined {
-  if (!result || typeof result !== "object") return undefined;
+export function hasGraphInterrupt(result: unknown): boolean {
+  if (!result || typeof result !== "object") return false;
   const interrupts = (result as { __interrupt__?: unknown }).__interrupt__;
-  if (!Array.isArray(interrupts) || interrupts.length === 0) return undefined;
+  return Array.isArray(interrupts) && interrupts.length > 0;
+}
+
+export function extractGraphInterruptValue(result: unknown): unknown | undefined {
+  if (!hasGraphInterrupt(result)) return undefined;
+  const interrupts = (result as { __interrupt__: unknown[] }).__interrupt__;
   const last = interrupts[interrupts.length - 1];
   if (last && typeof last === "object" && "value" in last) {
     return (last as { value: unknown }).value;
@@ -48,8 +53,8 @@ export function extractGraphInterruptValue(result: unknown): unknown | undefined
 }
 
 export function throwIfGraphInterrupted(result: unknown): void {
+  if (!hasGraphInterrupt(result)) return;
   const value = extractGraphInterruptValue(result);
-  if (value === undefined) return;
   const err = new Error("GraphInterrupt") as Error & { name: string; value: unknown };
   err.name = "GraphInterrupt";
   err.value = value;
