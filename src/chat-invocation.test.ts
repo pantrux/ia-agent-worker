@@ -41,6 +41,15 @@ describe("throwIfGraphInterrupted", () => {
     }
   });
 
+  it("sintetiza HITL cuando intent delete_customer sin tool call", () => {
+    expect(() =>
+      throwIfGraphInterrupted(
+        { intent: "delete_customer", messages: [] },
+        { userText: "Elimina el cliente cust-001 del CRM" }
+      )
+    ).toThrowError("GraphInterrupt");
+  });
+
   it("lanza error compatible con isGraphInterruptError", () => {
     const interrupt = { kind: "tool_approval", tool: "delete_customer_record", args: {} };
     expect(() =>
