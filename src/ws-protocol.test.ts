@@ -24,4 +24,18 @@ describe("ws-protocol", () => {
     });
     expect(JSON.parse(s)).toEqual({ type: "ready", session_id: "s1", thread_id: null });
   });
+
+  it("serializes hitl_pending", () => {
+    const interrupt = { kind: "tool_approval", tool: "delete_customer_record" };
+    const s = serializeWsServerMessage({
+      type: "hitl_pending",
+      thread_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      interrupt,
+    });
+    expect(JSON.parse(s)).toEqual({
+      type: "hitl_pending",
+      thread_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      interrupt,
+    });
+  });
 });
