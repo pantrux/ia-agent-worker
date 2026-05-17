@@ -4,6 +4,10 @@ import type { Env } from "./env.js";
 import { buildGraph } from "./graph.js";
 import type { ChatLangSmithOperation } from "./chat-queue-payload.js";
 import { buildChatLangSmithMetadata, buildChatLangSmithTags } from "./chat-queue-payload.js";
+import {
+  findUnresolvedCriticalToolApproval,
+  synthesizeHitlForDeleteIntent,
+} from "./hitl-pending.js";
 
 let langSmithEnvWarned = false;
 
@@ -52,13 +56,25 @@ export function extractGraphInterruptValue(result: unknown): unknown | undefined
   return last;
 }
 
-export function throwIfGraphInterrupted(result: unknown): void {
-  if (!hasGraphInterrupt(result)) return;
-  const value = extractGraphInterruptValue(result);
+function throwGraphInterruptValue(value: unknown): void {
   const err = new Error("GraphInterrupt") as Error & { name: string; value: unknown };
   err.name = "GraphInterrupt";
   err.value = value;
   throw err;
+}
+
+export function throwIfGraphInterrupted(
+  result: unknown,
+  opts?: { userText?: string }
+): void {
+  if (hasGraphInterrupt(result)) {
+    throwGraphInterruptValue(extractGraphInterruptValue(result));
+    return;
+  }
+  const pending =
+    findUnresolvedCriticalToolApproval(result) ??
+    (opts?.userText ? synthesizeHitlForDeleteIntent(result, opts.userText) : undefined);
+  if (pending !== undefined) throwGraphInterruptValue(pending);
 }
 
 export type ChatGraphInvokeResult = Awaited<ReturnType<ReturnType<typeof buildGraph>["invoke"]>>;
@@ -106,7 +122,7 @@ export async function runChatMessageGraph(
   const graph = buildGraph(env);
   const config = buildGraphInvokeConfig(env, params);
   const result = await graph.invoke({ messages: [new HumanMessage(params.text)] }, config);
-  throwIfGraphInterrupted(result);
+  throwIfGraphInterrupted(result, { userText: params.text });
   return result;
 }
 
