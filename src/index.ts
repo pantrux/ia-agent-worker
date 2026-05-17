@@ -27,6 +27,7 @@ import {
   putPendingTelegramDelivery,
 } from "./chat-pending-delivery.js";
 import { getTelegramThreadId, putTelegramThreadId } from "./chat-thread-kv.js";
+import { classifyChatGraphError } from "./chat-graph-error.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
@@ -59,9 +60,14 @@ function jsonResponse(data: unknown, status: number, request: Request, env: Env)
   return new Response(JSON.stringify(data), { status, headers });
 }
 
-/** Cuerpo JSON para 500 en chat/resume; `detail`/`stack` solo si `EXPOSE_CHAT_ERROR` está activo (no usar en prod pública). */
-function chatInternalErrorBody(env: Env, e: unknown): Record<string, unknown> {
-  const body: Record<string, unknown> = { error: "Internal server error" };
+/** Cuerpo JSON para errores en chat/resume; `detail`/`stack` solo si `EXPOSE_CHAT_ERROR` está activo (no usar en prod pública). */
+function chatInternalErrorBody(
+  env: Env,
+  e: unknown,
+  context: "chat" | "resume" = "chat"
+): Record<string, unknown> {
+  const classified = classifyChatGraphError(e, context);
+  const body: Record<string, unknown> = { error: classified.message, code: classified.code };
   const expose =
     env.EXPOSE_CHAT_ERROR === "true" ||
     env.EXPOSE_CHAT_ERROR === "1" ||
@@ -451,8 +457,9 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
       );
     }
     console.error("Chat error:", e);
-    const errCode = e instanceof Error ? e.name : "internal_error";
-    return finish(jsonResponse(chatInternalErrorBody(env, e), 500, request, env), threadId, errCode);
+    const classified = classifyChatGraphError(e, "chat");
+    const status = classified.code === "rate_limited" ? 503 : 500;
+    return finish(jsonResponse(chatInternalErrorBody(env, e, "chat"), status, request, env), threadId, classified.code);
   }
 }
 
@@ -534,7 +541,8 @@ async function handleResume(request: Request, env: Env): Promise<Response> {
       );
     }
     console.error("Resume error:", e);
-    const errCode = e instanceof Error ? e.name : "internal_error";
-    return finish(jsonResponse(chatInternalErrorBody(env, e), 500, request, env), threadId, errCode);
+    const classified = classifyChatGraphError(e, "resume");
+    const status = classified.code === "rate_limited" ? 503 : 500;
+    return finish(jsonResponse(chatInternalErrorBody(env, e, "resume"), status, request, env), threadId, classified.code);
   }
 }
