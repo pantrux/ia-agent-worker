@@ -2,6 +2,7 @@ import { AIMessage, type BaseMessage } from "@langchain/core/messages";
 import type { StructuredToolInterface } from "@langchain/core/tools";
 import type { Env } from "./env.js";
 import type { ChatWsTokenDeltaHandler } from "./chat-ws-stream.js";
+import { wsStreamPauseMs } from "./ws-stream-pace.js";
 import { getCopilotToken } from "./copilot-token.js";
 import { resolveAiGatewayLlmConfig } from "./ai-gateway.js";
 import {
@@ -199,20 +200,21 @@ function extractResponsesStreamDelta(payload: Record<string, unknown>, eventType
 export async function emitStreamedTextDeltas(
   text: string,
   onDelta: ChatWsTokenDeltaHandler,
-  chunkSize = 32
+  chunkSize = 24,
+  pauseMs = 20
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
   for (let i = 0; i < trimmed.length; i += chunkSize) {
-    onDelta(trimmed.slice(i, i + chunkSize));
-    await Promise.resolve();
+    await onDelta(trimmed.slice(i, i + chunkSize));
+    await wsStreamPauseMs(pauseMs);
   }
 }
 
-function parseResponsesSseChunk(
+async function parseResponsesSseChunk(
   block: string,
   onDelta?: ChatWsTokenDeltaHandler
-): Record<string, unknown> | null {
+): Promise<Record<string, unknown> | null> {
   const lines = block.split("\n");
   const dataLines: string[] = [];
   let eventType = "";
@@ -235,7 +237,7 @@ function parseResponsesSseChunk(
   }
   const type = typeof payload.type === "string" ? payload.type : eventType;
   const delta = extractResponsesStreamDelta(payload, type);
-  if (delta && onDelta) onDelta(delta);
+  if (delta && onDelta) await onDelta(delta);
   return payload;
 }
 
@@ -249,10 +251,10 @@ async function readResponsesSseStream(
   let completed: Record<string, unknown> | null = null;
   let deltaCount = 0;
   const trackDelta = onDelta
-    ? (delta: string) => {
+    ? async (delta: string) => {
         if (!delta) return;
         deltaCount += 1;
-        onDelta(delta);
+        await onDelta(delta);
       }
     : undefined;
 
@@ -264,7 +266,7 @@ async function readResponsesSseStream(
       const parts = buffer.split("\n\n");
       buffer = parts.pop() ?? "";
       for (const part of parts) {
-        const payload = parseResponsesSseChunk(part, trackDelta);
+        const payload = await parseResponsesSseChunk(part, trackDelta);
         if (!payload) continue;
         if (payload.type === "response.completed" && payload.response && typeof payload.response === "object") {
           completed = payload.response as Record<string, unknown>;
@@ -273,7 +275,7 @@ async function readResponsesSseStream(
     }
 
     if (buffer.trim()) {
-      const payload = parseResponsesSseChunk(buffer, trackDelta);
+      const payload = await parseResponsesSseChunk(buffer, trackDelta);
       if (payload?.type === "response.completed" && payload.response && typeof payload.response === "object") {
         completed = payload.response as Record<string, unknown>;
       }

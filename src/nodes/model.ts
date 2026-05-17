@@ -73,7 +73,7 @@ export function createModelNode(env: Env) {
       let gathered: AIMessageChunk | undefined;
       for await (const chunk of stream) {
         const delta = textDeltaFromMessageContent(chunk.content);
-        if (delta) onTokenDelta(delta);
+        if (delta) await onTokenDelta(delta);
         gathered = gathered ? gathered.concat(chunk) : chunk;
       }
       if (!gathered) {
