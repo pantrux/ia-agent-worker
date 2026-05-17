@@ -2,7 +2,7 @@
 /**
  * Instala reglas y skills globales de Cursor desde este repositorio.
  * Destino reglas: ~/.cursor/rules/
- * Destino skills:  ~/.agents/skills/
+ * Destino skills:  ~/.agents/skills/ y ~/.cursor/skills/ (ecosistema npx skills + Cursor nativo)
  */
 import { copyFileSync, cpSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -22,10 +22,15 @@ const GLOBAL_SKILLS = ["ci-cd-documentation-standard"];
 const rulesSourceDir = join(repoRoot, ".cursor", "rules");
 const rulesTargetDir = join(homedir(), ".cursor", "rules");
 const skillsSourceDir = join(repoRoot, ".cursor", "skills");
-const skillsTargetDir = join(homedir(), ".agents", "skills");
+const skillsTargetDirs = [
+  join(homedir(), ".agents", "skills"),
+  join(homedir(), ".cursor", "skills"),
+];
 
 mkdirSync(rulesTargetDir, { recursive: true });
-mkdirSync(skillsTargetDir, { recursive: true });
+for (const dir of skillsTargetDirs) {
+  mkdirSync(dir, { recursive: true });
+}
 
 for (const file of GLOBAL_RULES) {
   const source = join(rulesSourceDir, file);
@@ -43,16 +48,18 @@ for (const file of GLOBAL_RULES) {
 
 for (const skillName of GLOBAL_SKILLS) {
   const source = join(skillsSourceDir, skillName);
-  const target = join(skillsTargetDir, skillName);
   if (!existsSync(source)) {
     console.error(`No se encontró la skill fuente: ${source}`);
     process.exit(1);
   }
-  if (existsSync(target)) {
-    console.warn(`Aviso: se sobreescribirá la skill global: ${target}`);
+  for (const skillsTargetDir of skillsTargetDirs) {
+    const target = join(skillsTargetDir, skillName);
+    if (existsSync(target)) {
+      console.warn(`Aviso: se sobreescribirá la skill global: ${target}`);
+    }
+    cpSync(source, target, { recursive: true });
+    console.log(`Skill global instalada: ${target}`);
   }
-  cpSync(source, target, { recursive: true });
-  console.log(`Skill global instalada: ${target}`);
 }
 
 console.log("\nListo. Reglas activas en todos los proyectos vía ~/.cursor/rules/.");

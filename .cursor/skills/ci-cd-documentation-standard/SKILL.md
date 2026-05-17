@@ -138,7 +138,7 @@ Usar skill `runbook` para formato. Ubicación: `docs/ci/runbooks/<nombre>.md`.
 
 **Plantilla:**
 
-```markdown
+````markdown
 # Runbook: [fallo típico]
 
 **Owner:** [equipo] | **Última revisión:** YYYY-MM-DD | **Severidad si no se mitiga:** …
@@ -154,7 +154,7 @@ Usar skill `runbook` para formato. Ubicación: `docs/ci/runbooks/<nombre>.md`.
 ## Logs y dashboards
 - …
 ## Escalado
-```
+````
 
 Cubrir al menos: migración DB fallida, timeout de deploy, tests flaky, secretos/vars de CI.
 

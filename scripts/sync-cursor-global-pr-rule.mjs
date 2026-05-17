@@ -8,4 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const script = join(dirname(fileURLToPath(import.meta.url)), "sync-cursor-global-rules.mjs");
 const result = spawnSync(process.execPath, [script], { stdio: "inherit" });
+if (result.error) {
+  console.error("Error al lanzar sync-cursor-global-rules.mjs:", result.error.message);
+}
 process.exit(result.status ?? 1);
