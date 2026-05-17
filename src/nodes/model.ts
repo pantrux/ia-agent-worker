@@ -2,7 +2,11 @@ import { AIMessage, AIMessageChunk, SystemMessage } from "@langchain/core/messag
 import type { RunnableConfig } from "@langchain/core/runnables";
 import type { GraphState } from "../state.js";
 import type { Env } from "../env.js";
-import { readChatWsTokenDeltaHandler, textDeltaFromMessageContent } from "../chat-ws-stream.js";
+import {
+  readChatWsReplyResetHandler,
+  readChatWsTokenDeltaHandler,
+  textDeltaFromMessageContent,
+} from "../chat-ws-stream.js";
 import { getToolsForIndustry } from "../tools/crm.js";
 import {
   createChatOpenAI,
@@ -21,6 +25,7 @@ async function createLLM(env: Env, model?: string) {
 export function createModelNode(env: Env) {
   return async (state: GraphState, config?: RunnableConfig): Promise<Partial<GraphState>> => {
     const onTokenDelta = readChatWsTokenDeltaHandler(config);
+    const onReplyReset = readChatWsReplyResetHandler(config);
     const industry = state.industry;
     const intent = state.intent;
     const tools = getToolsForIndustry(industry, env.DB);
@@ -40,6 +45,7 @@ export function createModelNode(env: Env) {
     const rawModel = env.COPILOT_MODEL?.trim() || DEFAULT_MODEL;
     const baseForNormalize = env.OPENAI_API_BASE?.trim() || "";
     const usedModel = normalizeModelIdForGithubModelsInference(baseForNormalize, rawModel);
+    if (onTokenDelta) onReplyReset?.();
     const responsesResult = await invokeResponsesIfRequired(
       env,
       [systemMsg, ...state.messages],

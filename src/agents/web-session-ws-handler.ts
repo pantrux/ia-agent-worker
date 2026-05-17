@@ -105,6 +105,9 @@ export async function dispatchWebSessionWsMessage(
       userId,
       operation: "ws_chat",
       sessionId,
+      onReplyReset: () => {
+        deps.send({ type: "reply_reset", thread_id: threadId });
+      },
       onTokenDelta: (delta) => {
         if (!delta) return;
         deps.send({ type: "reply_delta", delta, thread_id: threadId });

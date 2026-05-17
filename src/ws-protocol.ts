@@ -28,6 +28,12 @@ export type WsServerReady = {
   thread_id: string | null;
 };
 
+/** Reinicia el buffer de texto incremental en el cliente (p. ej. reintento tras validación). */
+export type WsServerReplyReset = {
+  type: "reply_reset";
+  thread_id: string;
+};
+
 /** Fragmento incremental de la respuesta del asistente (PAN-33 / streaming WS). */
 export type WsServerReplyDelta = {
   type: "reply_delta";
@@ -60,6 +66,7 @@ export type WsServerError = {
 
 export type WsServerMessage =
   | WsServerReady
+  | WsServerReplyReset
   | WsServerReplyDelta
   | WsServerReply
   | WsServerHitlPending

@@ -184,12 +184,13 @@ function parseResponsesSseChunk(
   onDelta?: ChatWsTokenDeltaHandler
 ): Record<string, unknown> | null {
   const lines = block.split("\n");
-  let dataLine = "";
+  const dataLines: string[] = [];
   for (const line of lines) {
     if (line.startsWith("data:")) {
-      dataLine = line.slice(5).trim();
+      dataLines.push(line.slice(5).trim());
     }
   }
+  const dataLine = dataLines.join("\n");
   if (!dataLine || dataLine === "[DONE]") return null;
   let payload: Record<string, unknown>;
   try {
@@ -214,26 +215,30 @@ async function readResponsesSseStream(
   let buffer = "";
   let completed: Record<string, unknown> | null = null;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() ?? "";
-    for (const part of parts) {
-      const payload = parseResponsesSseChunk(part, onDelta);
-      if (!payload) continue;
-      if (payload.type === "response.completed" && payload.response && typeof payload.response === "object") {
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() ?? "";
+      for (const part of parts) {
+        const payload = parseResponsesSseChunk(part, onDelta);
+        if (!payload) continue;
+        if (payload.type === "response.completed" && payload.response && typeof payload.response === "object") {
+          completed = payload.response as Record<string, unknown>;
+        }
+      }
+    }
+
+    if (buffer.trim()) {
+      const payload = parseResponsesSseChunk(buffer, onDelta);
+      if (payload?.type === "response.completed" && payload.response && typeof payload.response === "object") {
         completed = payload.response as Record<string, unknown>;
       }
     }
-  }
-
-  if (buffer.trim()) {
-    const payload = parseResponsesSseChunk(buffer, onDelta);
-    if (payload?.type === "response.completed" && payload.response && typeof payload.response === "object") {
-      completed = payload.response as Record<string, unknown>;
-    }
+  } finally {
+    reader.releaseLock();
   }
 
   return completed;
@@ -288,7 +293,7 @@ export async function invokeResponsesIfRequired(
   if (onTokenDelta && response.body) {
     const completed = await readResponsesSseStream(response.body, onTokenDelta);
     if (completed) return outputToAIMessage(completed);
-    return new AIMessage({ content: "" });
+    throw new Error("Copilot Responses API stream ended without response.completed");
   }
 
   const text = await response.text();

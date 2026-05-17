@@ -189,6 +189,7 @@ describe("dispatchWebSessionWsMessage (PAN-32)", () => {
 
   it("chat: emite reply_delta cuando el grafo hace streaming (PAN-33)", async () => {
     runChatMessageGraph.mockImplementation(async (_env, params) => {
+      params.onReplyReset?.();
       params.onTokenDelta?.("Hel");
       params.onTokenDelta?.("lo");
       return graphReply("Hello");
@@ -197,6 +198,7 @@ describe("dispatchWebSessionWsMessage (PAN-32)", () => {
     await dispatchWebSessionWsMessage(deps(), { type: "chat", text: "hola" });
 
     expect(sent).toEqual([
+      { type: "reply_reset", thread_id: THREAD_ID },
       { type: "reply_delta", delta: "Hel", thread_id: THREAD_ID },
       { type: "reply_delta", delta: "lo", thread_id: THREAD_ID },
       {
