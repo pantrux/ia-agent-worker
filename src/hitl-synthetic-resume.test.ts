@@ -1,3 +1,4 @@
+import { HumanMessage } from "@langchain/core/messages";
 import { describe, expect, it, vi } from "vitest";
 import type { Env } from "./env.js";
 import { executeSyntheticHitlResume, snapshotHasPendingInterrupt } from "./hitl-synthetic-resume.js";
@@ -21,16 +22,6 @@ describe("snapshotHasPendingInterrupt", () => {
 });
 
 describe("executeSyntheticHitlResume", () => {
-  const baseState: GraphState = {
-    messages: [],
-    industry: "retail",
-    intent: "delete_customer",
-    toolState: { synthetic_hitl_pending: { synthetic: true } },
-    validationPass: false,
-    policyFeedback: "",
-    retryCount: 0,
-  };
-
   const pending = {
     kind: "tool_approval" as const,
     synthetic: true,
@@ -39,7 +30,17 @@ describe("executeSyntheticHitlResume", () => {
     tool_call_id: "pending-delete-cust-001",
   };
 
-  it("aprobado ejecuta delete_customer_record y responde en español", async () => {
+  const baseState: GraphState = {
+    messages: [new HumanMessage("Elimina cust-001")],
+    industry: "retail",
+    intent: "delete_customer",
+    toolState: { synthetic_hitl_pending: { synthetic: true } },
+    validationPass: false,
+    policyFeedback: "",
+    retryCount: 0,
+  };
+
+  it("aprobado ejecuta delete, persiste Tool+AI y conserva historial", async () => {
     deleteInvoke.mockResolvedValueOnce(JSON.stringify({ ok: true, deleted_id: "cust-001" }));
     const updateState = vi.fn().mockResolvedValue(undefined);
     const graph = { updateState };
@@ -54,14 +55,15 @@ describe("executeSyntheticHitlResume", () => {
     );
 
     expect(deleteInvoke).toHaveBeenCalledWith({ customer_id: "cust-001" });
-    expect(updateState).toHaveBeenCalled();
+    expect(updateState).toHaveBeenCalledTimes(2);
+    const lastPersist = updateState.mock.calls[1][1];
+    expect(lastPersist.messages).toHaveLength(2);
+    expect(result.messages).toHaveLength(3);
     expect(result.toolState?.synthetic_hitl_pending).toBeUndefined();
-    const last = result.messages[result.messages.length - 1];
-    expect(String(last.content)).toContain("cust-001");
-    expect(String(last.content)).toContain("eliminado");
+    expect(String(result.messages[2].content)).toContain("eliminado");
   });
 
-  it("denegado no llama a delete y devuelve mensaje de rechazo", async () => {
+  it("denegado no llama a delete y persiste Tool+AI", async () => {
     deleteInvoke.mockClear();
     const updateState = vi.fn().mockResolvedValue(undefined);
     const graph = { updateState };
@@ -76,7 +78,42 @@ describe("executeSyntheticHitlResume", () => {
     );
 
     expect(deleteInvoke).not.toHaveBeenCalled();
-    const last = result.messages[result.messages.length - 1];
-    expect(String(last.content)).toMatch(/denegad/i);
+    const lastPersist = updateState.mock.calls[1][1];
+    expect(lastPersist.messages).toHaveLength(2);
+    expect(String(result.messages[result.messages.length - 1].content)).toMatch(/denegad/i);
+  });
+
+  it("sin customer_id no invoca delete", async () => {
+    deleteInvoke.mockClear();
+    const updateState = vi.fn().mockResolvedValue(undefined);
+    const graph = { updateState };
+
+    await executeSyntheticHitlResume(
+      { DB: {} } as Env,
+      graph,
+      {},
+      { approved: true },
+      { ...pending, args: {} },
+      baseState
+    );
+
+    expect(deleteInvoke).not.toHaveBeenCalled();
+  });
+
+  it("error de CRM devuelve mensaje en español", async () => {
+    deleteInvoke.mockRejectedValueOnce(new Error("DB timeout"));
+    const updateState = vi.fn().mockResolvedValue(undefined);
+    const graph = { updateState };
+
+    const result = await executeSyntheticHitlResume(
+      { DB: {} } as Env,
+      graph,
+      {},
+      { approved: true },
+      pending,
+      baseState
+    );
+
+    expect(String(result.messages[result.messages.length - 1].content)).toMatch(/error interno/i);
   });
 });

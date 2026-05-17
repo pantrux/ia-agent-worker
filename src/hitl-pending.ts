@@ -71,23 +71,29 @@ export async function resolveDeleteCustomerId(env: Env, userText: string): Promi
     /(?:elimina|borra|delete).*?(?:cliente|customer)\s+(.+?)(?:\s+del\s|\s*$|[,.])/i,
   ];
 
+  const tools = createCrmTools(env.DB);
+  const queriedNames = new Set<string>();
+
   for (const re of namePatterns) {
     const match = re.exec(userText);
     if (!match) continue;
     const name = match[1].trim();
     if (!name || /\bcust-\d+\b/i.test(name)) continue;
 
-    const tools = createCrmTools(env.DB);
+    const nameKey = name.toLowerCase();
+    if (queriedNames.has(nameKey)) continue;
+    queriedNames.add(nameKey);
+
     const raw = await tools.findCustomerByName.invoke({ name });
     try {
       const parsed = JSON.parse(String(raw)) as { items?: Array<{ id?: string }> };
       if (parsed.items?.[0]?.id) return parsed.items[0].id;
     } catch {
-      /* ignore malformed tool JSON */
+      /* ignorar JSON malformado de la tool */
     }
   }
 
-  return resolveDeleteCustomerIdFromText(userText);
+  return undefined;
 }
 
 /**
