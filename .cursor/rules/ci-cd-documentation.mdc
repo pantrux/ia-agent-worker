@@ -1,0 +1,53 @@
+---
+description: Documentación CI/CD — recetas por audiencia, pipeline comentado, diagramas Mermaid en repo y runbooks en cualquier proyecto
+alwaysApply: true
+---
+
+# Documentación CI/CD estandarizada
+
+Regla operativa para **cualquier repositorio** cuando el fichero está en `~/.cursor/rules/` (instalar con `npm run sync:cursor-global-rules` en [ia-agent-worker](https://github.com/pantrux/ia-agent-worker)) o en `.cursor/rules/` del proyecto.
+
+**Alcance:** `alwaysApply: true` inyecta este estándar en Agent en todos los proyectos. Para plantillas, checklists y ejemplos detallados, usar la skill global `ci-cd-documentation-standard` y, según la tarea, `documentation`, `runbook` y `mermaid-diagrams`.
+
+## Obligaciones mínimas
+
+1. **Estructura en el repo** — Si el proyecto tiene CI/CD (workflows, pipelines, deploy), mantener o proponer:
+   - `docs/ci/README.md` (índice con enlaces por audiencia)
+   - `docs/ci/recipes/` (recetas orientadas a acción)
+   - `docs/ci/runbooks/` (incidentes y troubleshooting)
+   - `docs/ci/diagrams/` (fuentes Mermaid, no capturas estáticas en wiki)
+
+2. **Recetas por audiencia** — Documentación corta y accionable:
+   - **Desarrollador:** qué ocurre al hacer push/PR (gates, artefactos, entornos).
+   - **SRE/ops:** rollback, logs, dashboards, escalado.
+   - Título tipo «Cómo …»; pasos numerados; comandos copiables.
+
+3. **Pipeline-as-code** — En YAML/Groovy/etc. del CI:
+   - Comentarios del **porqué** (timeouts, flags, secretos, condiciones), no del qué obvio.
+   - `name:` de jobs y steps **legibles** para parsear logs en incidentes.
+
+4. **Diagramas versionados** — Flujo CI/CD en Mermaid en el repo; actualizar el diagrama en el mismo PR que cambie el pipeline.
+
+5. **Runbooks** — Fallos recurrentes (migraciones, timeouts de deploy, tests flaky): síntomas, diagnóstico, rollback, enlaces a observabilidad, owner y fecha de revisión.
+
+6. **Centralización** — Preferir una plataforma/documentación canónica por equipo; plantillas reutilizables para nuevos servicios en lugar de pipelines ad hoc sin documentar.
+
+## Cuándo actuar
+
+- Nuevo repo, nuevo workflow o cambio sustancial en CI/CD.
+- PR que toque `.github/workflows/`, `wrangler`, deploy scripts o `docs/ci/`.
+- Usuario pide documentar pipeline, runbook o arquitectura de entrega.
+
+## Skills relacionadas (cargar según tarea)
+
+| Tarea | Skill |
+|-------|--------|
+| Estándar completo, estructura, checklist | `ci-cd-documentation-standard` |
+| Redacción técnica por tipo de doc | `documentation` |
+| Runbook operativo paso a paso | `runbook` |
+| Diagrama Mermaid | `mermaid-diagrams` |
+
+## Excepciones
+
+- Prototipos desechables o repos sin CI: no forzar `docs/ci/` completo; documentar solo lo que exista.
+- Proyectos de terceros: respetar convenciones locales si el usuario pide no imponer esta estructura.
