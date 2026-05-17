@@ -31,6 +31,31 @@ export function isGraphInterruptError(e: unknown): boolean {
   return String(e).includes("GraphInterrupt");
 }
 
+/**
+ * LangGraph.js: `interrupt()` en un nodo pausa el grafo y expone el payload en
+ * `result.__interrupt__` (no siempre lanza). Sin esta comprobación, HTTP/WS devuelven
+ * `reply` vacío en lugar de `pending_approval` / `hitl_pending`.
+ */
+export function extractGraphInterruptValue(result: unknown): unknown | undefined {
+  if (!result || typeof result !== "object") return undefined;
+  const interrupts = (result as { __interrupt__?: unknown }).__interrupt__;
+  if (!Array.isArray(interrupts) || interrupts.length === 0) return undefined;
+  const last = interrupts[interrupts.length - 1];
+  if (last && typeof last === "object" && "value" in last) {
+    return (last as { value: unknown }).value;
+  }
+  return last;
+}
+
+export function throwIfGraphInterrupted(result: unknown): void {
+  const value = extractGraphInterruptValue(result);
+  if (value === undefined) return;
+  const err = new Error("GraphInterrupt") as Error & { name: string; value: unknown };
+  err.name = "GraphInterrupt";
+  err.value = value;
+  throw err;
+}
+
 export type ChatGraphInvokeResult = Awaited<ReturnType<ReturnType<typeof buildGraph>["invoke"]>>;
 
 /**
@@ -75,7 +100,9 @@ export async function runChatMessageGraph(
   configureLangSmithEnv(env);
   const graph = buildGraph(env);
   const config = buildGraphInvokeConfig(env, params);
-  return graph.invoke({ messages: [new HumanMessage(params.text)] }, config);
+  const result = await graph.invoke({ messages: [new HumanMessage(params.text)] }, config);
+  throwIfGraphInterrupted(result);
+  return result;
 }
 
 export async function runChatResumeGraph(
@@ -92,5 +119,7 @@ export async function runChatResumeGraph(
   configureLangSmithEnv(env);
   const graph = buildGraph(env);
   const config = buildGraphInvokeConfig(env, params);
-  return graph.invoke(new Command({ resume: { approved: params.approved } }), config);
+  const result = await graph.invoke(new Command({ resume: { approved: params.approved } }), config);
+  throwIfGraphInterrupted(result);
+  return result;
 }
