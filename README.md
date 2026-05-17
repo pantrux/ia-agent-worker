@@ -291,7 +291,7 @@ Navegador
 |----------|------|-------------|----------------|
 | `COPILOT_GITHUB_TOKEN` | Secreto | Token GitHub (PAT o `gh auth token`). Reusado como Bearer hacia GitHub Models. | `gho_…` / `ghu_…` |
 | `ALLOWED_ORIGINS` | Var | Orígenes CORS (separados por coma). Usa `*` para abrir todos. | `*,http://localhost:3000` |
-| `COPILOT_MODEL` | Var | Modelo LLM. Con Copilot Enterprise usa ids estilo [Openclaw](https://github.com/openclaw/openclaw) sin publisher; con GitHub Models y `models.github.ai`, el Worker prefija `openai/` cuando aplica. | `gpt-5.4-mini` |
+| `COPILOT_MODEL` | Var | Modelo LLM. Con Copilot Enterprise usa ids estilo [Openclaw](https://github.com/openclaw/openclaw) sin publisher; con GitHub Models y `models.github.ai`, el Worker prefija `openai/` cuando aplica. | `gpt-5-mini` |
 | `OPENAI_API_BASE` | Var | Base URL del LLM. | `https://api.enterprise.githubcopilot.com` |
 | `LANGSMITH_API_KEY` | Secreto | API key de LangSmith para enviar runs/traces. | `lsv2_…` |
 | `LANGSMITH_TRACING` | Var | Activa tracing de LangSmith. | `true` |
@@ -310,7 +310,7 @@ Navegador
 
 > Si quieres apuntar al endpoint real de GitHub Copilot (`https://api.individual.githubcopilot.com`), `src/copilot-token.ts` intentará intercambiar el GitHub token por un session token Copilot. Si no, usa el GitHub token tal cual.
 
-> **Copilot Enterprise en este repo:** el modelo por defecto es `gpt-5.4-mini` y no hay fallback automático a `gpt-4o`; el `model` enviado al gateway debe coincidir con `COPILOT_MODEL`. Cuando el tráfico va por AI Gateway y el modelo es GPT-5/O, el Worker usa `/v1/responses` porque la ruta `chat/completions` del custom provider devuelve 404 aunque la llamada directa a Copilot funcione.
+> **Copilot Enterprise en este repo:** el modelo por defecto es `gpt-5-mini` y no hay fallback automático a `gpt-4o`; el `model` enviado al gateway debe coincidir con `COPILOT_MODEL`. Cuando el tráfico va por AI Gateway y el modelo es GPT-5/O, el Worker usa `/v1/responses` porque la ruta `chat/completions` del custom provider devuelve 404 aunque la llamada directa a Copilot funcione.
 
 > **Openclaw vs GitHub Models en este repo:** [openclaw/openclaw](https://github.com/openclaw/openclaw) documenta ids cortos de Copilot (p. ej. `gpt-5.4-mini` en `extensions/github-copilot/models-defaults.ts`) contra la API interna. Aquí, con **`OPENAI_API_BASE`** apuntando a **`models.github.ai`**, el cuerpo debe usar el id del **catálogo REST** (`publisher/modelo`, p. ej. `openai/gpt-4o-mini`). Si defines `COPILOT_MODEL` sin `/` y la base incluye `models.github.ai`, el Worker añade el prefijo **`openai/`** automáticamente para nombres tipo `gpt-*` / `o*`.
 
