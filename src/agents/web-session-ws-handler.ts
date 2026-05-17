@@ -105,6 +105,10 @@ export async function dispatchWebSessionWsMessage(
       userId,
       operation: "ws_chat",
       sessionId,
+      onTokenDelta: (delta) => {
+        if (!delta) return;
+        deps.send({ type: "reply_delta", delta, thread_id: threadId });
+      },
     });
     const reply = extractLastAiReply(result);
     deps.send({
