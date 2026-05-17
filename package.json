@@ -18,7 +18,7 @@
     "list:github-models": "node ./scripts/list-github-models-catalog.mjs",
     "rotate:bff-secret": "node ./scripts/rotate-bff-secret.mjs",
     "rotate:copilot-github-token": "node ./scripts/rotate-copilot-github-token.mjs",
-    "sync:cursor-global-rules": "node ./scripts/sync-cursor-global-pr-rule.mjs",
+    "sync:cursor-global-rules": "node ./scripts/sync-cursor-global-rules.mjs",
     "ensure:chat-queues": "node ./scripts/ensure-chat-queues.mjs",
     "metrics:access-aggregate": "node scripts/aggregate-ia-agent-access.mjs",
     "test:access-aggregate": "node --test scripts/aggregate-ia-agent-access.test.mjs",
