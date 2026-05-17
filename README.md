@@ -106,6 +106,7 @@ Contrato del mensaje y política HITL en cola: [`docs/CHAT-QUEUE-PAYLOAD.md`](do
 - Webhook en **aaas-landing** (prod): `https://aaas-landing.pages.dev/api/webhooks/telegram` → `POST /api/agent/messages` con Bearer `BFF_API_TOKEN`.
 - Diseño y runbook: [`docs/PAN-18-c2-channel-webhooks-design.md`](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-18-c2-channel-webhooks-design.md) · contrato § Telegram en [`docs/CHAT-QUEUE-PAYLOAD.md`](docs/CHAT-QUEUE-PAYLOAD.md).
 - Operación: `node scripts/set-telegram-webhook.mjs` (tras configurar secretos en Pages y Worker).
+- **Resincronizar secretos** (401/502 webhook, rotación): `put-pages-secret.mjs` para `TELEGRAM_WEBHOOK_SECRET` y `BFF_API_TOKEN` en Pages → redeploy Pages → `set-telegram-webhook.mjs`. Detalle: [runbook PAN-18](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-18-c2-channel-webhooks-design.md) § *Resincronización de secretos*.
 
 **Workers Builds (PR / ramas no producción):** el despliegue por defecto ejecuta `npx wrangler versions upload`. Con colas nuevas, configura en el panel de Cloudflare el comando **no producción** a `npm run cf:versions-upload` (crea las colas si faltan y luego sube la versión). En **producción** (`main`), si el comando es `npm run deploy`, ya incluye `ensure-chat-queues` antes de `wrangler deploy`.
 
