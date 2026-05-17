@@ -37,13 +37,21 @@ async function hmacSign(secret: string, data: string): Promise<string> {
 }
 
 async function hmacVerify(secret: string, data: string, signature: string): Promise<boolean> {
-  const expected = await hmacSign(secret, data);
-  if (expected.length !== signature.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+  let sigBytes: Uint8Array;
+  try {
+    sigBytes = base64UrlDecode(signature);
+  } catch {
+    return false;
   }
-  return diff === 0;
+  return crypto.subtle.verify("HMAC", key, sigBytes, enc.encode(data));
 }
 
 export function wsTicketTtlSeconds(): number {
