@@ -6,7 +6,7 @@ export const CHAT_WS_TOKEN_DELTA_KEY = "chat_ws_token_delta";
 /** Clave en `config.configurable` para reiniciar el buffer de streaming en el cliente (reintentos validación). */
 export const CHAT_WS_REPLY_RESET_KEY = "chat_ws_reply_reset";
 
-export type ChatWsTokenDeltaHandler = (delta: string) => void;
+export type ChatWsTokenDeltaHandler = (delta: string) => void | Promise<void>;
 
 export type ChatWsReplyResetHandler = () => void;
 

@@ -8,6 +8,7 @@ import {
 } from "../chat-invocation.js";
 import { parseThreadId } from "../chat-queue-payload.js";
 import type { WsClientMessage, WsServerMessage } from "../ws-protocol.js";
+import { wsStreamPauseMs } from "../ws-stream-pace.js";
 
 export interface WebSessionAgentState {
   threadId: string;
@@ -108,9 +109,10 @@ export async function dispatchWebSessionWsMessage(
       onReplyReset: () => {
         deps.send({ type: "reply_reset", thread_id: threadId });
       },
-      onTokenDelta: (delta) => {
+      onTokenDelta: async (delta) => {
         if (!delta) return;
         deps.send({ type: "reply_delta", delta, thread_id: threadId });
+        await wsStreamPauseMs();
       },
     });
     const reply = extractLastAiReply(result);
