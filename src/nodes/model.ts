@@ -76,14 +76,15 @@ export function createModelNode(env: Env) {
         if (delta) onTokenDelta(delta);
         gathered = gathered ? gathered.concat(chunk) : chunk;
       }
-      result = gathered
-        ? new AIMessage({
-            content: gathered.content,
-            tool_calls: gathered.tool_calls,
-            additional_kwargs: gathered.additional_kwargs,
-            response_metadata: gathered.response_metadata,
-          })
-        : new AIMessage({ content: "" });
+      if (!gathered) {
+        throw new Error("Chat Completions stream ended without producing any chunks");
+      }
+      result = new AIMessage({
+        content: gathered.content,
+        tool_calls: gathered.tool_calls,
+        additional_kwargs: gathered.additional_kwargs,
+        response_metadata: gathered.response_metadata,
+      });
     } else {
       result = (await bound.invoke(input)) as AIMessage;
     }
