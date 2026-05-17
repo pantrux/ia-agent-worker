@@ -145,6 +145,34 @@ describe("dispatchWebSessionWsMessage (PAN-32)", () => {
     ]);
   });
 
+  it("chat: error genérico del grafo → internal_error", async () => {
+    runChatMessageGraph.mockRejectedValueOnce(new Error("DB timeout"));
+
+    await dispatchWebSessionWsMessage(deps(), { type: "chat", text: "hola" });
+
+    expect(sent).toEqual([
+      {
+        type: "error",
+        code: "internal_error",
+        message: "Error al ejecutar el grafo",
+      },
+    ]);
+  });
+
+  it("resume: error genérico del grafo → internal_error", async () => {
+    runChatResumeGraph.mockRejectedValueOnce(new Error("DB timeout"));
+
+    await dispatchWebSessionWsMessage(deps(), { type: "resume", approved: true });
+
+    expect(sent).toEqual([
+      {
+        type: "error",
+        code: "internal_error",
+        message: "Error al reanudar el grafo",
+      },
+    ]);
+  });
+
   it("chat asigna thread_id en estado si aún no existía", async () => {
     state = { threadId: "", userId: "anon" };
     runChatMessageGraph.mockImplementation(async (_env, params) => {
