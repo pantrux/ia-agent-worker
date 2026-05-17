@@ -57,10 +57,10 @@ describe("executeSyntheticHitlResume", () => {
     expect(deleteInvoke).toHaveBeenCalledWith({ customer_id: "cust-001" });
     expect(updateState).toHaveBeenCalledTimes(2);
     const lastPersist = updateState.mock.calls[1][1];
-    expect(lastPersist.messages).toHaveLength(2);
-    expect(result.messages).toHaveLength(3);
+    expect(lastPersist.messages).toHaveLength(3);
+    expect(result.messages).toHaveLength(4);
     expect(result.toolState?.synthetic_hitl_pending).toBeUndefined();
-    expect(String(result.messages[2].content)).toContain("eliminado");
+    expect(String(result.messages[result.messages.length - 1].content)).toContain("eliminado");
   });
 
   it("denegado no llama a delete y persiste Tool+AI", async () => {
@@ -79,7 +79,7 @@ describe("executeSyntheticHitlResume", () => {
 
     expect(deleteInvoke).not.toHaveBeenCalled();
     const lastPersist = updateState.mock.calls[1][1];
-    expect(lastPersist.messages).toHaveLength(2);
+    expect(lastPersist.messages).toHaveLength(3);
     expect(String(result.messages[result.messages.length - 1].content)).toMatch(/denegad/i);
   });
 

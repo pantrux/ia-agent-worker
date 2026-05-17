@@ -17,6 +17,20 @@ export function snapshotHasPendingInterrupt(snapshot: {
   return snapshot.tasks.some((t) => Array.isArray(t.interrupts) && t.interrupts.length > 0);
 }
 
+/** Paridad con tools_node: ToolMessage debe ir precedido por AIMessage con tool_calls. */
+function syntheticAiWithToolCall(pending: HitlApprovalPayload): AIMessage {
+  return new AIMessage({
+    content: "",
+    tool_calls: [
+      {
+        id: pending.tool_call_id,
+        name: pending.tool,
+        args: pending.args,
+      },
+    ],
+  });
+}
+
 function buildResumeResult(
   stateValues: GraphState,
   appended: BaseMessage[],
@@ -54,17 +68,20 @@ export async function executeSyntheticHitlResume(
 
   await graph.updateState(config, { toolState: nextToolState });
 
+  const aiToolCall = syntheticAiWithToolCall(pending);
+
   if (!params.approved) {
     const toolMsg = new ToolMessage({
       content: "Operator denied this CRM mutation.",
       tool_call_id: toolCallId,
     });
     const aiMsg = new AIMessage({ content: "Operación de borrado denegada por el operador." });
+    const appended = [aiToolCall, toolMsg, aiMsg];
     await graph.updateState(config, {
-      messages: [toolMsg, aiMsg],
+      messages: appended,
       toolState: nextToolState,
     });
-    return buildResumeResult(stateValues, [toolMsg, aiMsg], nextToolState);
+    return buildResumeResult(stateValues, appended, nextToolState);
   }
 
   if (!customerId) {
@@ -73,11 +90,12 @@ export async function executeSyntheticHitlResume(
       tool_call_id: toolCallId,
     });
     const aiMsg = new AIMessage({ content: "No se pudo identificar el cliente a eliminar." });
+    const appended = [aiToolCall, toolMsg, aiMsg];
     await graph.updateState(config, {
-      messages: [toolMsg, aiMsg],
+      messages: appended,
       toolState: nextToolState,
     });
-    return buildResumeResult(stateValues, [toolMsg, aiMsg], nextToolState);
+    return buildResumeResult(stateValues, appended, nextToolState);
   }
 
   const crm = createCrmTools(env.DB);
@@ -90,18 +108,20 @@ export async function executeSyntheticHitlResume(
       tool_call_id: toolCallId,
     });
     const aiMsg = new AIMessage({ content: "No se pudo eliminar el cliente: error interno." });
+    const appended = [aiToolCall, toolMsg, aiMsg];
     await graph.updateState(config, {
-      messages: [toolMsg, aiMsg],
+      messages: appended,
       toolState: nextToolState,
     });
-    return buildResumeResult(stateValues, [toolMsg, aiMsg], nextToolState);
+    return buildResumeResult(stateValues, appended, nextToolState);
   }
 
   const toolMsg = new ToolMessage({ content: rawResult, tool_call_id: toolCallId });
   const aiMsg = new AIMessage({ content: replyTextFromDeleteResult(rawResult, customerId) });
+  const appended = [aiToolCall, toolMsg, aiMsg];
   await graph.updateState(config, {
-    messages: [toolMsg, aiMsg],
+    messages: appended,
     toolState: nextToolState,
   });
-  return buildResumeResult(stateValues, [toolMsg, aiMsg], nextToolState);
+  return buildResumeResult(stateValues, appended, nextToolState);
 }
