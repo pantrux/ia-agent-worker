@@ -1,5 +1,6 @@
 import type { Env } from "../env.js";
 import { extractLastAiReply } from "../chat-reply.js";
+import { classifyChatGraphError } from "../chat-graph-error.js";
 import {
   isGraphInterruptError,
   runChatMessageGraph,
@@ -85,10 +86,11 @@ export async function dispatchWebSessionWsMessage(
         return;
       }
       console.error("[WebSessionAgent] resume error:", e);
+      const classified = classifyChatGraphError(e, "resume");
       deps.send({
         type: "error",
-        code: "internal_error",
-        message: "Error al reanudar el grafo",
+        code: classified.code,
+        message: classified.message,
       });
     }
     return;
@@ -124,10 +126,11 @@ export async function dispatchWebSessionWsMessage(
       return;
     }
     console.error("[WebSessionAgent] chat error:", e);
+    const classified = classifyChatGraphError(e, "chat");
     deps.send({
       type: "error",
-      code: "internal_error",
-      message: "Error al ejecutar el grafo",
+      code: classified.code,
+      message: classified.message,
     });
   }
 }

@@ -159,6 +159,20 @@ describe("dispatchWebSessionWsMessage (PAN-32)", () => {
     ]);
   });
 
+  it("chat: 429 del proveedor → rate_limited con mensaje claro", async () => {
+    runChatMessageGraph.mockRejectedValueOnce(
+      new Error("Copilot Responses API failed (429 Too Many Requests): quota exceeded")
+    );
+
+    await dispatchWebSessionWsMessage(deps(), { type: "chat", text: "hola" });
+
+    expect(sent[0]).toMatchObject({
+      type: "error",
+      code: "rate_limited",
+    });
+    expect(String(sent[0]?.message)).toMatch(/cuota|saturado/i);
+  });
+
   it("resume: error genérico del grafo → internal_error", async () => {
     runChatResumeGraph.mockRejectedValueOnce(new Error("DB timeout"));
 
