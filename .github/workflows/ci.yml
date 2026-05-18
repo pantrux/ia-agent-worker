@@ -16,6 +16,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Vitest completo (~80 tests); 10 min cubren cold start npm ci + suite en PR.
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4

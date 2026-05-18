@@ -8,6 +8,8 @@
  * Uso:
  *   WORKER_SMOKE_URL=https://ia-agent-worker-preview....workers.dev \\
  *   WS_TICKET_SECRET=... node scripts/smoke-c3-ws.mjs
+ *
+ * Requiere Node >= 22 (WebSocket global).
  */
 
 const baseRaw = process.env.WORKER_SMOKE_URL?.trim();
@@ -59,6 +61,14 @@ function agentHttpToWs(httpBase) {
 
 function smokeWebSocket(wsUrl) {
   return new Promise((resolve, reject) => {
+    if (typeof WebSocket === "undefined") {
+      reject(
+        new Error(
+          "WebSocket global no disponible (requiere Node >= 22). Actualiza Node o omite este smoke."
+        )
+      );
+      return;
+    }
     const ws = new WebSocket(wsUrl);
     let settled = false;
     let sawReady = false;
@@ -139,4 +149,9 @@ async function main() {
   console.log("\nSmoke C3 WS completado.");
 }
 
-main();
+main()
+  .then(() => process.exit(0))
+  .catch((e) => {
+    console.error(e?.message ?? e);
+    process.exit(1);
+  });

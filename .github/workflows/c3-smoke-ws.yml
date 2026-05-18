@@ -1,4 +1,5 @@
 # Smoke WebSocket directo al Worker (PAN-35). Opcional: requiere WORKER_SMOKE_URL + WS_TICKET_SECRET.
+# No añadir este job a branch protection: el gate duro de deploy sigue siendo worker-smoke.yml → job `smoke`.
 
 name: C3 smoke WS (Worker directo)
 
@@ -16,12 +17,14 @@ concurrency:
 jobs:
   c3-ws-remote:
     runs-on: ubuntu-latest
+    # npm ci + smoke WS (timeout interno 45s); 8 min de margen si install o red van lentos.
     timeout-minutes: 8
     outputs:
       skipped: ${{ steps.gate.outputs.skipped }}
     steps:
       - uses: actions/checkout@v4
 
+      # Gate blando: sin secretos → skipped (no falla CI). Contrasta con worker-smoke.yml que exige WORKER_SMOKE_URL.
       - name: Comprobar variables de smoke WS
         id: gate
         env:

@@ -11,6 +11,7 @@ Spec multicanal completa (BFF + Telegram): [`aaas-landing` — `PAN-35-linear-de
 - Workflow [`.github/workflows/ci.yml`](../.github/workflows/ci.yml): `npm test` en push/PR (protocolo WS, payload cola Telegram, tickets, handlers).
 - Workflow [`.github/workflows/c3-smoke-ws.yml`](../.github/workflows/c3-smoke-ws.yml): smoke remoto opcional `ready` + `ping`/`pong` contra `WebSessionAgent`.
 - Script [`scripts/smoke-c3-ws.mjs`](../scripts/smoke-c3-ws.mjs).
+- Documentación CI: [`docs/ci/README.md`](./ci/README.md) (diagrama + receta desarrollador).
 
 ---
 
