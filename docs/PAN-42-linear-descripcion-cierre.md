@@ -25,7 +25,7 @@ Convención para que el agente genere secretos, los guarde en `.env` local (giti
 | Documento | Rol |
 |-----------|-----|
 | [PAN-42 (Linear)](https://linear.app/pantrux/issue/PAN-42) | Issue de tracking |
-| [secrets-and-env-vars.mdc](../.cursor/rules/secrets-and-env-vars.mdc) | Regla Cursor |
+| [secrets-and-env-vars.mdc](https://github.com/pantrux/ia-agent-worker/blob/main/.cursor/rules/secrets-and-env-vars.mdc) | Regla Cursor (en `main` desde PR #61) |
 | [PAN-18 runbook (landing)](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-18-c2-channel-webhooks-design.md) | Resincronización secretos Pages |
 | [put-pages-secret.mjs](../scripts/put-pages-secret.mjs) | Subida stdin sin newline (PowerShell) |
 
