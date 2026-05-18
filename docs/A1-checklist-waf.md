@@ -57,12 +57,20 @@ and any(http.request.headers["upgrade"][*] eq "websocket")
 
 **Umbrales sugeridos (orientación):** periodo **60 s**, conteo **IP**, umbral **60** upgrades/min (≥ sesiones BFF 30/min + margen reconexión). Acción **Block** o **Managed Challenge** según plan.
 
-**`*.workers.dev`:** mantener para CI/smoke y preview; **no** como URL de producción (`AGENT_API_URL` / `ws_url`). Ver tabla en el doc del hallazgo PAN-41.
+**`*.workers.dev`:** Cloudflare **no lo quita** al añadir custom hostname; el mismo script prod sigue accesible ahí (**puerta trasera** sin WAF de zona). Ver [PAN-41](https://linear.app/pantrux/issue/PAN-41) y [`PAN-34-hallazgo-custom-hostname-worker-waf.md`](./PAN-34-hallazgo-custom-hostname-worker-waf.md).
 
-Si el plan Free no permite segunda regla RL, unificar expresiones en la regla existente de la zona o subir plan — **no** sustituir por rate limit en código del Worker.
+### 8.2.1 Cierre puerta `workers.dev` (Worker prod — obligatorio)
+
+- [ ] Variable `ALLOWED_WORKER_HOSTS` (o equivalente) en prod: solo custom hostname(s) acordados.
+- [ ] Requests con `Host` en `*.workers.dev` al script **`ia-agent-worker`** → **403** (no confundir con rate limit de upgrade; es allowlist de host).
+- [ ] Script **`ia-agent-worker-preview`**: sin este bloqueo; CI/smoke (`WORKER_SMOKE_URL`) apunta a preview o a custom hostname documentado.
+- [ ] `AGENT_API_URL` de Pages prod **sin** URL `workers.dev`.
+
+Si el plan Free no permite segunda regla RL, unificar expresiones en la regla existente de la zona o subir plan — **no** sustituir RL de upgrade por código; **sí** allowlist de `Host` en prod.
 
 ### 8.3 Verificación
 
 - [ ] BFF: `POST /api/ws/session` → **429** tras 30 peticiones/min desde la misma IP (tests Vitest en landing).
 - [ ] DO: enviar **11** mensajes `chat` en &lt;60 s en la misma sesión → `{"type":"error","code":"rate_limited"}` sin invocar grafo.
-- [ ] WAF Worker: forzar superación del umbral de upgrade y comprobar bloqueo en edge (opcional si regla desplegada).
+- [ ] WAF: upgrade por **custom hostname** → **429** HTML CF al superar umbral.
+- [ ] Prod: request a URL `workers.dev` del script prod → **403**.
