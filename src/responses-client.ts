@@ -2,7 +2,7 @@ import { AIMessage, type BaseMessage } from "@langchain/core/messages";
 import type { StructuredToolInterface } from "@langchain/core/tools";
 import type { Env } from "./env.js";
 import type { ChatWsTokenDeltaHandler } from "./chat-ws-stream.js";
-import { wsStreamPauseMs } from "./ws-stream-pace.js";
+import { WS_STREAM_PACE_MS, wsStreamPauseMs } from "./ws-stream-pace.js";
 import { getCopilotToken } from "./copilot-token.js";
 import { resolveAiGatewayLlmConfig } from "./ai-gateway.js";
 import {
@@ -201,7 +201,7 @@ export async function emitStreamedTextDeltas(
   text: string,
   onDelta: ChatWsTokenDeltaHandler,
   chunkSize = 24,
-  pauseMs = 20
+  pauseMs = WS_STREAM_PACE_MS
 ): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
