@@ -55,6 +55,19 @@ describe("dispatchWebSessionWsMessage (PAN-32)", () => {
     expect(runChatResumeGraph).not.toHaveBeenCalled();
   });
 
+  it("chat: supera límite por sesión → rate_limited sin invocar grafo (PAN-34)", async () => {
+    state = { threadId: THREAD_ID, userId: "user-1", wsMsgWindowStartMs: Date.now(), wsMsgCount: 10 };
+    await dispatchWebSessionWsMessage(deps(), { type: "chat", text: "once más" });
+    expect(runChatMessageGraph).not.toHaveBeenCalled();
+    expect(sent).toEqual([
+      {
+        type: "error",
+        code: "rate_limited",
+        message: expect.stringMatching(/máximo 10 por minuto/i),
+      },
+    ]);
+  });
+
   it("chat: GraphInterrupt → hitl_pending", async () => {
     const interrupt = {
       kind: "tool_approval",
@@ -226,6 +239,8 @@ describe("dispatchWebSessionWsMessage (PAN-32)", () => {
     expect(state.threadId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
+    expect(state.wsMsgCount).toBe(1);
+    expect(state.wsMsgWindowStartMs).toBeGreaterThan(0);
     expect(sent[0]).toMatchObject({ type: "reply", text: "hola" });
   });
 });

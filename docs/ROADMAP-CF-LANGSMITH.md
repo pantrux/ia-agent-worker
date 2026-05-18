@@ -47,6 +47,7 @@ Aplicar en **reglas de zona** (recomendado) o complementar con lógica en Worker
 | `GET` | `/ping` | Health | Baja sensibilidad; limitar si abuso de escaneo. |
 | `POST` | `/api/chat` | Chat + posible HITL `pending_approval` | **Alta prioridad** rate limit + tamaño de body. |
 | `POST` | `/api/chat/resume` | HITL resume | **Alta prioridad** misma política que chat. |
+| `GET` | `/agents/web-session-agent/*` | Upgrade WebSocket (ticket en query) | **Alta prioridad** rate limit por IP en zona del Worker; ver [A1-checklist-waf.md §8](./A1-checklist-waf.md) ([PAN-34](https://linear.app/pantrux/issue/PAN-34)). |
 | `OPTIONS` | `*` | CORS preflight | Permitir sin contar contra límite estricto de chat si el WAF lo distingue. |
 
 CORS hoy: `ALLOWED_ORIGINS` en Worker — endurecer en prod (sin `*`).

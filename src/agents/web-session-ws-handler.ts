@@ -8,9 +8,14 @@ import {
 } from "../chat-invocation.js";
 import { parseThreadId } from "../chat-queue-payload.js";
 import type { WsClientMessage, WsServerMessage } from "../ws-protocol.js";
+import {
+  applyWsMessageRateLimit,
+  WS_MESSAGE_RATE_MAX,
+  type WsMessageRateLimitFields,
+} from "../ws-message-rate-limit.js";
 import { wsStreamPauseMs } from "../ws-stream-pace.js";
 
-export interface WebSessionAgentState {
+export interface WebSessionAgentState extends WsMessageRateLimitFields {
   threadId: string;
   userId: string;
 }
@@ -23,11 +28,14 @@ export type WebSessionWsHandlerDeps = {
   setState: (state: WebSessionAgentState) => void;
 };
 
-function ensureThreadId(deps: WebSessionWsHandlerDeps): string {
+function ensureThreadId(
+  deps: WebSessionWsHandlerDeps,
+  extraPatch: Partial<WebSessionAgentState> = {}
+): string {
   const existing = parseThreadId(deps.state.threadId);
   if (existing) return existing;
   const threadId = crypto.randomUUID();
-  deps.setState({ ...deps.state, threadId });
+  deps.setState({ ...deps.state, ...extraPatch, threadId });
   return threadId;
 }
 
@@ -41,6 +49,17 @@ export async function dispatchWebSessionWsMessage(
 ): Promise<void> {
   if (parsed.type === "ping") {
     deps.send({ type: "pong" });
+    return;
+  }
+
+  const rateLimit = applyWsMessageRateLimit(deps.state);
+  deps.setState({ ...deps.state, ...rateLimit.statePatch });
+  if (!rateLimit.allowed) {
+    deps.send({
+      type: "error",
+      code: "rate_limited",
+      message: `Demasiados mensajes en esta sesión. Máximo ${WS_MESSAGE_RATE_MAX} por minuto.`,
+    });
     return;
   }
 
@@ -97,7 +116,7 @@ export async function dispatchWebSessionWsMessage(
     return;
   }
 
-  const threadId = ensureThreadId(deps);
+  const threadId = ensureThreadId(deps, rateLimit.statePatch);
   try {
     const result = await runChatMessageGraph(deps.env, {
       text: parsed.text,
