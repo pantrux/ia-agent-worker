@@ -239,6 +239,8 @@ describe("dispatchWebSessionWsMessage (PAN-32)", () => {
     expect(state.threadId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
+    expect(state.wsMsgCount).toBe(1);
+    expect(state.wsMsgWindowStartMs).toBeGreaterThan(0);
     expect(sent[0]).toMatchObject({ type: "reply", text: "hola" });
   });
 });

@@ -28,11 +28,14 @@ export type WebSessionWsHandlerDeps = {
   setState: (state: WebSessionAgentState) => void;
 };
 
-function ensureThreadId(deps: WebSessionWsHandlerDeps): string {
+function ensureThreadId(
+  deps: WebSessionWsHandlerDeps,
+  extraPatch: Partial<WebSessionAgentState> = {}
+): string {
   const existing = parseThreadId(deps.state.threadId);
   if (existing) return existing;
   const threadId = crypto.randomUUID();
-  deps.setState({ ...deps.state, threadId });
+  deps.setState({ ...deps.state, ...extraPatch, threadId });
   return threadId;
 }
 
@@ -113,7 +116,7 @@ export async function dispatchWebSessionWsMessage(
     return;
   }
 
-  const threadId = ensureThreadId(deps);
+  const threadId = ensureThreadId(deps, rateLimit.statePatch);
   try {
     const result = await runChatMessageGraph(deps.env, {
       text: parsed.text,
