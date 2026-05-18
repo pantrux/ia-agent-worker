@@ -42,12 +42,14 @@ Complementa el rate limit **por sesión DO** en código (`src/ws-message-rate-li
 
 `ping` no cuenta contra el límite DO.
 
-### 8.2 Plantilla RL — upgrade WebSocket (zona del Worker)
+### 8.2 Plantilla RL — upgrade WebSocket (custom hostname en zona propia)
 
-Aplicar en la zona que sirve el hostname público del Worker (`*.workers.dev` del script o custom hostname). Ajusta el host si difiere:
+**No aplicar solo sobre `*.workers.dev`:** ese hostname no está en tu zona `e-scale.cl`; las reglas WAF del dashboard del cliente **no** cubren el subdominio administrado por Cloudflare. Seguimiento: **[PAN-41](https://linear.app/pantrux/issue/PAN-41)** · [`PAN-34-hallazgo-custom-hostname-worker-waf.md`](./PAN-34-hallazgo-custom-hostname-worker-waf.md).
+
+Tras crear **custom hostname** (p. ej. `agent.e-scale.cl` → script `ia-agent-worker`), regla RL en la **misma zona** que el landing:
 
 ```text
-(http.host eq "ia-agent-worker.<tu-cuenta>.workers.dev")
+(http.host eq "agent.e-scale.cl")
 and http.request.method eq "GET"
 and starts_with(http.request.uri.path, "/agents/web-session-agent/")
 and any(http.request.headers["upgrade"][*] eq "websocket")
@@ -55,7 +57,9 @@ and any(http.request.headers["upgrade"][*] eq "websocket")
 
 **Umbrales sugeridos (orientación):** periodo **60 s**, conteo **IP**, umbral **60** upgrades/min (≥ sesiones BFF 30/min + margen reconexión). Acción **Block** o **Managed Challenge** según plan.
 
-Si el plan Free no permite segunda regla RL en la zona del Worker, priorizar el límite DO + BFF Pages y documentar riesgo residual en el PR.
+**`*.workers.dev`:** mantener para CI/smoke y preview; **no** como URL de producción (`AGENT_API_URL` / `ws_url`). Ver tabla en el doc del hallazgo PAN-41.
+
+Si el plan Free no permite segunda regla RL, unificar expresiones en la regla existente de la zona o subir plan — **no** sustituir por rate limit en código del Worker.
 
 ### 8.3 Verificación
 
