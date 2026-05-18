@@ -1,0 +1,18 @@
+flowchart TD
+  subgraph triggers["Disparadores"]
+    PR[Push / PR a main]
+  end
+
+  PR --> CI["ci.yml<br/>npm test"]
+  PR --> WSmoke["worker-smoke.yml"]
+  PR --> C3WS["c3-smoke-ws.yml<br/>(opcional)"]
+
+  WSmoke --> SmokeJob["job smoke<br/>WORKER_SMOKE_URL obligatoria"]
+  SmokeJob -->|falla si falta URL| FailSmoke[exit 1]
+  WSmoke --> LangJob["job langsmith<br/>si LANGSMITH_API_KEY"]
+
+  C3WS --> Gate{"WORKER_SMOKE_URL<br/>y WS_TICKET_SECRET?"}
+  Gate -->|no| SkipC3["::notice:: omitido"]
+  Gate -->|sí| C3Run["npm run smoke:c3-ws<br/>Node 22"]
+
+  CI --> Vitest["Vitest: ws-protocol,<br/>chat-queue-payload, …"]

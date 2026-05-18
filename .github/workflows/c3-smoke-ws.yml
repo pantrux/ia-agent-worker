@@ -1,0 +1,57 @@
+# Smoke WebSocket directo al Worker (PAN-35). Opcional: requiere WORKER_SMOKE_URL + WS_TICKET_SECRET.
+# No añadir este job a branch protection: el gate duro de deploy sigue siendo worker-smoke.yml → job `smoke`.
+
+name: C3 smoke WS (Worker directo)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: c3-smoke-ws-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  c3-ws-remote:
+    runs-on: ubuntu-latest
+    # npm ci + smoke WS (timeout interno 45s); 8 min de margen si install o red van lentos.
+    timeout-minutes: 8
+    outputs:
+      skipped: ${{ steps.gate.outputs.skipped }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Gate blando: sin secretos → skipped (no falla CI). Contrasta con worker-smoke.yml que exige WORKER_SMOKE_URL.
+      - name: Comprobar variables de smoke WS
+        id: gate
+        env:
+          WORKER_SMOKE_URL: ${{ vars.WORKER_SMOKE_URL }}
+          WS_TICKET_SECRET: ${{ secrets.WS_TICKET_SECRET }}
+        run: |
+          if [ -z "${WORKER_SMOKE_URL}" ] || [ -z "${WS_TICKET_SECRET}" ]; then
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Omitido: define WORKER_SMOKE_URL (variable) y WS_TICKET_SECRET (secreto) para smoke WS directo."
+          else
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.skipped != 'true'
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        if: steps.gate.outputs.skipped != 'true'
+        run: npm ci
+
+      - name: Smoke WS (ready + pong)
+        if: steps.gate.outputs.skipped != 'true'
+        env:
+          WORKER_SMOKE_URL: ${{ vars.WORKER_SMOKE_URL }}
+          WS_TICKET_SECRET: ${{ secrets.WS_TICKET_SECRET }}
+        run: npm run smoke:c3-ws

@@ -1,0 +1,34 @@
+# Tests unitarios en PR/push (protocolo WS, cola Telegram, handlers).
+# El smoke remoto sigue en worker-smoke.yml y c3-smoke-ws.yml (PAN-35).
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Vitest completo (~80 tests); 10 min cubren cold start npm ci + suite en PR.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Test (incl. protocolo WS + payload Telegram)
+        run: npm test
