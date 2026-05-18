@@ -8,9 +8,14 @@ import {
 } from "../chat-invocation.js";
 import { parseThreadId } from "../chat-queue-payload.js";
 import type { WsClientMessage, WsServerMessage } from "../ws-protocol.js";
+import {
+  applyWsMessageRateLimit,
+  WS_MESSAGE_RATE_MAX,
+  type WsMessageRateLimitFields,
+} from "../ws-message-rate-limit.js";
 import { wsStreamPauseMs } from "../ws-stream-pace.js";
 
-export interface WebSessionAgentState {
+export interface WebSessionAgentState extends WsMessageRateLimitFields {
   threadId: string;
   userId: string;
 }
@@ -41,6 +46,17 @@ export async function dispatchWebSessionWsMessage(
 ): Promise<void> {
   if (parsed.type === "ping") {
     deps.send({ type: "pong" });
+    return;
+  }
+
+  const rateLimit = applyWsMessageRateLimit(deps.state);
+  deps.setState({ ...deps.state, ...rateLimit.statePatch });
+  if (!rateLimit.allowed) {
+    deps.send({
+      type: "error",
+      code: "rate_limited",
+      message: `Demasiados mensajes en esta sesión. Máximo ${WS_MESSAGE_RATE_MAX} por minuto.`,
+    });
     return;
   }
 
