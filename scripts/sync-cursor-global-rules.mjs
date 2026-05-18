@@ -15,6 +15,7 @@ const repoRoot = join(__dirname, "..");
 const GLOBAL_RULES = [
   "pr-review-merge.mdc",
   "ci-cd-documentation.mdc",
+  "secrets-and-env-vars.mdc",
 ];
 
 const GLOBAL_SKILLS = ["ci-cd-documentation-standard"];
