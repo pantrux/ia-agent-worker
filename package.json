@@ -10,6 +10,7 @@
     "studio:tunnel": "langgraphjs dev -h 0.0.0.0 -p 2024 --tunnel",
     "studio:check": "node ./scripts/studio-check.mjs",
     "smoke:worker": "node ./scripts/smoke-worker.mjs",
+    "smoke:c3-ws": "node ./scripts/smoke-c3-ws.mjs",
     "langsmith:dataset:sync": "node ./scripts/langsmith-sync-dataset.mjs",
     "langsmith:eval": "node ./scripts/langsmith-eval-worker.mjs",
     "langsmith:api-preflight": "node ./scripts/langsmith-api-preflight.mjs",
