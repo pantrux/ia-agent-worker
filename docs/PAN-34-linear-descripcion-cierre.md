@@ -27,8 +27,8 @@ Tras PoC WS (PAN-19), faltaba endurecer abuso: emisión masiva de tickets BFF, u
 ## Hallazgos o Mejoras
 
 - El límite DO es **por sesión** (estado SQLite del DO), no global por IP: el edge debe cubrir upgrades y BFF.
+- **Seguridad (follow-up):** upgrade WS en `*.workers.dev` queda **fuera** de WAF zona `e-scale.cl` (mismo Worker prod = puerta trasera). **[PAN-41](https://linear.app/pantrux/issue/PAN-41):** custom hostname + RL CF + **allowlist `Host` en prod** (403 a `workers.dev`). Doc [`PAN-34-hallazgo-custom-hostname-worker-waf.md`](./PAN-34-hallazgo-custom-hostname-worker-waf.md). **No** RL de upgrade en código; **sí** bloqueo de host en prod.
 - `routeAgentRequest({ cors: true })` no sustituye `ALLOWED_ORIGINS`; auth WS sigue por ticket. Endurecer `Origin` en `onConnect` queda como mejora opcional (mencionado en reviews PR C3).
-- Rate limit distribuido (KV / [Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)) solo si el tráfico supera aislamiento por isolate en BFF.
 
 ## Bloqueantes
 

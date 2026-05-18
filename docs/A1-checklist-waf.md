@@ -42,12 +42,14 @@ Complementa el rate limit **por sesión DO** en código (`src/ws-message-rate-li
 
 `ping` no cuenta contra el límite DO.
 
-### 8.2 Plantilla RL — upgrade WebSocket (zona del Worker)
+### 8.2 Plantilla RL — upgrade WebSocket (custom hostname en zona propia)
 
-Aplicar en la zona que sirve el hostname público del Worker (`*.workers.dev` del script o custom hostname). Ajusta el host si difiere:
+**No aplicar solo sobre `*.workers.dev`:** ese hostname no está en tu zona `e-scale.cl`; las reglas WAF del dashboard del cliente **no** cubren el subdominio administrado por Cloudflare. Seguimiento: **[PAN-41](https://linear.app/pantrux/issue/PAN-41)** · [`PAN-34-hallazgo-custom-hostname-worker-waf.md`](./PAN-34-hallazgo-custom-hostname-worker-waf.md).
+
+Tras crear **custom hostname** (p. ej. `agent.e-scale.cl` → script `ia-agent-worker`), regla RL en la **misma zona** que el landing:
 
 ```text
-(http.host eq "ia-agent-worker.<tu-cuenta>.workers.dev")
+(http.host eq "agent.e-scale.cl")
 and http.request.method eq "GET"
 and starts_with(http.request.uri.path, "/agents/web-session-agent/")
 and any(http.request.headers["upgrade"][*] eq "websocket")
@@ -55,10 +57,20 @@ and any(http.request.headers["upgrade"][*] eq "websocket")
 
 **Umbrales sugeridos (orientación):** periodo **60 s**, conteo **IP**, umbral **60** upgrades/min (≥ sesiones BFF 30/min + margen reconexión). Acción **Block** o **Managed Challenge** según plan.
 
-Si el plan Free no permite segunda regla RL en la zona del Worker, priorizar el límite DO + BFF Pages y documentar riesgo residual en el PR.
+**`*.workers.dev`:** Cloudflare **no lo quita** al añadir custom hostname; el mismo script prod sigue accesible ahí (**puerta trasera** sin WAF de zona). Ver [PAN-41](https://linear.app/pantrux/issue/PAN-41) y [`PAN-34-hallazgo-custom-hostname-worker-waf.md`](./PAN-34-hallazgo-custom-hostname-worker-waf.md).
+
+### 8.2.1 Cierre puerta `workers.dev` (Worker prod — obligatorio)
+
+- [ ] Variable `ALLOWED_WORKER_HOSTS` (o equivalente) en prod: solo custom hostname(s) acordados.
+- [ ] Requests con `Host` en `*.workers.dev` al script **`ia-agent-worker`** → **403** (no confundir con rate limit de upgrade; es allowlist de host).
+- [ ] Script **`ia-agent-worker-preview`**: sin este bloqueo; CI/smoke (`WORKER_SMOKE_URL`) apunta a preview o a custom hostname documentado.
+- [ ] `AGENT_API_URL` de Pages prod **sin** URL `workers.dev`.
+
+Si el plan Free no permite segunda regla RL, unificar expresiones en la regla existente de la zona o subir plan — **no** sustituir RL de upgrade por código; **sí** allowlist de `Host` en prod.
 
 ### 8.3 Verificación
 
 - [ ] BFF: `POST /api/ws/session` → **429** tras 30 peticiones/min desde la misma IP (tests Vitest en landing).
 - [ ] DO: enviar **11** mensajes `chat` en &lt;60 s en la misma sesión → `{"type":"error","code":"rate_limited"}` sin invocar grafo.
-- [ ] WAF Worker: forzar superación del umbral de upgrade y comprobar bloqueo en edge (opcional si regla desplegada).
+- [ ] WAF: upgrade por **custom hostname** → **429** HTML CF al superar umbral.
+- [ ] Prod: request a URL `workers.dev` del script prod → **403**.
