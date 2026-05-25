@@ -9,6 +9,10 @@ import { createRouterNode } from "./nodes/router.js";
 import { createModelNode } from "./nodes/model.js";
 import { createToolsNode } from "./nodes/tools.js";
 import { createValidationNode, MAX_VALIDATION_RETRIES } from "./nodes/validation.js";
+import {
+  createTerminalReplyNode,
+  lastBatchIsAllTerminal,
+} from "./nodes/terminal-reply.js";
 
 function routeAfterModel(state: GraphState): "tools" | "validation" {
   const last = state.messages[state.messages.length - 1];
@@ -16,6 +20,16 @@ function routeAfterModel(state: GraphState): "tools" | "validation" {
     return "tools";
   }
   return "validation";
+}
+
+/**
+ * PAN-40: si todos los `ToolMessage` del último batch ejecutado son terminales
+ * (`Customer not found`, denegación previa, error JSON conocido) saltamos al nodo
+ * `terminal_reply` y evitamos un segundo round-trip al LLM Copilot, que en prod
+ * añadía ≈9 s al tiempo de respuesta sin aportar contenido nuevo.
+ */
+function routeAfterTools(state: GraphState): "model" | "terminal_reply" {
+  return lastBatchIsAllTerminal(state) ? "terminal_reply" : "model";
 }
 
 function routeAfterValidation(state: GraphState): "model" | typeof END {
@@ -41,11 +55,13 @@ export function buildGraph(env: Env, options?: { checkpointer?: BaseCheckpointSa
     .addNode("router", createRouterNode(env))
     .addNode("model", createModelNode(env))
     .addNode("tools", createToolsNode(env))
+    .addNode("terminal_reply", createTerminalReplyNode())
     .addNode("validation", createValidationNode())
     .addEdge(START, "router")
     .addEdge("router", "model")
     .addConditionalEdges("model", routeAfterModel, { tools: "tools", validation: "validation" })
-    .addEdge("tools", "model")
+    .addConditionalEdges("tools", routeAfterTools, { model: "model", terminal_reply: "terminal_reply" })
+    .addEdge("terminal_reply", "validation")
     .addConditionalEdges("validation", routeAfterValidation, { model: "model", [END]: END });
 
   return graph.compile({ checkpointer });
