@@ -102,4 +102,22 @@ describe("corsHeaders", () => {
     const headers = corsHeaders(reqWithOrigin(undefined), { ALLOWED_ORIGINS: "" });
     expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
   });
+
+  // PAN-25: contrato con `routeAgentRequest({ cors })` del paquete `agents` (partyserver).
+  // Si `Access-Control-Allow-Origin` no está presente, el SDK no responderá con `*`
+  // y el navegador bloqueará la petición cross-origin del cliente WS / `/agents/*`.
+  it("contrato Agents SDK: sin Allow-Origin para origen no autorizado", () => {
+    const headers = corsHeaders(reqWithOrigin("https://evil.example"), {
+      ALLOWED_ORIGINS: PROD_ORIGINS,
+    });
+    expect(headers).not.toHaveProperty("Access-Control-Allow-Origin");
+    expect(headers["Access-Control-Allow-Methods"]).toBeDefined();
+  });
+
+  it("contrato Agents SDK: con Allow-Origin para origen autorizado", () => {
+    const headers = corsHeaders(reqWithOrigin("https://www.e-scale.cl"), {
+      ALLOWED_ORIGINS: PROD_ORIGINS,
+    });
+    expect(headers["Access-Control-Allow-Origin"]).toBe("https://www.e-scale.cl");
+  });
 });

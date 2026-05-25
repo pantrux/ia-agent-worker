@@ -261,7 +261,11 @@ async function handleEnqueueAgentMessage(request: Request, env: Env): Promise<Re
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const agentT0 = Date.now();
-    const agentResponse = await routeAgentRequest(request, env, { cors: true });
+    // PAN-25: pasamos la allowlist al `agents`/`partyserver` SDK como objeto de cabeceras CORS.
+    // `cors: true` haría que el SDK respondiera `Access-Control-Allow-Origin: *`
+    // y `Access-Control-Allow-Headers: *`, anulando el endurecimiento de `ALLOWED_ORIGINS`.
+    const cors = corsHeaders(request, env);
+    const agentResponse = await routeAgentRequest(request, env, { cors });
     if (agentResponse) {
       logWorkerAccess(request, env, {
         operation: "agent_route",
@@ -272,7 +276,6 @@ export default {
       return agentResponse;
     }
 
-    const cors = corsHeaders(request, env);
     const t0 = Date.now();
 
     if (request.method === "OPTIONS") {

@@ -259,7 +259,7 @@ En GitHub Actions, si configuras el secreto **`LANGSMITH_API_KEY`**, el mismo wo
 
 La landing [`pantrux/aaas-landing`](https://github.com/pantrux/aaas-landing) **llama directamente al Worker**: la URL queda hardcodeada en `lib/site.ts`. Se eliminaron las Pages Functions de proxy.
 
-El Worker autoriza orígenes con la variable `ALLOWED_ORIGINS`, una **lista explícita** separada por comas. Desde [PAN-25](https://linear.app/pantrux/issue/PAN-25), el comodín `*` está prohibido en producción y, si se introduce por error, el código (`src/cors.ts`) lo descarta y mantiene CORS cerrado. Para añadir un dominio nuevo del landing hay que actualizar `[vars]` (prod) **y** `[env.preview.vars]` (preview) en `wrangler.toml`.
+El Worker autoriza orígenes con la variable `ALLOWED_ORIGINS`, una **lista explícita** separada por comas. Desde [PAN-25](https://linear.app/pantrux/issue/PAN-25), el comodín `*` está prohibido en producción y, si se introduce por error, el código (`src/cors.ts`) lo descarta y mantiene CORS cerrado. La misma allowlist se inyecta también en las rutas `/agents/*` (Agents SDK / `routePartykitRequest`), porque pasarle `cors: true` al SDK reflejaría `Access-Control-Allow-Origin: *` y rompería el endurecimiento. Para añadir un dominio nuevo del landing hay que actualizar `[vars]` (prod) **y** `[env.preview.vars]` (preview) en `wrangler.toml`.
 
 Valores actuales:
 
