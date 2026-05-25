@@ -82,26 +82,58 @@ export function throwIfGraphInterrupted(result: unknown): void {
   if (pending !== undefined) throwGraphInterruptValue(pending);
 }
 
+/**
+ * PAN-39: para `delete_customer_record` en el path sintético, comprueba si el cliente
+ * existe en D1 antes de proponer la tarjeta HITL. Devuelve `true` solo si la query confirma
+ * que **no existe**, lo que permite cortocircuitar al ejecutor sin pedir aprobación. Ante
+ * cualquier fallo de D1 devuelve `false` para no bloquear el flujo HITL existente.
+ */
+async function customerIsKnownAbsent(env: Env, customerId: string): Promise<boolean> {
+  if (!customerId) return false;
+  try {
+    const row = await env.DB.prepare(`SELECT id FROM customers WHERE id = ?`).bind(customerId).first();
+    return row === null || row === undefined;
+  } catch {
+    return false;
+  }
+}
+
 async function exposePendingHitl(
   env: Env,
   graph: ReturnType<typeof buildGraph>,
   config: ReturnType<typeof buildGraphInvokeConfig>,
-  result: unknown,
+  result: ChatGraphInvokeResult,
   userText?: string
-): Promise<void> {
+): Promise<ChatGraphInvokeResult | undefined> {
   if (hasGraphInterrupt(result)) {
     throwGraphInterruptValue(extractGraphInterruptValue(result));
-    return;
+    return undefined;
   }
   const unresolved = findUnresolvedCriticalToolApproval(result);
   if (unresolved) {
     throwGraphInterruptValue(unresolved);
-    return;
+    return undefined;
   }
-  if (!userText) return;
+  if (!userText) return undefined;
 
   const synthetic = await resolveSyntheticDeleteHitl(env, result, userText);
-  if (!synthetic) return;
+  if (!synthetic) return undefined;
+
+  if (synthetic.tool === "delete_customer_record") {
+    const customerId = String((synthetic.args as { customer_id?: string }).customer_id ?? "");
+    if (await customerIsKnownAbsent(env, customerId)) {
+      const snapshot = await graph.getState(config);
+      const stateValues = snapshot.values as GraphState;
+      return executeSyntheticHitlResume(
+        env,
+        graph,
+        config,
+        { approved: true },
+        synthetic,
+        stateValues
+      );
+    }
+  }
 
   const toolState = {
     ...((result as { toolState?: Record<string, unknown> }).toolState ?? {}),
@@ -109,6 +141,7 @@ async function exposePendingHitl(
   };
   await graph.updateState(config, { toolState });
   throwGraphInterruptValue(synthetic);
+  return undefined;
 }
 
 export type ChatGraphInvokeResult = Awaited<ReturnType<ReturnType<typeof buildGraph>["invoke"]>>;
@@ -166,8 +199,8 @@ export async function runChatMessageGraph(
     config.configurable[CHAT_WS_REPLY_RESET_KEY] = params.onReplyReset;
   }
   const result = await graph.invoke({ messages: [new HumanMessage(params.text)] }, config);
-  await exposePendingHitl(env, graph, config, result, params.text);
-  return result;
+  const overridden = await exposePendingHitl(env, graph, config, result, params.text);
+  return overridden ?? result;
 }
 
 export async function runChatResumeGraph(
