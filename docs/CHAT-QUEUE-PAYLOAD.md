@@ -18,13 +18,23 @@ Todos los campos son obligatorios salvo `thread_hint`.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `delivery.kind` | `"telegram"` | Adaptador de entrega. |
-| `delivery.chat_id` | string | Chat de Telegram (`message.chat.id`). |
-| `delivery.update_id` | string | `update_id` del Update de Telegram (no `message.message_id`); slot KV de pending. |
+| `delivery.kind` | `"telegram"` \| `"slack"` | Adaptador de entrega. |
+| `delivery.chat_id` | string | Solo Telegram: `message.chat.id`. |
+| `delivery.update_id` | string | Solo Telegram: `update_id` del Update (slot KV pending). |
+| `delivery.channel_id` | string | Solo Slack: `event.channel`. |
+| `delivery.event_id` | string | Solo Slack: `event_id` del envelope `event_callback` (slot KV pending). |
 
-Continuidad de hilo: KV `CHAT_THREAD_KV`, clave `telegram:chat:{chat_id}` → `thread_id` (TTL 90 días, renovable).
+Continuidad de hilo (KV `CHAT_THREAD_KV`, TTL 90 días, renovable):
 
-Pending de entrega: `telegram:pending:{chat_id}:{update_id}` → `{ threadId, reply, text }` con TTL 24 h. Si `sendMessage` falla tras grafo OK, el **reintento de cola solo reenvía** ese pending (sin re-invoke). `clear` del pending es best-effort tras ack para no duplicar Telegram si KV.delete falla.
+- Telegram: `telegram:chat:{chat_id}` → `thread_id`
+- Slack: `slack:channel:{channel_id}` → `thread_id`
+
+Pending de entrega (TTL 24 h; si la API del canal falla tras grafo OK, el **reintento de cola solo reenvía** el pending sin re-invoke):
+
+- Telegram: `telegram:pending:{chat_id}:{update_id}`
+- Slack: `slack:pending:{channel_id}:{event_id}`
+
+`clear` del pending es best-effort tras ack para no duplicar mensajes si KV.delete falla.
 
 Preview: namespace KV `CHAT_THREAD_KV_preview` (aislado de prod).
 
@@ -94,7 +104,14 @@ Coste y modelo de consumo: [Queues — Pricing](https://developers.cloudflare.co
 - Secreto Worker `TELEGRAM_BOT_TOKEN` para `sendMessage` tras el consumer.
 - Runbook: [`PAN-18-c2-channel-webhooks-design.md`](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-18-c2-channel-webhooks-design.md).
 
-## Alcance fuera de PAN-17 / PAN-18 v1
+## Slack (PAN-37)
 
-- Slack / Microsoft Teams (mismo patrón `delivery`, issues posteriores).
+- Webhook BFF: `POST /api/webhooks/slack` en **aaas-landing** (Pages).
+- Secreto Pages `SLACK_SIGNING_SECRET` ↔ firma `X-Slack-Signature` + timestamp `X-Slack-Request-Timestamp`.
+- Secreto Worker `SLACK_BOT_TOKEN` (`xoxb-…`) para `chat.postMessage` tras el consumer.
+- Runbook: [`PAN-37-c2-slack-webhooks-design.md`](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-37-c2-slack-webhooks-design.md).
+
+## Alcance fuera de PAN-17 / PAN-18 / PAN-37 v1
+
+- Microsoft Teams (mismo patrón `delivery`, issue posterior).
 - Reanudación HITL vía cola: no soportada; usar `/api/chat/resume`.

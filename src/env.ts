@@ -15,6 +15,8 @@ export interface Env {
   CHAT_THREAD_KV?: KVNamespace;
   /** Bot API token para entrega Telegram desde el consumer de cola. */
   TELEGRAM_BOT_TOKEN?: string;
+  /** Bot token (`xoxb-…`) para `chat.postMessage` en Slack (PAN-37). */
+  SLACK_BOT_TOKEN?: string;
   COPILOT_GITHUB_TOKEN: string;
   ALLOWED_ORIGINS: string;
   COPILOT_MODEL: string;

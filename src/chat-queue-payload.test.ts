@@ -47,12 +47,29 @@ describe("parseNormalizedChatPayload", () => {
     }
   });
 
+  it("acepta delivery slack opcional (PAN-37)", () => {
+    const r = parseNormalizedChatPayload({
+      channel: "slack",
+      user_id: "slack:U99",
+      text: "hola",
+      delivery: { kind: "slack", channel_id: "C123", event_id: "Ev001" },
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.data.delivery?.kind).toBe("slack");
+      if (r.data.delivery?.kind === "slack") {
+        expect(r.data.delivery.channel_id).toBe("C123");
+        expect(r.data.delivery.event_id).toBe("Ev001");
+      }
+    }
+  });
+
   it("rechaza delivery con kind desconocido", () => {
     const r = parseNormalizedChatPayload({
       channel: "telegram",
       user_id: "telegram:99",
       text: "hola",
-      delivery: { kind: "slack", chat_id: "x" },
+      delivery: { kind: "teams", chat_id: "x" },
     });
     expect(r.ok).toBe(false);
   });

@@ -27,3 +27,27 @@ export async function putTelegramThreadId(
     expirationTtl: THREAD_KV_TTL_SECONDS,
   });
 }
+
+export function slackChannelThreadKey(channelId: string): string {
+  return `slack:channel:${channelId}`;
+}
+
+export async function getSlackThreadId(
+  kv: KVNamespace | undefined,
+  channelId: string
+): Promise<string | null> {
+  if (!kv) return null;
+  const raw = await kv.get(slackChannelThreadKey(channelId));
+  return parseThreadId(raw ?? undefined);
+}
+
+export async function putSlackThreadId(
+  kv: KVNamespace | undefined,
+  channelId: string,
+  threadId: string
+): Promise<void> {
+  if (!kv) return;
+  await kv.put(slackChannelThreadKey(channelId), threadId, {
+    expirationTtl: THREAD_KV_TTL_SECONDS,
+  });
+}

@@ -66,3 +66,56 @@ export async function clearPendingTelegramDeliveryBestEffort(
     console.error("[queue] KV pending clear failed (continuing):", err);
   }
 }
+
+export function slackPendingDeliveryKey(channelId: string, eventId: string): string {
+  return `slack:pending:${channelId}:${eventId}`;
+}
+
+export async function getPendingSlackDelivery(
+  kv: KVNamespace | undefined,
+  channelId: string,
+  eventId: string
+): Promise<PendingTelegramDelivery | null> {
+  if (!kv) return null;
+  const raw = await kv.get(slackPendingDeliveryKey(channelId, eventId));
+  if (!raw) return null;
+  try {
+    const parsed = pendingTelegramDeliverySchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function putPendingSlackDelivery(
+  kv: KVNamespace | undefined,
+  channelId: string,
+  eventId: string,
+  data: PendingTelegramDelivery
+): Promise<void> {
+  if (!kv) return;
+  await kv.put(slackPendingDeliveryKey(channelId, eventId), JSON.stringify(data), {
+    expirationTtl: PENDING_DELIVERY_TTL_SECONDS,
+  });
+}
+
+export async function clearPendingSlackDelivery(
+  kv: KVNamespace | undefined,
+  channelId: string,
+  eventId: string
+): Promise<void> {
+  if (!kv) return;
+  await kv.delete(slackPendingDeliveryKey(channelId, eventId));
+}
+
+export async function clearPendingSlackDeliveryBestEffort(
+  kv: KVNamespace | undefined,
+  channelId: string,
+  eventId: string
+): Promise<void> {
+  try {
+    await clearPendingSlackDelivery(kv, channelId, eventId);
+  } catch (err) {
+    console.error("[queue] KV pending clear failed (continuing):", err);
+  }
+}

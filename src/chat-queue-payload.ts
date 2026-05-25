@@ -17,7 +17,18 @@ export const telegramDeliverySchema = z.object({
   update_id: z.string().trim().min(1).max(64),
 });
 
-export const chatDeliverySchema = telegramDeliverySchema;
+export const slackDeliverySchema = z.object({
+  kind: z.literal("slack"),
+  /** Canal Slack (`event.channel`, p. ej. `C0123…`). */
+  channel_id: z.string().trim().min(1).max(64),
+  /** `event_id` del envelope `event_callback` (deduplicación / pending KV). */
+  event_id: z.string().trim().min(1).max(128),
+});
+
+export const chatDeliverySchema = z.discriminatedUnion("kind", [
+  telegramDeliverySchema,
+  slackDeliverySchema,
+]);
 
 export type ChatDelivery = z.infer<typeof chatDeliverySchema>;
 

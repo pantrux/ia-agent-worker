@@ -22,11 +22,13 @@ import {
 import { extractLastAiReply } from "./chat-reply.js";
 import { deliverChannelReply } from "./channel-delivery/index.js";
 import {
-  clearPendingTelegramDeliveryBestEffort,
-  getPendingTelegramDelivery,
-  putPendingTelegramDelivery,
-} from "./chat-pending-delivery.js";
-import { getTelegramThreadId, putTelegramThreadId } from "./chat-thread-kv.js";
+  clearPendingDeliveryForCtxBestEffort,
+  getPendingDeliveryForCtx,
+  lookupKvThreadIdForPayload,
+  persistThreadForPayload,
+  putPendingDeliveryForCtx,
+  resolveQueueDeliveryCtx,
+} from "./queue-channel-delivery.js";
 import { classifyChatGraphError, type ChatClientErrorCode } from "./chat-graph-error.js";
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -102,28 +104,10 @@ interface ResumeRequest {
   approved: boolean;
 }
 
-async function lookupKvThreadId(env: Env, data: NormalizedChatPayload): Promise<string | null> {
-  if (data.delivery?.kind === "telegram") {
-    return getTelegramThreadId(env.CHAT_THREAD_KV, data.delivery.chat_id);
-  }
-  return null;
-}
-
-/** Best-effort: KV antes del grafo/entrega para que reintentos de cola reutilicen el mismo hilo. */
-async function persistThreadForChannel(
-  env: Env,
-  data: NormalizedChatPayload,
-  threadId: string
-): Promise<void> {
-  if (data.delivery?.kind === "telegram") {
-    await putTelegramThreadId(env.CHAT_THREAD_KV, data.delivery.chat_id, threadId);
-  }
-}
-
 type QueueMessage = { ack(): void; retry(options?: { delaySeconds?: number }): void };
 
 /**
- * Consumer de cola: grafo + entrega Telegram. Si la Bot API falla tras grafo OK,
+ * Consumer de cola: grafo + entrega externa (Telegram / Slack). Si la API del canal falla tras grafo OK,
  * guarda reply en KV y en reintento solo reenvía (sin duplicar invoke).
  */
 async function processQueueChatMessage(
@@ -131,40 +115,31 @@ async function processQueueChatMessage(
   data: NormalizedChatPayload,
   msg: QueueMessage
 ): Promise<void> {
-  const threadId = await resolveQueueThreadId(data.thread_hint, () => lookupKvThreadId(env, data));
+  const threadId = await resolveQueueThreadId(data.thread_hint, () =>
+    lookupKvThreadIdForPayload(env, data)
+  );
   const { channel, user_id: userId, text } = data;
   const delivery = data.delivery;
-  const telegram =
-    delivery?.kind === "telegram"
-      ? { chatId: delivery.chat_id, updateId: delivery.update_id }
-      : undefined;
+  const deliveryCtx = delivery ? resolveQueueDeliveryCtx(delivery) : undefined;
 
   if (delivery) {
     try {
-      await persistThreadForChannel(env, data, threadId);
+      await persistThreadForPayload(env, data, threadId);
     } catch (kvErr) {
       console.error("[queue] KV thread persist failed (continuing):", kvErr);
     }
   }
 
-  if (telegram && delivery) {
-    const pending = await getPendingTelegramDelivery(
-      env.CHAT_THREAD_KV,
-      telegram.chatId,
-      telegram.updateId
-    );
+  if (deliveryCtx && delivery) {
+    const pending = await getPendingDeliveryForCtx(env, deliveryCtx);
     if (pending && pending.text === text) {
       try {
         await deliverChannelReply(env, delivery, pending.reply);
-        await clearPendingTelegramDeliveryBestEffort(
-          env.CHAT_THREAD_KV,
-          telegram.chatId,
-          telegram.updateId
-        );
+        await clearPendingDeliveryForCtxBestEffort(env, deliveryCtx);
         msg.ack();
         return;
       } catch (deliveryErr) {
-        console.error("[queue] Telegram delivery retry failed:", deliveryErr);
+        console.error("[queue] channel delivery retry failed:", deliveryErr);
         msg.retry({ delaySeconds: 30 });
         return;
       }
@@ -183,22 +158,14 @@ async function processQueueChatMessage(
   } catch (e: unknown) {
     if (isGraphInterruptError(e)) {
       console.warn("[queue] GraphInterrupt (HITL); ack. thread_id=", threadId);
-      if (telegram) {
-        await clearPendingTelegramDeliveryBestEffort(
-          env.CHAT_THREAD_KV,
-          telegram.chatId,
-          telegram.updateId
-        );
+      if (deliveryCtx) {
+        await clearPendingDeliveryForCtxBestEffort(env, deliveryCtx);
       }
       msg.ack();
       return;
     }
-    if (telegram) {
-      await clearPendingTelegramDeliveryBestEffort(
-        env.CHAT_THREAD_KV,
-        telegram.chatId,
-        telegram.updateId
-      );
+    if (deliveryCtx) {
+      await clearPendingDeliveryForCtxBestEffort(env, deliveryCtx);
     }
     console.error("[queue] error en invoke:", e);
     msg.retry({ delaySeconds: 30 });
@@ -211,14 +178,9 @@ async function processQueueChatMessage(
   }
 
   const reply = extractLastAiReply(result);
-  if (telegram) {
+  if (deliveryCtx) {
     try {
-      await putPendingTelegramDelivery(
-        env.CHAT_THREAD_KV,
-        telegram.chatId,
-        telegram.updateId,
-        { threadId, reply, text }
-      );
+      await putPendingDeliveryForCtx(env, deliveryCtx, { threadId, reply, text });
     } catch (kvErr) {
       console.error("[queue] KV pending persist failed (continuing):", kvErr);
     }
@@ -228,19 +190,15 @@ async function processQueueChatMessage(
     await deliverChannelReply(env, delivery, reply);
   } catch (deliveryErr) {
     console.error(
-      "[queue] Telegram delivery failed (pending en KV; reintento sin grafo):",
+      "[queue] channel delivery failed (pending en KV; reintento sin grafo):",
       deliveryErr
     );
     msg.retry({ delaySeconds: 30 });
     return;
   }
 
-  if (telegram) {
-    await clearPendingTelegramDeliveryBestEffort(
-      env.CHAT_THREAD_KV,
-      telegram.chatId,
-      telegram.updateId
-    );
+  if (deliveryCtx) {
+    await clearPendingDeliveryForCtxBestEffort(env, deliveryCtx);
   }
   msg.ack();
 }

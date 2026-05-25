@@ -1,5 +1,6 @@
 import type { Env } from "../env.js";
 import type { ChatDelivery } from "../chat-queue-payload.js";
+import { sendSlackMessage } from "./slack.js";
 import { sendTelegramMessage } from "./telegram.js";
 
 export async function deliverChannelReply(
@@ -13,6 +14,9 @@ export async function deliverChannelReply(
   switch (delivery.kind) {
     case "telegram":
       await sendTelegramMessage(env, delivery.chat_id, trimmed);
+      break;
+    case "slack":
+      await sendSlackMessage(env, delivery.channel_id, trimmed);
       break;
     default: {
       const _exhaustive: never = delivery;

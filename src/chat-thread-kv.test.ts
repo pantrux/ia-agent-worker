@@ -4,11 +4,15 @@ import {
   telegramChatThreadKey,
   getTelegramThreadId,
   putTelegramThreadId,
+  slackChannelThreadKey,
+  getSlackThreadId,
+  putSlackThreadId,
 } from "./chat-thread-kv.js";
 
 describe("chat-thread-kv", () => {
   it("clave estable por chat_id", () => {
     expect(telegramChatThreadKey("42")).toBe("telegram:chat:42");
+    expect(slackChannelThreadKey("C42")).toBe("slack:channel:C42");
   });
 
   it("get/put roundtrip con KV mock", async () => {
@@ -30,5 +34,19 @@ describe("chat-thread-kv", () => {
 
   it("sin KV devuelve null", async () => {
     expect(await getTelegramThreadId(undefined, "1")).toBeNull();
+    expect(await getSlackThreadId(undefined, "C1")).toBeNull();
+  });
+
+  it("slack get/put roundtrip", async () => {
+    const store = new Map<string, string>();
+    const kv = {
+      get: async (key: string) => store.get(key) ?? null,
+      put: async (key: string, value: string) => {
+        store.set(key, value);
+      },
+    };
+    const id = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+    await putSlackThreadId(kv as never, "C9", id);
+    expect(await getSlackThreadId(kv as never, "C9")).toBe(id);
   });
 });

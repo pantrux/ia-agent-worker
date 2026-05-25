@@ -68,6 +68,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 |----|------------|-----------------|--------|-------|
 | C1 | Queues + payload normalizado + metadata `channel` | [PR #39](https://github.com/pantrux/ia-agent-worker/pull/39) (merge `efbbc4f`, 2026-05-16) | Ejecutado | Contrato y runbook: [CHAT-QUEUE-PAYLOAD.md](./CHAT-QUEUE-PAYLOAD.md). Linear [PAN-17](https://linear.app/pantrux/issue/PAN-17) Done. |
 | C2 | BFF / webhooks por canal (Telegram v1) | [PR #41](https://github.com/pantrux/ia-agent-worker/pull/41) (merge `62971de`) + [PR #33 `aaas-landing`](https://github.com/pantrux/aaas-landing/pull/33) (`c2cb3ab`) | Ejecutado | `delivery` en cola, `CHAT_THREAD_KV`, pending por `update_id`, `sendTelegramMessage`; webhook en Pages. Ver [`CHAT-QUEUE-PAYLOAD.md`](./CHAT-QUEUE-PAYLOAD.md) § Telegram y [`PAN-18-c2-channel-webhooks-design.md`](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-18-c2-channel-webhooks-design.md). [PAN-18](https://linear.app/pantrux/issue/PAN-18) Done. |
+| C2-Slack | Webhook Slack (opcional) | PoC rama `feat-pan-37-c2-slack-webhook` (sin merge) | Standby | Bloqueado por [PAN-43](https://linear.app/pantrux/issue/PAN-43). [PAN-37](https://linear.app/pantrux/issue/PAN-37). |
 | C3 | Durable Objects / Agents SDK (WebSocket) | [PAN-19](https://linear.app/pantrux/issue/PAN-19) | En curso | [`PAN-19-c3-websocket-design.md`](https://github.com/pantrux/aaas-landing/blob/main/docs/PAN-19-c3-websocket-design.md) · [`ADR-C3-websocket-langgraph-hybrid.md`](./ADR-C3-websocket-langgraph-hybrid.md) |
 
 ---
