@@ -1,8 +1,11 @@
-import { AIMessage } from "@langchain/core/messages";
+import { AIMessage, HumanMessage, ToolMessage } from "@langchain/core/messages";
 import { describe, expect, it, vi } from "vitest";
 import type { Env } from "./env.js";
 import {
+  findPreviousToolResultForCall,
   findUnresolvedCriticalToolApproval,
+  isKnownTerminalToolResult,
+  OPERATOR_DENIED_TOOL_CONTENT,
   resolveDeleteCustomerId,
   resolveDeleteCustomerIdFromText,
   resolveSyntheticDeleteHitl,
@@ -91,5 +94,114 @@ describe("resolveDeleteCustomerId", () => {
     const id = await resolveDeleteCustomerId({ DB: {} } as Env, "Elimina el cliente Mystery Corp");
     expect(findInvoke).toHaveBeenCalledWith({ name: "Mystery Corp" });
     expect(id).toBe("cust-009");
+  });
+});
+
+describe("isKnownTerminalToolResult", () => {
+  it("acepta denegación textual del operador", () => {
+    expect(isKnownTerminalToolResult(OPERATOR_DENIED_TOOL_CONTENT)).toBe(true);
+  });
+
+  it("acepta JSON con error string", () => {
+    expect(isKnownTerminalToolResult(JSON.stringify({ error: "Customer not found" }))).toBe(true);
+    expect(isKnownTerminalToolResult(JSON.stringify({ error: "Order not found" }))).toBe(true);
+  });
+
+  it("rechaza éxito y errores transitorios sin estructura conocida", () => {
+    expect(isKnownTerminalToolResult(JSON.stringify({ ok: true, deleted_id: "cust-001" }))).toBe(false);
+    expect(isKnownTerminalToolResult("Tool error: timeout")).toBe(false);
+    expect(isKnownTerminalToolResult("texto libre")).toBe(false);
+  });
+
+  it("rechaza JSON con error no string (defensivo)", () => {
+    expect(isKnownTerminalToolResult(JSON.stringify({ error: 500 }))).toBe(false);
+  });
+});
+
+describe("findPreviousToolResultForCall", () => {
+  it("encuentra el ToolMessage previo emparejado por name+args", () => {
+    const messages = [
+      new HumanMessage("Elimina cust-001"),
+      new AIMessage({
+        content: "",
+        tool_calls: [{ id: "prev", name: "delete_customer_record", args: { customer_id: "cust-001" } }],
+      }),
+      new ToolMessage({
+        content: JSON.stringify({ error: "Customer not found" }),
+        tool_call_id: "prev",
+      }),
+    ];
+    expect(
+      findPreviousToolResultForCall(messages, "delete_customer_record", { customer_id: "cust-001" })
+    ).toContain("Customer not found");
+  });
+
+  it("ignora otras tools y customer_ids distintos", () => {
+    const messages = [
+      new AIMessage({
+        content: "",
+        tool_calls: [{ id: "p1", name: "delete_customer_record", args: { customer_id: "cust-002" } }],
+      }),
+      new ToolMessage({ content: "Operator denied this CRM mutation.", tool_call_id: "p1" }),
+    ];
+    expect(
+      findPreviousToolResultForCall(messages, "delete_customer_record", { customer_id: "cust-001" })
+    ).toBeUndefined();
+  });
+
+  it("devuelve el resultado más reciente cuando hay varios", () => {
+    const messages = [
+      new AIMessage({
+        content: "",
+        tool_calls: [{ id: "old", name: "delete_customer_record", args: { customer_id: "cust-001" } }],
+      }),
+      new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "old" }),
+      new AIMessage({
+        content: "",
+        tool_calls: [{ id: "new", name: "delete_customer_record", args: { customer_id: "cust-001" } }],
+      }),
+      new ToolMessage({ content: OPERATOR_DENIED_TOOL_CONTENT, tool_call_id: "new" }),
+    ];
+    expect(
+      findPreviousToolResultForCall(messages, "delete_customer_record", { customer_id: "cust-001" })
+    ).toBe(OPERATOR_DENIED_TOOL_CONTENT);
+  });
+});
+
+describe("resolveSyntheticDeleteHitl con resultado terminal previo (PAN-39)", () => {
+  it("no sintetiza si ya hubo Customer not found para mismo customer_id", async () => {
+    const messages = [
+      new HumanMessage("Elimina cust-001"),
+      new AIMessage({
+        content: "",
+        tool_calls: [{ id: "prev", name: "delete_customer_record", args: { customer_id: "cust-001" } }],
+      }),
+      new ToolMessage({
+        content: JSON.stringify({ error: "Customer not found" }),
+        tool_call_id: "prev",
+      }),
+    ];
+    const pending = await resolveSyntheticDeleteHitl(
+      { DB: {} } as Env,
+      { intent: "delete_customer", messages },
+      "Elimina cust-001 otra vez"
+    );
+    expect(pending).toBeUndefined();
+  });
+
+  it("no sintetiza si hubo denegación previa para mismo customer_id", async () => {
+    const messages = [
+      new AIMessage({
+        content: "",
+        tool_calls: [{ id: "prev", name: "delete_customer_record", args: { customer_id: "cust-001" } }],
+      }),
+      new ToolMessage({ content: OPERATOR_DENIED_TOOL_CONTENT, tool_call_id: "prev" }),
+    ];
+    const pending = await resolveSyntheticDeleteHitl(
+      { DB: {} } as Env,
+      { intent: "delete_customer", messages },
+      "Borra Acme Retail"
+    );
+    expect(pending).toBeUndefined();
   });
 });
