@@ -43,8 +43,14 @@ function buildState(messages: GraphState["messages"]): GraphState {
   };
 }
 
-function buildEnv(customerExists: boolean): Env {
-  const first = vi.fn().mockResolvedValue(customerExists ? { id: "cust-001" } : null);
+type DbStub = "exists" | "missing" | "fail";
+
+function buildEnv(state: DbStub): Env {
+  const first = vi.fn().mockImplementation(() => {
+    if (state === "fail") return Promise.reject(new Error("D1 unavailable"));
+    if (state === "exists") return Promise.resolve({ id: "cust-001" });
+    return Promise.resolve(null);
+  });
   const bind = vi.fn().mockReturnValue({ first, all: vi.fn(), run: vi.fn() });
   const prepare = vi.fn().mockReturnValue({ bind });
   return { DB: { prepare } } as unknown as Env;
@@ -61,10 +67,8 @@ describe("tools_node — PAN-39 pre-checks de delete_customer_record", () => {
     getInvoke.mockReset();
   });
 
-  it("cliente inexistente: ejecuta la tool directamente y NO interrumpe", async () => {
-    deleteInvoke.mockResolvedValueOnce(JSON.stringify({ error: "Customer not found" }));
-
-    const node = createToolsNode(buildEnv(false));
+  it("cliente inexistente: emite Customer not found sin interrumpir ni invocar la tool (cierra TOCTOU)", async () => {
+    const node = createToolsNode(buildEnv("missing"));
     const state = buildState([
       new HumanMessage("Elimina permanentemente cust-001 del CRM."),
       new AIMessage({
@@ -75,15 +79,37 @@ describe("tools_node — PAN-39 pre-checks de delete_customer_record", () => {
 
     const out = await node(state);
     expect(interruptMock).not.toHaveBeenCalled();
-    expect(deleteInvoke).toHaveBeenCalledWith({ customer_id: "cust-001" });
+    expect(deleteInvoke).not.toHaveBeenCalled();
     const msgs = out.messages as ToolMessage[];
     expect(msgs).toHaveLength(1);
     expect(msgs[0].tool_call_id).toBe("tc1");
-    expect(String(msgs[0].content)).toContain("Customer not found");
+    const parsed = JSON.parse(String(msgs[0].content)) as { error?: string };
+    expect(parsed.error).toBe("Customer not found");
+  });
+
+  it("D1 falla en la preflight: cae al flujo HITL normal sin crashear", async () => {
+    interruptMock.mockReset();
+    interruptMock.mockImplementationOnce(() => ({ approved: true }));
+    deleteInvoke.mockResolvedValueOnce(JSON.stringify({ ok: true, deleted_id: "cust-001" }));
+
+    const node = createToolsNode(buildEnv("fail"));
+    const state = buildState([
+      new HumanMessage("Elimina cust-001"),
+      new AIMessage({
+        content: "",
+        tool_calls: [{ id: "tcfail", name: "delete_customer_record", args: { customer_id: "cust-001" } }],
+      }),
+    ]);
+
+    const out = await node(state);
+    expect(interruptMock).toHaveBeenCalledTimes(1);
+    expect(deleteInvoke).toHaveBeenCalledWith({ customer_id: "cust-001" });
+    const msgs = out.messages as ToolMessage[];
+    expect(String(msgs[0].content)).toContain("ok");
   });
 
   it("denegación previa para mismo customer_id: reusa el ToolMessage sin interrumpir", async () => {
-    const node = createToolsNode(buildEnv(true));
+    const node = createToolsNode(buildEnv("exists"));
     const state = buildState([
       new HumanMessage("Elimina cust-001"),
       new AIMessage({
@@ -108,7 +134,7 @@ describe("tools_node — PAN-39 pre-checks de delete_customer_record", () => {
   });
 
   it("Customer not found previo para mismo id: reusa el resultado sin interrumpir ni consultar D1", async () => {
-    const env = buildEnv(true);
+    const env = buildEnv("exists");
     const node = createToolsNode(env);
     const state = buildState([
       new HumanMessage("Elimina cust-001"),
@@ -141,7 +167,7 @@ describe("tools_node — PAN-39 pre-checks de delete_customer_record", () => {
     interruptMock.mockImplementationOnce(() => ({ approved: true }));
     deleteInvoke.mockResolvedValueOnce(JSON.stringify({ ok: true, deleted_id: "cust-002" }));
 
-    const node = createToolsNode(buildEnv(true));
+    const node = createToolsNode(buildEnv("exists"));
     const state = buildState([
       new HumanMessage("Elimina cust-002"),
       new AIMessage({
@@ -164,7 +190,7 @@ describe("tools_node — PAN-39 pre-checks de delete_customer_record", () => {
     interruptMock.mockReset();
     interruptMock.mockImplementationOnce(() => ({ approved: false }));
 
-    const node = createToolsNode(buildEnv(true));
+    const node = createToolsNode(buildEnv("exists"));
     const state = buildState([
       new HumanMessage("Elimina cust-002"),
       new AIMessage({
@@ -183,7 +209,7 @@ describe("tools_node — PAN-39 pre-checks de delete_customer_record", () => {
   it("tool no crítica nunca interrumpe", async () => {
     findInvoke.mockResolvedValueOnce(JSON.stringify({ items: [], count: 0 }));
 
-    const node = createToolsNode(buildEnv(true));
+    const node = createToolsNode(buildEnv("exists"));
     const state = buildState([
       new HumanMessage("Busca clientes"),
       new AIMessage({
