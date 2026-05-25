@@ -40,6 +40,26 @@ describe("formatTerminalReply", () => {
     expect(reply).toMatch(/no existe/i);
   });
 
+  it("incluye `customer_id` en el reply de `Customer not found` cuando los args están disponibles", () => {
+    const tm = new ToolMessage({
+      content: JSON.stringify({ error: "Customer not found" }),
+      tool_call_id: "tc-1",
+    });
+    const reply = formatTerminalReply(tm, "delete_customer_record", { customer_id: "cust-001" });
+    expect(reply).toMatch(/cust-001/);
+    expect(reply).toMatch(/no existe/i);
+  });
+
+  it("incluye `customer_id` en el reply de denegación HITL cuando los args están disponibles", () => {
+    const tm = new ToolMessage({
+      content: OPERATOR_DENIED_TOOL_CONTENT,
+      tool_call_id: "tc-2",
+    });
+    const reply = formatTerminalReply(tm, "delete_customer_record", { customer_id: "cust-007" });
+    expect(reply).toMatch(/cancelada por el operador/i);
+    expect(reply).toMatch(/cust-007/);
+  });
+
   it("cae a copy genérico cuando el tool name es desconocido o no es delete", () => {
     const tm = new ToolMessage({
       content: JSON.stringify({ error: "Customer not found" }),
@@ -49,7 +69,7 @@ describe("formatTerminalReply", () => {
     expect(formatTerminalReply(tm)).toMatch(/no se pudo completar la operación/i);
   });
 
-  it("traduce denegación del operador a reply localizado", () => {
+  it("traduce denegación del operador a reply localizado sin args", () => {
     const tm = new ToolMessage({
       content: OPERATOR_DENIED_TOOL_CONTENT,
       tool_call_id: "tc-2",
@@ -187,7 +207,7 @@ describe("createTerminalReplyNode", () => {
     const state = makeState({
       messages: [
         new HumanMessage("delete cust-001"),
-        aiToolCall("delete_customer_record", "tc-1"),
+        aiToolCall("delete_customer_record", "tc-1", { customer_id: "cust-001" }),
         new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-1" }),
       ],
       toolState: { last_executed_batch: ["tc-1"] },
@@ -204,12 +224,14 @@ describe("createTerminalReplyNode", () => {
     expect(onReplyReset).toHaveBeenCalledTimes(1);
     expect(onTokenDelta).toHaveBeenCalledTimes(1);
     expect(onTokenDelta.mock.calls[0][0]).toMatch(/no existe/i);
+    expect(onTokenDelta.mock.calls[0][0]).toMatch(/cust-001/);
 
     const msgs = result.messages as AIMessage[];
     expect(msgs).toHaveLength(1);
     expect(msgs[0]).toBeInstanceOf(AIMessage);
     expect(typeof msgs[0].content).toBe("string");
     expect(msgs[0].content).toMatch(/no se pudo eliminar el cliente/i);
+    expect(msgs[0].content).toMatch(/cust-001/);
     expect((result.toolState as Record<string, unknown>).terminal_reply).toBe(true);
   });
 

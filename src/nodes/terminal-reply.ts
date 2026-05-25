@@ -34,9 +34,15 @@ import type { GraphState } from "../state.js";
  *   ningún error.
  */
 
+interface ToolCallContext {
+  name: string;
+  args: Record<string, unknown>;
+}
+
 interface TerminalToolMatch {
   toolMessage: ToolMessage;
   toolName: string;
+  toolArgs: Record<string, unknown>;
 }
 
 function toContentString(content: unknown): string {
@@ -45,17 +51,22 @@ function toContentString(content: unknown): string {
 }
 
 /**
- * Mapea `tool_call_id → tool_name` recorriendo los `AIMessage` con `tool_calls` previos
+ * Mapea `tool_call_id → {name, args}` recorriendo los `AIMessage` con `tool_calls` previos
  * en el estado. La búsqueda es necesaria porque `tools_node` solo registra los IDs del
- * batch en `state.toolState.last_executed_batch`, no los nombres.
+ * batch en `state.toolState.last_executed_batch`, no los nombres ni los argumentos. Los
+ * argumentos se utilizan para enriquecer el reply terminal (por ejemplo, mencionar el
+ * `customer_id` afectado en una denegación HITL sin necesidad de pasar por el LLM).
  */
-function buildToolCallNameIndex(state: GraphState): Map<string, string> {
-  const index = new Map<string, string>();
+function buildToolCallContextIndex(state: GraphState): Map<string, ToolCallContext> {
+  const index = new Map<string, ToolCallContext>();
   for (const m of state.messages) {
     if (m instanceof AIMessage && m.tool_calls?.length) {
       for (const tc of m.tool_calls) {
         if (tc.id && !index.has(tc.id) && typeof tc.name === "string") {
-          index.set(tc.id, tc.name);
+          index.set(tc.id, {
+            name: tc.name,
+            args: (tc.args as Record<string, unknown>) ?? {},
+          });
         }
       }
     }
@@ -74,7 +85,7 @@ function lastBatchTerminalCriticalToolMessages(state: GraphState): TerminalToolM
   if (!Array.isArray(batchIds) || batchIds.length === 0) return null;
   const ids = new Set(batchIds.map((id) => String(id)));
 
-  const nameIndex = buildToolCallNameIndex(state);
+  const ctxIndex = buildToolCallContextIndex(state);
   const matches: TerminalToolMatch[] = [];
   const seenIds = new Set<string>();
   for (let i = state.messages.length - 1; i >= 0 && matches.length < ids.size; i--) {
@@ -82,11 +93,12 @@ function lastBatchTerminalCriticalToolMessages(state: GraphState): TerminalToolM
     if (!(m instanceof ToolMessage)) continue;
     const tid = m.tool_call_id;
     if (!tid || !ids.has(tid) || seenIds.has(tid)) continue;
-    const toolName = nameIndex.get(tid) ?? "";
+    const ctx = ctxIndex.get(tid);
+    const toolName = ctx?.name ?? "";
     if (!CRITICAL_TOOL_NAMES.has(toolName)) return null;
     if (!isKnownTerminalToolResult(toContentString(m.content))) return null;
     seenIds.add(tid);
-    matches.unshift({ toolMessage: m, toolName });
+    matches.unshift({ toolMessage: m, toolName, toolArgs: ctx?.args ?? {} });
   }
   // Hallazgo Gitar/Devin: solo consideramos el batch terminal si **todos** los IDs
   // declarados en `last_executed_batch` tienen un `ToolMessage` validado. Si falta
@@ -110,10 +122,24 @@ export function lastBatchIsAllTerminal(state: GraphState): boolean {
  * call es `delete_customer_record`; para futuros tools críticos cae a un texto genérico
  * que no asume la operación de borrado (evita el copy contradictorio que señalaron Devin
  * y Gitar para tools de lectura).
+ *
+ * Cuando se proporciona `toolArgs`, el reply se enriquece con datos del tool call (por
+ * ejemplo, `customer_id`) para mantener la respuesta contextual sin necesidad de invocar
+ * al LLM (compromiso documentado tras el `🚩` de Devin sobre denegación HITL).
  */
-export function formatTerminalReply(toolMessage: ToolMessage, toolName?: string): string {
+export function formatTerminalReply(
+  toolMessage: ToolMessage,
+  toolName?: string,
+  toolArgs?: Record<string, unknown>
+): string {
   const content = toContentString(toolMessage.content);
   if (content === OPERATOR_DENIED_TOOL_CONTENT) {
+    if (toolName === "delete_customer_record") {
+      const customerId = String(toolArgs?.customer_id ?? "").trim();
+      if (customerId) {
+        return `Operación cancelada por el operador. No se eliminó el cliente ${customerId}.`;
+      }
+    }
     return "Operación cancelada por el operador.";
   }
   try {
@@ -121,6 +147,10 @@ export function formatTerminalReply(toolMessage: ToolMessage, toolName?: string)
     if (parsed && typeof parsed.error === "string") {
       const err = parsed.error.trim();
       if (toolName === "delete_customer_record" && /customer not found/i.test(err)) {
+        const customerId = String(toolArgs?.customer_id ?? "").trim();
+        if (customerId) {
+          return `No se pudo eliminar el cliente ${customerId}: no existe en la base de datos.`;
+        }
         return "No se pudo eliminar el cliente: el cliente solicitado no existe en la base de datos.";
       }
       return `No se pudo completar la operación: ${err}.`;
@@ -134,7 +164,7 @@ export function formatTerminalReply(toolMessage: ToolMessage, toolName?: string)
 /** Genera un único texto a partir de uno o varios matches terminales (deduplicado). */
 function composeTerminalReply(matches: TerminalToolMatch[]): string {
   if (matches.length === 0) return "No se pudo completar la operación solicitada.";
-  const replies = matches.map((m) => formatTerminalReply(m.toolMessage, m.toolName));
+  const replies = matches.map((m) => formatTerminalReply(m.toolMessage, m.toolName, m.toolArgs));
   const unique: string[] = [];
   for (const r of replies) {
     if (!unique.includes(r)) unique.push(r);
