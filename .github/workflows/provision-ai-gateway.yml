@@ -1,5 +1,12 @@
 # Crea (si no existen) el AI Gateway y los custom providers GitHub Models + Copilot Enterprise (idempotente).
 # Requiere secret: CLOUDFLARE_API_TOKEN (se pasa como CF_AI_GATEWAY_API_TOKEN al script; Account → AI Gateway → Edit).
+#
+# PAN-26: Variables del repo que aplica usar (Settings → Secrets and variables → Actions → Variables):
+#   - CLOUDFLARE_ACCOUNT_ID   (obligatoria si el token tiene acceso a varias cuentas)
+#   - AI_GATEWAY_ID           (default ia-agent-worker-llm)
+#   - AI_GATEWAY_COPILOT_BASE_URL (default https://api.enterprise.githubcopilot.com)
+# `AI_GATEWAY_PROVIDER_SLUG` solo aplica cuando se quiere crear el provider GitHub Models con un slug distinto a
+# `github-models`. Si lo defines igual que el slug Copilot, el script omite el provider Models para no pisarlo.
 
 name: Provision AI Gateway
 
