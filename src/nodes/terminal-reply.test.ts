@@ -25,14 +25,28 @@ function makeState(partial: Partial<GraphState>): GraphState {
   } as GraphState;
 }
 
+function aiToolCall(name: string, id: string, args: Record<string, unknown> = {}): AIMessage {
+  return new AIMessage({ content: "", tool_calls: [{ name, args, id }] });
+}
+
 describe("formatTerminalReply", () => {
-  it("traduce `Customer not found` a un reply localizado y específico", () => {
+  it("usa el copy específico de borrado cuando el tool call es `delete_customer_record`", () => {
     const tm = new ToolMessage({
       content: JSON.stringify({ error: "Customer not found" }),
       tool_call_id: "tc-1",
     });
-    expect(formatTerminalReply(tm)).toMatch(/no se pudo eliminar el cliente/i);
-    expect(formatTerminalReply(tm)).toMatch(/no existe/i);
+    const reply = formatTerminalReply(tm, "delete_customer_record");
+    expect(reply).toMatch(/no se pudo eliminar el cliente/i);
+    expect(reply).toMatch(/no existe/i);
+  });
+
+  it("cae a copy genérico cuando el tool name es desconocido o no es delete", () => {
+    const tm = new ToolMessage({
+      content: JSON.stringify({ error: "Customer not found" }),
+      tool_call_id: "tc-1",
+    });
+    expect(formatTerminalReply(tm, "future_critical_tool")).toMatch(/no se pudo completar la operación/i);
+    expect(formatTerminalReply(tm)).toMatch(/no se pudo completar la operación/i);
   });
 
   it("traduce denegación del operador a reply localizado", () => {
@@ -40,7 +54,7 @@ describe("formatTerminalReply", () => {
       content: OPERATOR_DENIED_TOOL_CONTENT,
       tool_call_id: "tc-2",
     });
-    expect(formatTerminalReply(tm)).toMatch(/cancelada por el operador/i);
+    expect(formatTerminalReply(tm, "delete_customer_record")).toMatch(/cancelada por el operador/i);
   });
 
   it("usa el `error` JSON como complemento para mensajes genéricos", () => {
@@ -48,22 +62,23 @@ describe("formatTerminalReply", () => {
       content: JSON.stringify({ error: "Order locked" }),
       tool_call_id: "tc-3",
     });
-    expect(formatTerminalReply(tm)).toMatch(/no se pudo completar la operación/i);
-    expect(formatTerminalReply(tm)).toMatch(/Order locked/);
+    const reply = formatTerminalReply(tm, "delete_customer_record");
+    expect(reply).toMatch(/no se pudo completar la operación/i);
+    expect(reply).toMatch(/Order locked/);
   });
 
   it("cae a un texto genérico si el contenido no es JSON ni denegación", () => {
     const tm = new ToolMessage({ content: "garbage", tool_call_id: "tc-4" });
-    expect(formatTerminalReply(tm)).toMatch(/no se pudo completar la operación/i);
+    expect(formatTerminalReply(tm, "delete_customer_record")).toMatch(/no se pudo completar la operación/i);
   });
 });
 
 describe("lastBatchIsAllTerminal", () => {
-  it("`true` cuando todos los `ToolMessage` del último batch son terminales", () => {
+  it("`true` cuando todos los tool calls del batch son críticos y terminales", () => {
     const state = makeState({
       messages: [
         new HumanMessage("delete cust-001"),
-        new AIMessage({ content: "", tool_calls: [{ name: "delete_customer_record", args: {}, id: "tc-1" }] }),
+        aiToolCall("delete_customer_record", "tc-1"),
         new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-1" }),
       ],
       toolState: { last_executed_batch: ["tc-1"] },
@@ -71,7 +86,19 @@ describe("lastBatchIsAllTerminal", () => {
     expect(lastBatchIsAllTerminal(state)).toBe(true);
   });
 
-  it("`false` cuando algún `ToolMessage` del batch es éxito (no terminal)", () => {
+  it("`false` cuando el tool call no es crítico (caso `find_customer_by_name` con error)", () => {
+    const state = makeState({
+      messages: [
+        new HumanMessage("buscar cliente Acme"),
+        aiToolCall("find_customer_by_name", "tc-a", { name: "Acme" }),
+        new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-a" }),
+      ],
+      toolState: { last_executed_batch: ["tc-a"] },
+    });
+    expect(lastBatchIsAllTerminal(state)).toBe(false);
+  });
+
+  it("`false` cuando el batch mezcla crítico terminal + no crítico (debe ir a model)", () => {
     const state = makeState({
       messages: [
         new HumanMessage("hello"),
@@ -79,7 +106,7 @@ describe("lastBatchIsAllTerminal", () => {
           content: "",
           tool_calls: [
             { name: "find_customer_by_name", args: { name: "Acme" }, id: "tc-a" },
-            { name: "delete_customer_record", args: {}, id: "tc-b" },
+            { name: "delete_customer_record", args: { customer_id: "cust-001" }, id: "tc-b" },
           ],
         }),
         new ToolMessage({ content: JSON.stringify({ items: [{ id: "cust-001" }] }), tool_call_id: "tc-a" }),
@@ -90,8 +117,30 @@ describe("lastBatchIsAllTerminal", () => {
     expect(lastBatchIsAllTerminal(state)).toBe(false);
   });
 
+  it("`false` cuando algún `ToolMessage` del batch no es terminal (éxito)", () => {
+    const state = makeState({
+      messages: [
+        aiToolCall("delete_customer_record", "tc-1"),
+        new ToolMessage({ content: JSON.stringify({ ok: true }), tool_call_id: "tc-1" }),
+      ],
+      toolState: { last_executed_batch: ["tc-1"] },
+    });
+    expect(lastBatchIsAllTerminal(state)).toBe(false);
+  });
+
   it("`false` cuando no hay batch registrado (estado inicial)", () => {
     expect(lastBatchIsAllTerminal(makeState({ toolState: {} }))).toBe(false);
+  });
+
+  it("`false` cuando el batch no se puede mapear a un AIMessage con tool_calls", () => {
+    const state = makeState({
+      messages: [
+        new HumanMessage("delete cust-001"),
+        new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-orphan" }),
+      ],
+      toolState: { last_executed_batch: ["tc-orphan"] },
+    });
+    expect(lastBatchIsAllTerminal(state)).toBe(false);
   });
 });
 
@@ -103,7 +152,7 @@ describe("createTerminalReplyNode", () => {
     const state = makeState({
       messages: [
         new HumanMessage("delete cust-001"),
-        new AIMessage({ content: "", tool_calls: [{ name: "delete_customer_record", args: {}, id: "tc-1" }] }),
+        aiToolCall("delete_customer_record", "tc-1"),
         new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-1" }),
       ],
       toolState: { last_executed_batch: ["tc-1"] },
@@ -133,7 +182,7 @@ describe("createTerminalReplyNode", () => {
     const node = createTerminalReplyNode();
     const state = makeState({
       messages: [
-        new AIMessage({ content: "", tool_calls: [{ name: "delete_customer_record", args: {}, id: "tc-1" }] }),
+        aiToolCall("delete_customer_record", "tc-1"),
         new ToolMessage({ content: OPERATOR_DENIED_TOOL_CONTENT, tool_call_id: "tc-1" }),
       ],
       toolState: { last_executed_batch: ["tc-1"] },
@@ -141,5 +190,50 @@ describe("createTerminalReplyNode", () => {
     const result = await node(state);
     const msgs = result.messages as AIMessage[];
     expect(msgs[0].content).toMatch(/cancelada por el operador/i);
+  });
+
+  it("concatena replies únicos cuando el batch tiene múltiples terminales distintos", async () => {
+    const node = createTerminalReplyNode();
+    const state = makeState({
+      messages: [
+        new AIMessage({
+          content: "",
+          tool_calls: [
+            { name: "delete_customer_record", args: { customer_id: "cust-001" }, id: "tc-1" },
+            { name: "delete_customer_record", args: { customer_id: "cust-002" }, id: "tc-2" },
+          ],
+        }),
+        new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-1" }),
+        new ToolMessage({ content: OPERATOR_DENIED_TOOL_CONTENT, tool_call_id: "tc-2" }),
+      ],
+      toolState: { last_executed_batch: ["tc-1", "tc-2"] },
+    });
+    const result = await node(state);
+    const text = String((result.messages as AIMessage[])[0].content);
+    expect(text).toMatch(/no se pudo eliminar el cliente/i);
+    expect(text).toMatch(/cancelada por el operador/i);
+    expect(text.split("\n").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("deduplica replies idénticos cuando el batch tiene varios terminales del mismo tipo", async () => {
+    const node = createTerminalReplyNode();
+    const state = makeState({
+      messages: [
+        new AIMessage({
+          content: "",
+          tool_calls: [
+            { name: "delete_customer_record", args: { customer_id: "cust-001" }, id: "tc-1" },
+            { name: "delete_customer_record", args: { customer_id: "cust-001" }, id: "tc-2" },
+          ],
+        }),
+        new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-1" }),
+        new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-2" }),
+      ],
+      toolState: { last_executed_batch: ["tc-1", "tc-2"] },
+    });
+    const result = await node(state);
+    const text = String((result.messages as AIMessage[])[0].content);
+    expect(text).toMatch(/no se pudo eliminar el cliente/i);
+    expect(text).not.toMatch(/^1\./m);
   });
 });
