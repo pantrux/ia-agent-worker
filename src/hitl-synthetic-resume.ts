@@ -2,6 +2,7 @@ import { AIMessage, ToolMessage, type BaseMessage } from "@langchain/core/messag
 import type { Env } from "./env.js";
 import type { buildGraph } from "./graph.js";
 import {
+  OPERATOR_DENIED_TOOL_CONTENT,
   SYNTHETIC_HITL_PENDING_KEY,
   type HitlApprovalPayload,
 } from "./hitl-pending.js";
@@ -72,7 +73,7 @@ export async function executeSyntheticHitlResume(
 
   if (!params.approved) {
     const toolMsg = new ToolMessage({
-      content: "Operator denied this CRM mutation.",
+      content: OPERATOR_DENIED_TOOL_CONTENT,
       tool_call_id: toolCallId,
     });
     const aiMsg = new AIMessage({ content: "Operación de borrado denegada por el operador." });
