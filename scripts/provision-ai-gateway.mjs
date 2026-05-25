@@ -309,15 +309,30 @@ async function ensureCustomProvider(slug, baseUrlInput, defaultName, defaultDesc
   console.log(`Custom provider «${slug}» creado.`);
 }
 
+// PAN-26: si `AI_GATEWAY_PROVIDER_SLUG` coincide con el slug Copilot (mismo nombre), las dos
+// llamadas a `ensureCustomProvider` se pelearían por el mismo provider con base_url distintas
+// (primero Models, luego Copilot) dejando un PATCH redundante en el dashboard. En ese caso,
+// preservar el rol Copilot (base_url Enterprise) y omitir el provider GitHub Models.
+const providerSlugCollidesWithCopilot = providerSlug === copilotSlug;
+if (providerSlugCollidesWithCopilot) {
+  console.warn(
+    `[aviso] AI_GATEWAY_PROVIDER_SLUG="${providerSlug}" coincide con AI_GATEWAY_COPILOT_SLUG; ` +
+      `se omite el provider «GitHub Models» (base_url=${customBaseUrl}) para evitar pisar el provider Copilot. ` +
+      `Para crear ambos providers, usa slugs distintos (p. ej. AI_GATEWAY_PROVIDER_SLUG=github-models).`
+  );
+}
+
 try {
   console.log(`Cuenta Cloudflare: ${accountId}`);
   await ensureGateway();
-  await ensureCustomProvider(
-    providerSlug,
-    customBaseUrl,
-    "GitHub Models (inference)",
-    "OpenAI-compatible upstream for ia-agent-worker (GitHub Models REST inference)."
-  );
+  if (!providerSlugCollidesWithCopilot) {
+    await ensureCustomProvider(
+      providerSlug,
+      customBaseUrl,
+      "GitHub Models (inference)",
+      "OpenAI-compatible upstream for ia-agent-worker (GitHub Models REST inference)."
+    );
+  }
   if ((process.env.AI_GATEWAY_SKIP_COPILOT_PROVIDER || "").trim() !== "1") {
     assertCopilotProviderBaseNotDebug(copilotBaseUrl);
     await ensureCustomProvider(
