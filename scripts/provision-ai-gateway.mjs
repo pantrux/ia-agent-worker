@@ -314,6 +314,22 @@ async function ensureCustomProvider(slug, baseUrlInput, defaultName, defaultDesc
 // (primero Models, luego Copilot) dejando un PATCH redundante en el dashboard. En ese caso,
 // preservar el rol Copilot (base_url Enterprise) y omitir el provider GitHub Models.
 const providerSlugCollidesWithCopilot = providerSlug === copilotSlug;
+const skipCopilotProvider = (process.env.AI_GATEWAY_SKIP_COPILOT_PROVIDER || "").trim() === "1";
+
+// PAN-26 (Greptile P2): escenario en el que se omitirían **todos** los custom providers
+// (Models por colisión y Copilot por SKIP) y el gateway quedaría vacío sin aviso.
+if (providerSlugCollidesWithCopilot && skipCopilotProvider) {
+  console.error(
+    `[error] AI_GATEWAY_PROVIDER_SLUG="${providerSlug}" coincide con AI_GATEWAY_COPILOT_SLUG y ` +
+      `AI_GATEWAY_SKIP_COPILOT_PROVIDER=1 a la vez: el script no crearía ningún custom provider ` +
+      `(omite GitHub Models por colisión y omite Copilot por SKIP). Aborta para no dejar el ` +
+      `gateway «${gatewayId}» sin providers.\n` +
+      `Soluciones: usa slugs distintos (recomendado AI_GATEWAY_PROVIDER_SLUG=github-models), o ` +
+      `desactiva AI_GATEWAY_SKIP_COPILOT_PROVIDER si necesitas el provider Copilot.`
+  );
+  process.exit(1);
+}
+
 if (providerSlugCollidesWithCopilot) {
   console.warn(
     `[aviso] AI_GATEWAY_PROVIDER_SLUG="${providerSlug}" coincide con AI_GATEWAY_COPILOT_SLUG; ` +
@@ -333,7 +349,7 @@ try {
       "OpenAI-compatible upstream for ia-agent-worker (GitHub Models REST inference)."
     );
   }
-  if ((process.env.AI_GATEWAY_SKIP_COPILOT_PROVIDER || "").trim() !== "1") {
+  if (!skipCopilotProvider) {
     assertCopilotProviderBaseNotDebug(copilotBaseUrl);
     await ensureCustomProvider(
       copilotSlug,
