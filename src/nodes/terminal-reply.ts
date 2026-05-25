@@ -76,16 +76,23 @@ function lastBatchTerminalCriticalToolMessages(state: GraphState): TerminalToolM
 
   const nameIndex = buildToolCallNameIndex(state);
   const matches: TerminalToolMatch[] = [];
+  const seenIds = new Set<string>();
   for (let i = state.messages.length - 1; i >= 0 && matches.length < ids.size; i--) {
     const m = state.messages[i];
     if (!(m instanceof ToolMessage)) continue;
-    if (!m.tool_call_id || !ids.has(m.tool_call_id)) continue;
-    const toolName = nameIndex.get(m.tool_call_id) ?? "";
+    const tid = m.tool_call_id;
+    if (!tid || !ids.has(tid) || seenIds.has(tid)) continue;
+    const toolName = nameIndex.get(tid) ?? "";
     if (!CRITICAL_TOOL_NAMES.has(toolName)) return null;
     if (!isKnownTerminalToolResult(toContentString(m.content))) return null;
+    seenIds.add(tid);
     matches.unshift({ toolMessage: m, toolName });
   }
-  return matches.length > 0 ? matches : null;
+  // Hallazgo Gitar/Devin: solo consideramos el batch terminal si **todos** los IDs
+  // declarados en `last_executed_batch` tienen un `ToolMessage` validado. Si falta
+  // alguno (estado corrupto o futura ruta que descarte mensajes) caemos al loop
+  // normal `tools → model` para no emitir un reply parcial.
+  return matches.length === ids.size ? matches : null;
 }
 
 /**

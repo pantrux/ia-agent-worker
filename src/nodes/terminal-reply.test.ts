@@ -142,6 +142,41 @@ describe("lastBatchIsAllTerminal", () => {
     });
     expect(lastBatchIsAllTerminal(state)).toBe(false);
   });
+
+  it("`false` cuando faltan `ToolMessage` para alguno de los IDs del batch (defensive)", () => {
+    const state = makeState({
+      messages: [
+        new AIMessage({
+          content: "",
+          tool_calls: [
+            { name: "delete_customer_record", args: { customer_id: "cust-001" }, id: "tc-1" },
+            { name: "delete_customer_record", args: { customer_id: "cust-002" }, id: "tc-2" },
+          ],
+        }),
+        new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-1" }),
+      ],
+      toolState: { last_executed_batch: ["tc-1", "tc-2"] },
+    });
+    expect(lastBatchIsAllTerminal(state)).toBe(false);
+  });
+
+  it("ignora `ToolMessage` duplicados con el mismo `tool_call_id` y exige cobertura completa del batch", () => {
+    const state = makeState({
+      messages: [
+        new AIMessage({
+          content: "",
+          tool_calls: [
+            { name: "delete_customer_record", args: { customer_id: "cust-001" }, id: "tc-1" },
+            { name: "delete_customer_record", args: { customer_id: "cust-002" }, id: "tc-2" },
+          ],
+        }),
+        new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-1" }),
+        new ToolMessage({ content: JSON.stringify({ error: "Customer not found" }), tool_call_id: "tc-1" }),
+      ],
+      toolState: { last_executed_batch: ["tc-1", "tc-2"] },
+    });
+    expect(lastBatchIsAllTerminal(state)).toBe(false);
+  });
 });
 
 describe("createTerminalReplyNode", () => {
