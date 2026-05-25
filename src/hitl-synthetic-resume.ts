@@ -54,6 +54,31 @@ function replyTextFromDeleteResult(rawResult: string, customerId: string): strin
   }
 }
 
+/**
+ * PAN-39: para el camino sintético, cuando el preflight ya confirmó que el cliente no existe,
+ * no queremos invocar la tool real (cierra la ventana TOCTOU entre preflight y delete y evita
+ * una segunda consulta D1 idéntica). Construimos directamente el ToolMessage de error y la
+ * respuesta del agente, persistimos en el thread y devolvemos el `result` actualizado para
+ * que el caller lo propague al canal sin pasar por la tarjeta HITL.
+ */
+export async function executeSyntheticDeleteAbsent(
+  graph: { updateState(config: unknown, update: Partial<GraphState>): Promise<void> },
+  config: unknown,
+  pending: HitlApprovalPayload,
+  stateValues: GraphState
+): Promise<GraphInvokeResult> {
+  const customerId = String(pending.args?.customer_id ?? "");
+  const errorContent = JSON.stringify({ error: "Customer not found" });
+  const aiToolCall = syntheticAiWithToolCall(pending);
+  const toolMsg = new ToolMessage({ content: errorContent, tool_call_id: pending.tool_call_id });
+  const aiMsg = new AIMessage({ content: replyTextFromDeleteResult(errorContent, customerId) });
+  const appended = [aiToolCall, toolMsg, aiMsg];
+  const nextToolState = { ...stateValues.toolState };
+  delete nextToolState[SYNTHETIC_HITL_PENDING_KEY];
+  await graph.updateState(config, { messages: appended, toolState: nextToolState });
+  return buildResumeResult(stateValues, appended, nextToolState);
+}
+
 export async function executeSyntheticHitlResume(
   env: Env,
   graph: { updateState(config: unknown, update: Partial<GraphState>): Promise<void> },
