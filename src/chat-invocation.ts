@@ -96,7 +96,7 @@ async function customerIsKnownAbsent(env: Env, customerId: string): Promise<bool
   if (!customerId) return false;
   try {
     const row = await env.DB.prepare(`SELECT id FROM customers WHERE id = ?`).bind(customerId).first();
-    return row === null || row === undefined;
+    return row === null;
   } catch {
     return false;
   }
