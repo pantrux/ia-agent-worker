@@ -26,7 +26,7 @@ Este entregable se cumple **principalmente en el dashboard de la zona** (o vía 
 
 ## 5. Posteriores (fuera de A1 estricto)
 
-- [ ] Endurecer `ALLOWED_ORIGINS` en producción (sin `*`) — alineado con el roadmap §2.0.
+- [x] Endurecer `ALLOWED_ORIGINS` en producción (sin `*`) — alineado con el roadmap §2.0. Cerrado en [PAN-25](https://linear.app/pantrux/issue/PAN-25); lista explícita en `wrangler.toml` `[vars]` y `[env.preview.vars]`, con neutralización del comodín en `src/cors.ts` y tests en `src/cors.test.ts`.
 
 ## 8. WebSocket C3 ([PAN-34](https://linear.app/pantrux/issue/PAN-34))
 

@@ -21,6 +21,7 @@ import {
 } from "./chat-invocation.js";
 import { extractLastAiReply } from "./chat-reply.js";
 import { deliverChannelReply } from "./channel-delivery/index.js";
+import { corsHeaders } from "./cors.js";
 import {
   clearPendingTelegramDeliveryBestEffort,
   getPendingTelegramDelivery,
@@ -28,32 +29,6 @@ import {
 } from "./chat-pending-delivery.js";
 import { getTelegramThreadId, putTelegramThreadId } from "./chat-thread-kv.js";
 import { classifyChatGraphError, type ChatClientErrorCode } from "./chat-graph-error.js";
-
-function corsHeaders(request: Request, env: Env): Record<string, string> {
-  const origin = request.headers.get("Origin") ?? "";
-  const raw = (env.ALLOWED_ORIGINS ?? "").trim();
-  const allowList = raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
-
-  let allowOrigin = "";
-  if (allowList.includes("*")) {
-    allowOrigin = origin || "*";
-  } else if (origin && allowList.includes(origin)) {
-    allowOrigin = origin;
-  } else if (allowList.length === 1) {
-    allowOrigin = allowList[0]!;
-  }
-
-  const h: Record<string, string> = {
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-AAAS-User-Id",
-    "Access-Control-Max-Age": "86400",
-  };
-  if (allowOrigin) {
-    h["Access-Control-Allow-Origin"] = allowOrigin;
-    h["Vary"] = "Origin";
-  }
-  return h;
-}
 
 function jsonResponse(data: unknown, status: number, request: Request, env: Env): Response {
   const headers = { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(request, env) };
@@ -286,7 +261,11 @@ async function handleEnqueueAgentMessage(request: Request, env: Env): Promise<Re
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const agentT0 = Date.now();
-    const agentResponse = await routeAgentRequest(request, env, { cors: true });
+    // PAN-25: pasamos la allowlist al `agents`/`partyserver` SDK como objeto de cabeceras CORS.
+    // `cors: true` haría que el SDK respondiera `Access-Control-Allow-Origin: *`
+    // y `Access-Control-Allow-Headers: *`, anulando el endurecimiento de `ALLOWED_ORIGINS`.
+    const cors = corsHeaders(request, env);
+    const agentResponse = await routeAgentRequest(request, env, { cors });
     if (agentResponse) {
       logWorkerAccess(request, env, {
         operation: "agent_route",
@@ -297,7 +276,6 @@ export default {
       return agentResponse;
     }
 
-    const cors = corsHeaders(request, env);
     const t0 = Date.now();
 
     if (request.method === "OPTIONS") {

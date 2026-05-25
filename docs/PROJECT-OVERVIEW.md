@@ -158,7 +158,8 @@ database_name = "ia-agent-db"
 database_id   = "..."
 
 [vars]
-ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
+# PAN-25: lista explícita; el comodín `*` se ignora en `src/cors.ts`.
+ALLOWED_ORIGINS = "https://www.e-scale.cl,https://e-scale.cl,http://localhost:3000,http://127.0.0.1:3000"
 COPILOT_MODEL   = "openai/gpt-4o-mini"
 OPENAI_API_BASE = "https://models.github.ai/inference"
 LANGSMITH_TRACING = "true"

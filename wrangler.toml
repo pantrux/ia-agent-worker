@@ -43,7 +43,12 @@ tag = "v2-pan19-web-session-agent"
 new_sqlite_classes = ["WebSessionAgent"]
 
 [vars]
-ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
+# PAN-25: orígenes CORS explícitos para producción (sin `*`).
+# Producción del landing en `https://www.e-scale.cl` (con redirección desde el ápex);
+# `localhost`/`127.0.0.1:3000` se mantienen para `npm run dev` del landing apuntando a este Worker.
+# Cualquier origen no listado recibe respuesta sin `Access-Control-Allow-Origin`,
+# lo que el navegador interpreta como petición cross-origin denegada.
+ALLOWED_ORIGINS = "https://www.e-scale.cl,https://e-scale.cl,http://localhost:3000,http://127.0.0.1:3000"
 # Copilot Enterprise: intercambio vía `copilot_internal/v2/token` y llamadas al host devuelto (p. ej. api.enterprise.githubcopilot.com).
 # Modelo Copilot Enterprise por defecto; no se define fallback para evitar cambiar el id enviado al gateway.
 # Cloudflare AI Gateway: `npm run provision:ai-gateway` crea gateway + proveedores. Copilot usa custom provider con path vacío.
@@ -87,7 +92,10 @@ binding = "CHAT_THREAD_KV"
 id = "1439742f07494ce5947dc0cec13cbff3"
 
 [env.preview.vars]
-ALLOWED_ORIGINS = "*,http://localhost:3000,http://127.0.0.1:3000"
+# PAN-25: orígenes CORS explícitos también en preview (sin `*`).
+# `aaas-landing.pages.dev` cubre el deploy preview Pages del landing; `localhost`/`127.0.0.1:3000`
+# permiten apuntar el dev server local del landing al Worker preview.
+ALLOWED_ORIGINS = "https://aaas-landing.pages.dev,http://localhost:3000,http://127.0.0.1:3000"
 COPILOT_MODEL = "gpt-5-mini"
 OPENAI_API_BASE = "https://api.enterprise.githubcopilot.com"
 LANGSMITH_TRACING = "true"
