@@ -54,8 +54,11 @@ export function resolveAllowOrigin(
 
 /**
  * Construye las cabeceras CORS para una request del Worker. Si el origen no
- * está autorizado, omite `Access-Control-Allow-Origin` y `Vary` para que el
- * navegador rechace la lectura cross-origin sin filtrar la lista permitida.
+ * está autorizado, omite `Access-Control-Allow-Origin` para que el navegador
+ * rechace la lectura cross-origin sin filtrar la lista permitida.
+ * `Vary: Origin` se incluye siempre, aunque no se autorice el origen, para
+ * evitar que cachés intermedias mezclen respuestas entre orígenes
+ * (recomendación MDN / CORS spec).
  */
 export function corsHeaders(request: Request, env: CorsEnv): Record<string, string> {
   const origin = request.headers.get("Origin") ?? "";
