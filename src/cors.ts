@@ -62,14 +62,18 @@ export function corsHeaders(request: Request, env: CorsEnv): Record<string, stri
   const allowList = buildAllowList(env.ALLOWED_ORIGINS);
   const allowOrigin = resolveAllowOrigin(origin, allowList);
 
+  // `Vary: Origin` siempre, autorizado o no: una caché o proxy intermedio podría
+  // guardar la respuesta sin `Access-Control-Allow-Origin` y reutilizarla luego
+  // ante una petición legítima desde un origen permitido. Recomendación MDN /
+  // CORS spec.
   const h: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type,Authorization,X-AAAS-User-Id",
     "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
   };
   if (allowOrigin) {
     h["Access-Control-Allow-Origin"] = allowOrigin;
-    h["Vary"] = "Origin";
   }
   return h;
 }

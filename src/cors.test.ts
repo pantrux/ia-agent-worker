@@ -74,7 +74,9 @@ describe("corsHeaders", () => {
       ALLOWED_ORIGINS: PROD_ORIGINS,
     });
     expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
-    expect(headers["Vary"]).toBeUndefined();
+    // Vary: Origin debe estar presente aunque no se autorice el origen,
+    // para evitar caché compartida entre orígenes (recomendación MDN / CORS spec).
+    expect(headers["Vary"]).toBe("Origin");
   });
 
   it("mantiene cerrado el CORS si ALLOWED_ORIGINS sigue conteniendo '*' por error", () => {
