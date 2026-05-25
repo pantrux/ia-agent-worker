@@ -22,24 +22,37 @@ async function invokeTool(toolFn: InvocableTool, args: Record<string, unknown>, 
 
 /**
  * PAN-39: para `delete_customer_record`, comprueba si el `customer_id` existe en D1 antes
- * de pedir aprobación HITL. Si no existe, ejecutar la tool directamente reutiliza la rama
- * de error (`Customer not found`) sin interrumpir al operador. Devuelve `undefined` cuando
- * el flujo debe continuar al `interrupt` normal.
+ * de pedir aprobación HITL.
+ *
+ * - Si la consulta D1 falla (timeout, indisponibilidad), devuelve `undefined` para caer al
+ *   flujo HITL normal en lugar de crashear el nodo (Gitar/Devin: bug por excepción no
+ *   manejada).
+ * - Si la consulta confirma que el `customer_id` no existe, emite directamente el
+ *   `ToolMessage` con `{"error":"Customer not found"}` sin invocar la tool real, evitando
+ *   una segunda lectura idéntica y la ventana TOCTOU señalada por Greptile (P2): un
+ *   proceso concurrente podría crear el cliente entre la consulta y el delete, con lo que
+ *   la tool lo encontraría y lo borraría sin pasar por aprobación.
+ * - En cualquier otro caso (existe o no se pudo verificar) devuelve `undefined` para que
+ *   `tools_node` siga su flujo habitual de `interrupt(...)`.
  */
 async function preflightDeleteCustomerRecord(
   env: Env,
   args: Record<string, unknown>,
-  tid: string,
-  toolFn: InvocableTool | undefined
+  tid: string
 ): Promise<ToolMessage | undefined> {
   const customerId = String((args as { customer_id?: string }).customer_id ?? "");
   if (!customerId) return undefined;
-  const exists = await env.DB.prepare(`SELECT id FROM customers WHERE id = ?`).bind(customerId).first();
-  if (exists) return undefined;
-  if (!toolFn) {
-    return new ToolMessage({ content: `Tool not available: delete_customer_record`, tool_call_id: tid });
+  let exists: unknown;
+  try {
+    exists = await env.DB.prepare(`SELECT id FROM customers WHERE id = ?`).bind(customerId).first();
+  } catch {
+    return undefined;
   }
-  return invokeTool(toolFn, args, tid);
+  if (exists) return undefined;
+  return new ToolMessage({
+    content: JSON.stringify({ error: "Customer not found" }),
+    tool_call_id: tid,
+  });
 }
 
 export function createToolsNode(env: Env) {
@@ -67,7 +80,7 @@ export function createToolsNode(env: Env) {
         }
 
         if (name === "delete_customer_record") {
-          const preflight = await preflightDeleteCustomerRecord(env, args, tid, byName.get(name));
+          const preflight = await preflightDeleteCustomerRecord(env, args, tid);
           if (preflight) {
             outMsgs.push(preflight);
             continue;
