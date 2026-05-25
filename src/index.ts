@@ -21,6 +21,7 @@ import {
 } from "./chat-invocation.js";
 import { extractLastAiReply } from "./chat-reply.js";
 import { deliverChannelReply } from "./channel-delivery/index.js";
+import { corsHeaders } from "./cors.js";
 import {
   clearPendingTelegramDeliveryBestEffort,
   getPendingTelegramDelivery,
@@ -28,32 +29,6 @@ import {
 } from "./chat-pending-delivery.js";
 import { getTelegramThreadId, putTelegramThreadId } from "./chat-thread-kv.js";
 import { classifyChatGraphError, type ChatClientErrorCode } from "./chat-graph-error.js";
-
-function corsHeaders(request: Request, env: Env): Record<string, string> {
-  const origin = request.headers.get("Origin") ?? "";
-  const raw = (env.ALLOWED_ORIGINS ?? "").trim();
-  const allowList = raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
-
-  let allowOrigin = "";
-  if (allowList.includes("*")) {
-    allowOrigin = origin || "*";
-  } else if (origin && allowList.includes(origin)) {
-    allowOrigin = origin;
-  } else if (allowList.length === 1) {
-    allowOrigin = allowList[0]!;
-  }
-
-  const h: Record<string, string> = {
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-AAAS-User-Id",
-    "Access-Control-Max-Age": "86400",
-  };
-  if (allowOrigin) {
-    h["Access-Control-Allow-Origin"] = allowOrigin;
-    h["Vary"] = "Origin";
-  }
-  return h;
-}
 
 function jsonResponse(data: unknown, status: number, request: Request, env: Env): Response {
   const headers = { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(request, env) };

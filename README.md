@@ -259,7 +259,12 @@ En GitHub Actions, si configuras el secreto **`LANGSMITH_API_KEY`**, el mismo wo
 
 La landing [`pantrux/aaas-landing`](https://github.com/pantrux/aaas-landing) **llama directamente al Worker**: la URL queda hardcodeada en `lib/site.ts`. Se eliminaron las Pages Functions de proxy.
 
-El Worker autoriza orígenes con la variable `ALLOWED_ORIGINS` (puede incluir `*` para abrir cualquier origen o una lista separada por comas).
+El Worker autoriza orígenes con la variable `ALLOWED_ORIGINS`, una **lista explícita** separada por comas. Desde [PAN-25](https://linear.app/pantrux/issue/PAN-25), el comodín `*` está prohibido en producción y, si se introduce por error, el código (`src/cors.ts`) lo descarta y mantiene CORS cerrado. Para añadir un dominio nuevo del landing hay que actualizar `[vars]` (prod) **y** `[env.preview.vars]` (preview) en `wrangler.toml`.
+
+Valores actuales:
+
+- **Prod:** `https://www.e-scale.cl, https://e-scale.cl, http://localhost:3000, http://127.0.0.1:3000`.
+- **Preview:** `https://aaas-landing.pages.dev, http://localhost:3000, http://127.0.0.1:3000`.
 
 ## Arquitectura interna
 
@@ -290,7 +295,7 @@ Navegador
 | Variable | Tipo | Descripción | Valor habitual |
 |----------|------|-------------|----------------|
 | `COPILOT_GITHUB_TOKEN` | Secreto | Token GitHub (PAT o `gh auth token`). Reusado como Bearer hacia GitHub Models. | `gho_…` / `ghu_…` |
-| `ALLOWED_ORIGINS` | Var | Orígenes CORS (separados por coma). Usa `*` para abrir todos. | `*,http://localhost:3000` |
+| `ALLOWED_ORIGINS` | Var | Orígenes CORS (lista explícita separada por coma; `*` se ignora desde PAN-25). | `https://www.e-scale.cl,https://e-scale.cl,http://localhost:3000` |
 | `COPILOT_MODEL` | Var | Modelo LLM. Con Copilot Enterprise usa ids estilo [Openclaw](https://github.com/openclaw/openclaw) sin publisher; con GitHub Models y `models.github.ai`, el Worker prefija `openai/` cuando aplica. | `gpt-5-mini` |
 | `OPENAI_API_BASE` | Var | Base URL del LLM. | `https://api.enterprise.githubcopilot.com` |
 | `LANGSMITH_API_KEY` | Secreto | API key de LangSmith para enviar runs/traces. | `lsv2_…` |

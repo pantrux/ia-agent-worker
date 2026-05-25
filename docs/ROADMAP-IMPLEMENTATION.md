@@ -47,6 +47,7 @@ Entregables que soportan el MVP del roadmap pero no encajan en una sola celda A1
 | A2 | Access o JWT en BFF | [PR #6](https://github.com/pantrux/ia-agent-worker/pull/6) (merge 2026-05-13) | Ejecutado | Bearer opcional vía secreto `BFF_API_TOKEN`; smoke con `WORKER_SMOKE_BFF_TOKEN` en Actions. Ver README. |
 | A3 | Secretos + proyectos LangSmith prod/preview | [PR #4](https://github.com/pantrux/ia-agent-worker/pull/4) (merge 2026-05-13) | Ejecutado | Wrangler `preview` + vars; **pendiente manual:** `wrangler secret put … --env preview`, proyecto LangSmith, D1 dedicado cuando toque. |
 | A4 | Logs estructurados + retención; metadata `thread_id` / canal | [PR #5](https://github.com/pantrux/ia-agent-worker/pull/5) (merge 2026-05-13) | Ejecutado | JSON `msg: ia_agent_access`, `requestTs` al inicio del handler; sin cuerpos de chat. Retención / Logpush: dashboard CF (manual). |
+| A5 | Hardening `ALLOWED_ORIGINS` sin `*` en producción ([PAN-25](https://linear.app/pantrux/issue/PAN-25)) | rama `fix-pan-25-allowed-origins-no-wildcard` | En curso | Lista explícita en `wrangler.toml` `[vars]` y `[env.preview.vars]`; comodín neutralizado en `src/cors.ts`; tests unitarios en `src/cors.test.ts`; checklist [A1-checklist-waf.md §5](./A1-checklist-waf.md). |
 
 ---
 

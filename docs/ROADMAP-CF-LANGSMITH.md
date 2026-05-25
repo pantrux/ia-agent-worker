@@ -50,7 +50,7 @@ Aplicar en **reglas de zona** (recomendado) o complementar con lógica en Worker
 | `GET` | `/agents/web-session-agent/*` | Upgrade WebSocket (ticket en query) | **Alta prioridad** rate limit por IP en zona del Worker; ver [A1-checklist-waf.md §8](./A1-checklist-waf.md) ([PAN-34](https://linear.app/pantrux/issue/PAN-34)). |
 | `OPTIONS` | `*` | CORS preflight | Permitir sin contar contra límite estricto de chat si el WAF lo distingue. |
 
-CORS hoy: `ALLOWED_ORIGINS` en Worker — endurecer en prod (sin `*`).
+CORS hoy: `ALLOWED_ORIGINS` en Worker — lista **explícita** en prod (sin `*`) desde [PAN-25](https://linear.app/pantrux/issue/PAN-25); neutralización del comodín y tests en `src/cors.ts` / `src/cors.test.ts`.
 
 ### Nota de implementación — AI Gateway + custom provider (2026-05-13)
 
@@ -171,5 +171,5 @@ Para **estado y PR** asociados a cada ítem, usa [ROADMAP-IMPLEMENTATION.md](./R
 
 - [ ] Reglas WAF en zona: rate limit `POST /api/chat` y `POST /api/chat/resume` (umbrales por IP).
 - [ ] Proyectos LangSmith: `ia-agent-worker-prod` vs `ia-agent-worker-preview` + `LANGSMITH_PROJECT` por entorno en Wrangler (`[env.*]` o vars de preview).
-- [ ] `ALLOWED_ORIGINS` sin `*` en el entorno de producción.
+- [x] `ALLOWED_ORIGINS` sin `*` en el entorno de producción — [PAN-25](https://linear.app/pantrux/issue/PAN-25); lista explícita en `wrangler.toml`, comodín neutralizado en `src/cors.ts`.
 - [ ] Variable opcional `DEPLOYMENT_ENV` en el Worker para filtrar runs (metadata `deployment`). *Implementado en código; falta definirla en Wrangler por entorno.*
