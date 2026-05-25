@@ -10,7 +10,11 @@ import {
   resolveSyntheticDeleteHitl,
   SYNTHETIC_HITL_PENDING_KEY,
 } from "./hitl-pending.js";
-import { executeSyntheticHitlResume, snapshotHasPendingInterrupt } from "./hitl-synthetic-resume.js";
+import {
+  executeSyntheticDeleteAbsent,
+  executeSyntheticHitlResume,
+  snapshotHasPendingInterrupt,
+} from "./hitl-synthetic-resume.js";
 import type { GraphState } from "./state.js";
 import {
   CHAT_WS_REPLY_RESET_KEY,
@@ -124,14 +128,7 @@ async function exposePendingHitl(
     if (await customerIsKnownAbsent(env, customerId)) {
       const snapshot = await graph.getState(config);
       const stateValues = snapshot.values as GraphState;
-      return executeSyntheticHitlResume(
-        env,
-        graph,
-        config,
-        { approved: true },
-        synthetic,
-        stateValues
-      );
+      return executeSyntheticDeleteAbsent(graph, config, synthetic, stateValues);
     }
   }
 

@@ -118,7 +118,7 @@ describe("runChatMessageGraph — preflight sintético PAN-39", () => {
     findInvoke.mockReset();
   });
 
-  it("customer ausente en D1: ejecuta delete sin pedir aprobación y devuelve reply con error", async () => {
+  it("customer ausente en D1: emite Tool/AI sin pedir aprobación y NO invoca la tool (cierra TOCTOU)", async () => {
     graphInvoke.mockResolvedValueOnce({
       messages: [new HumanMessage("Borra cust-999")],
       intent: "delete_customer",
@@ -141,7 +141,6 @@ describe("runChatMessageGraph — preflight sintético PAN-39", () => {
       tasks: [],
     });
     graphUpdateState.mockResolvedValue(undefined);
-    deleteInvoke.mockResolvedValueOnce(JSON.stringify({ error: "Customer not found" }));
 
     const result = await runChatMessageGraph(buildEnv("missing"), {
       text: "Por favor elimina permanentemente el cliente cust-999 del CRM.",
@@ -151,11 +150,12 @@ describe("runChatMessageGraph — preflight sintético PAN-39", () => {
       operation: "chat",
     });
 
-    expect(deleteInvoke).toHaveBeenCalledWith({ customer_id: "cust-999" });
+    expect(deleteInvoke).not.toHaveBeenCalled();
     const msgs = result.messages as Array<AIMessage | HumanMessage | ToolMessage>;
     const toolMsg = msgs.find((m) => m instanceof ToolMessage) as ToolMessage | undefined;
     expect(toolMsg).toBeDefined();
-    expect(String(toolMsg!.content)).toContain("Customer not found");
+    const parsed = JSON.parse(String(toolMsg!.content)) as { error?: string };
+    expect(parsed.error).toBe("Customer not found");
     const lastAi = [...msgs].reverse().find((m) => m instanceof AIMessage) as AIMessage | undefined;
     expect(String(lastAi!.content)).toMatch(/no se pudo eliminar el cliente/i);
   });
