@@ -15,17 +15,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: pantrux/omni-channel-worker
-          path: omni-channel-worker
 
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
 
       - name: Provision Workers Builds
-        working-directory: omni-channel-worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/provision-workers-builds.mjs
+        run: node scripts/provision-omni-workers-builds.mjs
