@@ -7,6 +7,10 @@ export type AccessOperation =
   | "resume"
   | "agent_messages_enqueue"
   | "bff_auth"
+  | "internal_auth"
+  | "v2_agent_run"
+  | "v2_agent_resume"
+  | "agent_route"
   | "not_found"
   | "unknown";
 
@@ -17,6 +21,7 @@ export interface AccessLogFields {
   /** ISO del instante de entrada al handler (alinear con Logpush / ventanas temporales). */
   requestTs: string;
   thread_id?: string;
+  trace_id?: string | null;
   /** UUID público de auth (solo si BFF autenticó y cabecera válida). */
   aaas_user_id?: string | null;
   /** Sin stack ni mensaje crudo: código o nombre corto si aplica. */
@@ -41,6 +46,7 @@ export function logWorkerAccess(request: Request, env: Env, fields: AccessLogFie
     operation: fields.operation,
     deployment: env.DEPLOYMENT_ENV ?? null,
     thread_id: fields.thread_id ?? null,
+    trace_id: fields.trace_id ?? null,
     aaas_user_id: fields.aaas_user_id ?? null,
     cf_ray: request.headers.get("CF-Ray"),
     colo: cf?.colo ?? null,

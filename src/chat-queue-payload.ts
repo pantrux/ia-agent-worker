@@ -72,7 +72,9 @@ export type ChatLangSmithOperation =
   | "resume"
   | "queue_chat"
   | "ws_chat"
-  | "ws_resume";
+  | "ws_resume"
+  | "v2_run"
+  | "v2_resume";
 
 export function buildChatLangSmithMetadata(params: {
   threadId: string;

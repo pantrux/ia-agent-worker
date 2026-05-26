@@ -28,6 +28,11 @@ export interface Env {
   /** Secreto opcional: si está definido, POST /api/chat y /api/chat/resume exigen `Authorization: Bearer …`. */
   BFF_API_TOKEN?: string;
   /**
+   * Token interno omni-channel-worker → ia-agent-worker para `/v2/agent/run` y `/v2/agent/resume`.
+   * Debe coincidir con `AGENT_INTERNAL_TOKEN` en omni-channel-worker.
+   */
+  AGENT_INTERNAL_TOKEN?: string;
+  /**
    * Si es `1`/`true`/`yes`/`on`, las llamadas LLM van directo a `OPENAI_API_BASE` (p. ej. GitHub Models)
    * y se ignoran `AI_GATEWAY_*` (útil para aislar 404 del gateway frente al upstream).
    */
