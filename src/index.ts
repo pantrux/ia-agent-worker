@@ -9,6 +9,11 @@ import {
   type BffAuthFailureReason,
 } from "./bff-auth.js";
 import {
+  verifyInternalApiAuth,
+  type InternalAuthFailureReason,
+} from "./internal-auth.js";
+import { handleAgentV2Resume, handleAgentV2Run } from "./agent-v2/index.js";
+import {
   parseNormalizedChatPayload,
   parseThreadId,
   resolveQueueThreadId,
@@ -59,6 +64,48 @@ function jsonBffUnauthorized(request: Request, env: Env, t0: number, reason: Bff
   res.headers.set("WWW-Authenticate", 'Bearer realm="bff"');
   logWorkerAccess(request, env, {
     operation: "bff_auth",
+    status: res.status,
+    durationMs: Date.now() - t0,
+    requestTs: new Date(t0).toISOString(),
+    error: reason,
+  });
+  return res;
+}
+
+function jsonInternalUnauthorized(
+  request: Request,
+  env: Env,
+  t0: number,
+  reason: InternalAuthFailureReason
+): Response {
+  if (reason === "token_not_configured") {
+    const res = jsonResponse(
+      {
+        ok: false,
+        error: {
+          code: "internal_auth_not_configured",
+          message: "AGENT_INTERNAL_TOKEN must be configured for /v2/agent endpoints",
+          retryable: false
+        }
+      },
+      503,
+      request,
+      env
+    );
+    logWorkerAccess(request, env, {
+      operation: "internal_auth",
+      status: res.status,
+      durationMs: Date.now() - t0,
+      requestTs: new Date(t0).toISOString(),
+      error: reason
+    });
+    return res;
+  }
+
+  const res = jsonResponse({ ok: false, error: { code: "unauthorized", message: "No autorizado", retryable: false } }, 401, request, env);
+  res.headers.set("WWW-Authenticate", 'Bearer realm="internal"');
+  logWorkerAccess(request, env, {
+    operation: "internal_auth",
     status: res.status,
     durationMs: Date.now() - t0,
     requestTs: new Date(t0).toISOString(),
@@ -253,9 +300,19 @@ async function handleEnqueueAgentMessage(request: Request, env: Env): Promise<Re
     return finish(jsonResponse({ error: "Failed to enqueue message" }, 502, request, env), "queue_send");
   }
 
-  return finish(
-    jsonResponse({ accepted: true, channel: parsed.data.channel }, 202, request, env)
+  return withLegacyDeprecationHeader(
+    finish(jsonResponse({ accepted: true, channel: parsed.data.channel }, 202, request, env))
   );
+}
+
+function withLegacyDeprecationHeader(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("X-Deprecated", "PAN-43");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 }
 
 export default {
@@ -319,6 +376,18 @@ export default {
       const auth = verifyBffApiAuth(request, env);
       if (!auth.ok) return jsonBffUnauthorized(request, env, t0, auth.reason);
       return handleEnqueueAgentMessage(request, env);
+    }
+
+    if (path === "/v2/agent/run" && request.method === "POST") {
+      const auth = verifyInternalApiAuth(request, env, { requireConfigured: true });
+      if (!auth.ok) return jsonInternalUnauthorized(request, env, t0, auth.reason);
+      return handleAgentV2Run(request, env);
+    }
+
+    if (path === "/v2/agent/resume" && request.method === "POST") {
+      const auth = verifyInternalApiAuth(request, env, { requireConfigured: true });
+      if (!auth.ok) return jsonInternalUnauthorized(request, env, t0, auth.reason);
+      return handleAgentV2Resume(request, env);
     }
 
     const res = jsonResponse({ error: "Not found" }, 404, request, env);
