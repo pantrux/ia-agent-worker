@@ -57,6 +57,7 @@ describe("canonical v2 schemas", () => {
       payload_version: "2" as const,
       trace_id: "trace_tg_001",
       conversation_id: "telegram:12345",
+      reply_token: "12345",
       interrupt_id: "hitl_pending-delete-cust-001",
       callback_ref: "hitl.v2.signed.example",
       action: { id: "approve", kind: "approve" as const },

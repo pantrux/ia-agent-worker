@@ -18,8 +18,16 @@ function requestWithBearer(token: string | null): Request {
 }
 
 describe("verifyInternalApiAuth", () => {
-  it("returns ok when AGENT_INTERNAL_TOKEN is not configured", () => {
-    expect(verifyInternalApiAuth(requestWithBearer(null), envWithToken(undefined))).toEqual({ ok: true });
+  it("returns ok when AGENT_INTERNAL_TOKEN is not configured and requireConfigured is false", () => {
+    expect(
+      verifyInternalApiAuth(requestWithBearer(null), envWithToken(undefined), { requireConfigured: false })
+    ).toEqual({ ok: true });
+  });
+
+  it("returns token_not_configured when AGENT_INTERNAL_TOKEN is missing and requireConfigured is true", () => {
+    expect(
+      verifyInternalApiAuth(requestWithBearer("any"), envWithToken(undefined), { requireConfigured: true })
+    ).toEqual({ ok: false, reason: "token_not_configured" });
   });
 
   it("returns ok when bearer token matches", () => {

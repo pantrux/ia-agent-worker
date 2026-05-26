@@ -151,6 +151,7 @@ describe("handleAgentV2Resume", () => {
     payload_version: "2" as const,
     trace_id: "trace_tg_001",
     conversation_id: "telegram:12345",
+    reply_token: "12345",
     interrupt_id: "hitl_call_delete_001",
     callback_ref: "hitl.v2.signed.example",
     action: { id: "approve", kind: "approve" as const },
@@ -177,6 +178,25 @@ describe("handleAgentV2Resume", () => {
     });
   });
 
+  it("returns 400 for unknown conversation_id prefix", async () => {
+    const response = await handleAgentV2Resume(
+      new Request("https://worker.test/v2/agent/resume", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...callback,
+          conversation_id: "unknown:12345"
+        })
+      }),
+      env
+    );
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: { code: "invalid_conversation_id" }
+    });
+  });
+
   it("returns OutboundMessageV2 text after resume", async () => {
     runChatResumeGraph.mockResolvedValueOnce({
       messages: [{ content: "Cliente eliminado." }]
@@ -195,6 +215,7 @@ describe("handleAgentV2Resume", () => {
       payload_version: "2",
       trace_id: callback.trace_id,
       conversation_id: callback.conversation_id,
+      reply_token: callback.reply_token,
       text: "Cliente eliminado."
     });
     expect(runChatResumeGraph).toHaveBeenCalledWith(

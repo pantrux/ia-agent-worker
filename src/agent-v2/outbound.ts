@@ -12,13 +12,30 @@ export function buildOutboundFromGraphSuccess(
   inbound: Pick<InboundMessageV2, "trace_id" | "conversation_id" | "reply_token">,
   result: ChatGraphInvokeResult
 ): OutboundMessageV2 {
+  const text = extractLastAiReply(result);
+  if (!text.trim()) {
+    const outbound: OutboundMessageV2 = {
+      payload_version: "2",
+      message_id: createOutboundMessageId("omni_out_err"),
+      trace_id: inbound.trace_id,
+      conversation_id: inbound.conversation_id,
+      reply_token: inbound.reply_token,
+      error: {
+        code: "empty_reply",
+        message: "Graph completed without assistant reply",
+        retryable: false
+      }
+    };
+    return OutboundMessageV2Schema.parse(outbound);
+  }
+
   const outbound: OutboundMessageV2 = {
     payload_version: "2",
     message_id: createOutboundMessageId(),
     trace_id: inbound.trace_id,
     conversation_id: inbound.conversation_id,
     reply_token: inbound.reply_token,
-    text: extractLastAiReply(result)
+    text
   };
   return OutboundMessageV2Schema.parse(outbound);
 }

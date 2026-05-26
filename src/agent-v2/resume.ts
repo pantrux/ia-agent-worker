@@ -1,6 +1,6 @@
 import type { Env } from "../env.js";
 import { logWorkerAccess } from "../access-log.js";
-import { HitlCallbackV2Schema } from "../canonical/index.js";
+import { HitlCallbackV2Schema, type Channel } from "../canonical/index.js";
 import {
   isGraphInterruptError,
   runChatResumeGraph
@@ -12,12 +12,13 @@ import {
 } from "./outbound.js";
 import { agentV2ErrorResponse, agentV2SuccessResponse } from "./http.js";
 
-function inferChannelFromConversationId(conversationId: string): string {
+function parseChannelFromConversationId(conversationId: string): Channel | null {
   if (conversationId.startsWith("slack:")) return "slack";
   if (conversationId.startsWith("telegram:")) return "telegram";
   if (conversationId.startsWith("teams:")) return "teams";
   if (conversationId.startsWith("gchat:")) return "gchat";
-  return "web";
+  if (conversationId.startsWith("web:")) return "web";
+  return null;
 }
 
 function mapCallbackActionToApproved(actionKind: "approve" | "deny" | "custom"): boolean {
@@ -65,6 +66,21 @@ export async function handleAgentV2Resume(request: Request, env: Env): Promise<R
   }
 
   const callback = parsed.data;
+  const channel = parseChannelFromConversationId(callback.conversation_id);
+  if (!channel) {
+    return finish(
+      agentV2ErrorResponse(
+        request,
+        env,
+        400,
+        "invalid_conversation_id",
+        "conversation_id must use a known channel prefix (slack:, telegram:, teams:, gchat:, web:)"
+      ),
+      "invalid_conversation_id",
+      callback.trace_id
+    );
+  }
+
   let approved: boolean;
   try {
     approved = mapCallbackActionToApproved(callback.action.kind);
@@ -85,13 +101,13 @@ export async function handleAgentV2Resume(request: Request, env: Env): Promise<R
   const resumeContext = {
     trace_id: callback.trace_id,
     conversation_id: callback.conversation_id,
-    reply_token: callback.conversation_id
+    reply_token: callback.reply_token
   };
 
   try {
     const result = await runChatResumeGraph(env, {
       threadId: callback.conversation_id,
-      channel: inferChannelFromConversationId(callback.conversation_id),
+      channel,
       userId: "omni-hitl-resume",
       approved,
       operation: "v2_resume"

@@ -78,6 +78,30 @@ function jsonInternalUnauthorized(
   t0: number,
   reason: InternalAuthFailureReason
 ): Response {
+  if (reason === "token_not_configured") {
+    const res = jsonResponse(
+      {
+        ok: false,
+        error: {
+          code: "internal_auth_not_configured",
+          message: "AGENT_INTERNAL_TOKEN must be configured for /v2/agent endpoints",
+          retryable: false
+        }
+      },
+      503,
+      request,
+      env
+    );
+    logWorkerAccess(request, env, {
+      operation: "internal_auth",
+      status: res.status,
+      durationMs: Date.now() - t0,
+      requestTs: new Date(t0).toISOString(),
+      error: reason
+    });
+    return res;
+  }
+
   const res = jsonResponse({ ok: false, error: { code: "unauthorized", message: "No autorizado", retryable: false } }, 401, request, env);
   res.headers.set("WWW-Authenticate", 'Bearer realm="internal"');
   logWorkerAccess(request, env, {
@@ -355,13 +379,13 @@ export default {
     }
 
     if (path === "/v2/agent/run" && request.method === "POST") {
-      const auth = verifyInternalApiAuth(request, env);
+      const auth = verifyInternalApiAuth(request, env, { requireConfigured: true });
       if (!auth.ok) return jsonInternalUnauthorized(request, env, t0, auth.reason);
       return handleAgentV2Run(request, env);
     }
 
     if (path === "/v2/agent/resume" && request.method === "POST") {
-      const auth = verifyInternalApiAuth(request, env);
+      const auth = verifyInternalApiAuth(request, env, { requireConfigured: true });
       if (!auth.ok) return jsonInternalUnauthorized(request, env, t0, auth.reason);
       return handleAgentV2Resume(request, env);
     }

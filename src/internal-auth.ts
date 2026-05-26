@@ -1,33 +1,39 @@
 import type { Env } from "./env.js";
+import { timingSafeEqualUtf8 } from "./timing-safe-equal.js";
 
-export type InternalAuthFailureReason = "missing_bearer" | "invalid_token";
+export type InternalAuthFailureReason =
+  | "missing_bearer"
+  | "invalid_token"
+  | "token_not_configured";
 
 export type InternalAuthResult =
   | { ok: true }
   | { ok: false; reason: InternalAuthFailureReason };
+
+export type VerifyInternalApiAuthOptions = {
+  /** En `/v2/agent/*` el token debe estar configurado; si falta, fallar cerrado. */
+  requireConfigured?: boolean;
+};
 
 function getConfiguredInternalToken(env: Env): string | null {
   const token = env.AGENT_INTERNAL_TOKEN?.trim();
   return token ? token : null;
 }
 
-function timingSafeEqualUtf8(a: string, b: string): boolean {
-  const enc = new TextEncoder();
-  const ua = enc.encode(a);
-  const ub = enc.encode(b);
-  const maxLen = Math.max(ua.length, ub.length);
-  let diff = ua.length ^ ub.length;
-  for (let i = 0; i < maxLen; i++) diff |= (ua[i] ?? 0) ^ (ub[i] ?? 0);
-  return diff === 0;
-}
-
 /**
  * Valida llamadas internas omni-channel-worker → ia-agent-worker.
- * Si `AGENT_INTERNAL_TOKEN` no está definido (dev local), no se exige cabecera.
+ * Con `requireConfigured: true` (rutas v2), rechaza si falta `AGENT_INTERNAL_TOKEN`.
  */
-export function verifyInternalApiAuth(request: Request, env: Env): InternalAuthResult {
+export function verifyInternalApiAuth(
+  request: Request,
+  env: Env,
+  options: VerifyInternalApiAuthOptions = {}
+): InternalAuthResult {
   const expected = getConfiguredInternalToken(env);
-  if (!expected) return { ok: true };
+  if (!expected) {
+    if (options.requireConfigured) return { ok: false, reason: "token_not_configured" };
+    return { ok: true };
+  }
 
   const raw = request.headers.get("Authorization")?.trim() ?? "";
   const match = /^Bearer\s+(\S+)$/i.exec(raw);

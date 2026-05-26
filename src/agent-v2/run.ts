@@ -65,6 +65,7 @@ export async function handleAgentV2Run(request: Request, env: Env): Promise<Resp
     );
   }
 
+  // PAN-95: `async` se ejecuta inline como `sync`; la cola omni llegará en un slice posterior.
   try {
     const result = await runChatMessageGraph(env, {
       text: inbound.text,

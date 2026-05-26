@@ -147,6 +147,7 @@ export const HitlCallbackV2Schema = z
     payload_version: z.literal("2"),
     trace_id: z.string().min(1),
     conversation_id: z.string().min(1),
+    reply_token: z.string().min(1),
     interrupt_id: z.string().min(1),
     callback_ref: z.string().min(1),
     action: HitlCallbackActionSchema,
