@@ -1,0 +1,31 @@
+# Conecta pantrux/omni-channel-worker a Workers Builds (prod + preview).
+# Requiere secret CLOUDFLARE_API_TOKEN con permisos:
+# - Workers Builds Configuration (Edit)
+# - Workers Scripts (Read)
+# GitHub App de Cloudflare autorizada previamente en el dashboard.
+
+name: Provision omni Workers Builds
+
+on:
+  workflow_dispatch:
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: pantrux/omni-channel-worker
+          path: omni-channel-worker
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Provision Workers Builds
+        working-directory: omni-channel-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/provision-workers-builds.mjs
