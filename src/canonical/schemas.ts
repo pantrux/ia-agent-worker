@@ -10,6 +10,7 @@ export const ExternalConversationRefSchema = z
     channel_id: z.string().min(1).optional(),
     thread_ts: z.string().min(1).optional(),
     team_id: z.string().min(1).optional(),
+    is_direct_message: z.boolean().optional(),
     activity_id: z.string().min(1).optional(),
     conversation_id: z.string().min(1).optional(),
     service_url: z.string().url().optional(),
