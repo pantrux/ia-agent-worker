@@ -12,8 +12,10 @@ import {
 } from "./outbound.js";
 import { wsStreamPauseMs } from "../ws-stream-pace.js";
 
+const textEncoder = new TextEncoder();
+
 function ndjsonLine(data: unknown): Uint8Array {
-  return new TextEncoder().encode(`${JSON.stringify(data)}\n`);
+  return textEncoder.encode(`${JSON.stringify(data)}\n`);
 }
 
 /**

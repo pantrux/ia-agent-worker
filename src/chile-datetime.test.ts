@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHILE_TIMEZONE, formatChileDateTime } from "../src/chile-datetime.js";
+import { CHILE_TIMEZONE, formatChileDateTime } from "./chile-datetime.js";
 
 describe("formatChileDateTime", () => {
   it("formatea en zona horaria Chile continental", () => {

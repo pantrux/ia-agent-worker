@@ -53,8 +53,45 @@ export async function handleAgentV2Run(request: Request, env: Env): Promise<Resp
 
   const inbound = parsed.data;
   if (inbound.reply_mode === "stream") {
+    if (!inbound.capabilities.supports_streaming) {
+      return finish(
+        agentV2ErrorResponse(
+          request,
+          env,
+          400,
+          "streaming_not_supported",
+          "reply_mode stream requires capabilities.supports_streaming=true",
+          false
+        ),
+        "streaming_not_supported",
+        inbound.trace_id
+      );
+    }
+
     const streamResponse = await runAgentV2StreamResponse(request, env, inbound);
-    return finish(streamResponse, undefined, inbound.trace_id);
+    if (!streamResponse.body) {
+      return finish(streamResponse, undefined, inbound.trace_id);
+    }
+
+    const loggedBody = streamResponse.body.pipeThrough(
+      new TransformStream<Uint8Array, Uint8Array>({
+        flush() {
+          logWorkerAccess(request, env, {
+            operation: "v2_agent_run",
+            status: streamResponse.status,
+            durationMs: Date.now() - t0,
+            requestTs,
+            trace_id: inbound.trace_id,
+            error: undefined
+          });
+        }
+      })
+    );
+
+    return new Response(loggedBody, {
+      status: streamResponse.status,
+      headers: streamResponse.headers
+    });
   }
 
   // PAN-95: `async` se ejecuta inline como `sync`; la cola omni llegará en un slice posterior.
