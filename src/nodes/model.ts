@@ -14,6 +14,7 @@ import {
   normalizeModelIdForGithubModelsInference,
 } from "../llm-client.js";
 import { invokeResponsesIfRequired } from "../responses-client.js";
+import { CHILE_TIMEZONE, formatChileDateTime } from "../chile-datetime.js";
 
 /** Coincide con `COPILOT_MODEL` por defecto en `wrangler.toml` y `DEFAULT_COPILOT_MODEL` en `llm-client.ts`. */
 const DEFAULT_MODEL = DEFAULT_COPILOT_MODEL;
@@ -36,6 +37,9 @@ export function createModelNode(env: Env) {
 
     const systemMsg = new SystemMessage(
       `You are a CRM assistant. Use tools to read or change data when appropriate.\n` +
+        `Current date and time (${CHILE_TIMEZONE}, Chile continental): ${formatChileDateTime()}.\n` +
+        `Always answer date and time questions using that timezone.\n` +
+        `Respond in Spanish unless the user writes in another language.\n` +
         `Detected industry: ${industry}. Intent hint: ${intent}.\n` +
         `If the user gives a customer name but not id, call find_customer_by_name first.\n` +
         `Prefer tools over guessing. Keep answers concise.` +

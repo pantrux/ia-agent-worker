@@ -64,20 +64,28 @@ describe("handleAgentV2Run", () => {
     });
   });
 
-  it("returns 501 for reply_mode stream", async () => {
+  it("returns NDJSON stream for reply_mode stream", async () => {
+    runChatMessageGraph.mockImplementationOnce(async (_env, params) => {
+      await params.onTokenDelta?.("Hola ");
+      await params.onTokenDelta?.("mundo");
+      return { messages: [{ content: "Hola mundo" }] };
+    });
+
     const response = await handleAgentV2Run(
       new Request("https://worker.test/v2/agent/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...inbound, reply_mode: "stream" })
+        body: JSON.stringify({ ...inbound, reply_mode: "stream", capabilities: { ...inbound.capabilities, supports_streaming: true } })
       }),
       env
     );
-    expect(response.status).toBe(501);
-    await expect(response.json()).resolves.toMatchObject({
-      ok: false,
-      error: { code: "reply_mode_not_supported" }
-    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/x-ndjson");
+    const raw = await response.text();
+    expect(raw).toContain('"event":"delta"');
+    expect(raw).toContain('"event":"complete"');
+    expect(raw).toContain("Hola mundo");
   });
 
   it("returns OutboundMessageV2 text on graph success", async () => {

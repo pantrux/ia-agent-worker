@@ -11,6 +11,7 @@ import {
   buildOutboundFromGraphSuccess
 } from "./outbound.js";
 import { agentV2ErrorResponse, agentV2SuccessResponse } from "./http.js";
+import { runAgentV2StreamResponse } from "./run-stream.js";
 
 export async function handleAgentV2Run(request: Request, env: Env): Promise<Response> {
   const t0 = Date.now();
@@ -52,17 +53,8 @@ export async function handleAgentV2Run(request: Request, env: Env): Promise<Resp
 
   const inbound = parsed.data;
   if (inbound.reply_mode === "stream") {
-    return finish(
-      agentV2ErrorResponse(
-        request,
-        env,
-        501,
-        "reply_mode_not_supported",
-        "reply_mode stream is not supported on /v2/agent/run yet"
-      ),
-      "reply_mode_not_supported",
-      inbound.trace_id
-    );
+    const streamResponse = await runAgentV2StreamResponse(request, env, inbound);
+    return finish(streamResponse, undefined, inbound.trace_id);
   }
 
   // PAN-95: `async` se ejecuta inline como `sync`; la cola omni llegará en un slice posterior.
